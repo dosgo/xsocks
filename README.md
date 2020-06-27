@@ -42,7 +42,12 @@
 
 #感谢
   github.com/google/netstack
+  
   github.com/yinghuocho/gotun2socks
+  
   github.com/miekg/dns
+  
   github.com/xtaci/smux
+  
   github.com/hashicorp/yamux
+  
