@@ -52,17 +52,18 @@ func (rd *RemoteDns)Resolve(remoteHost string) (string,error){
 	rd.Lock();
 	defer  rd.Unlock()
 	var err error
+	cache:= readDnsCache(remoteHost)
+	if(cache!=""){
+		return  cache,nil;
+	}
 	if(rd.Tunnel==nil) {
+		fmt.Printf("Resolve Tunnel null connect\r\n")
 		tunnel,err := rd.Connect();
 		if (err != nil) {
 			fmt.Printf("Resolve1\r\n")
 			return "",err
 		}
 		rd.Tunnel=tunnel;
-	}
-	cache:= readDnsCache(remoteHost)
-	if(cache!=""){
-		return  cache,nil;
 	}
 	sendBuf:=[]byte{};
 	hostLen:=uint8( len(remoteHost))
@@ -90,23 +91,31 @@ func (rd *RemoteDns)Resolve(remoteHost string) (string,error){
 	backHead := make([]byte,2)
 	_, err = io.ReadFull(rd.Tunnel, backHead)
 	if err != nil {
-		fmt.Printf("Resolve4\r\n")
+		//回收
+		if(rd.Tunnel!=nil) {
+			rd.Tunnel.Close();
+			rd.Tunnel = nil;
+		}
+		fmt.Printf("Resolve4 err:%v\r\n",err)
 		return "",err
 	}
 	if(backHead[0]!=0x00){
 		fmt.Printf("Resolve5\r\n")
-		return "",err;
+		return "",errors.New("remote dns err");
 	}
 	//ipv4
 	if(backHead[1]==0x04){
 		ipBuf := make([]byte,4)
 		_, err = io.ReadFull(rd.Tunnel, ipBuf)
 		if err != nil {
+			fmt.Printf("Resolve6 err:%v\r\n",err)
 			return "",err
 		}
 		ipAddr := net.IPv4(ipBuf[0], ipBuf[1], ipBuf[2], ipBuf[3])
 		writeDnsCache(remoteHost,ipAddr.String())
 		return ipAddr.String(),nil;
+	}else{
+		fmt.Printf("backHead no v4 backHead:%v\r\n",backHead)
 	}
 	return "",errors.New("err");
 }

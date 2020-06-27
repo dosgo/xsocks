@@ -68,8 +68,9 @@ func dnsResolve(conn comm.CommConn) {
 		}
 		addr, err := net.ResolveIPAddr("ip4", string(hostBuf))
 		if(err!=nil){
-			conn.Write([]byte{0x01, 0x04,0x00, 0x00, 0x00, 0x00}) //0x01==error  0x04==ipv4
-			return ;
+			//err
+			conn.Write([]byte{0x01, 0x04}) //0x01==error  0x04==ipv4
+			continue;//解析失败跳过不关闭连接
 		}
 		_, err =conn.Write([]byte{0x00, 0x04}) //响应客户端
 		_, err =conn.Write(addr.IP.To4()) //响应客户端

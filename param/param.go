@@ -1,7 +1,7 @@
 package param
 
 //common
-var Version ="1.0.1-(20200624)"
+var Version ="1.0.2-(20200627)"
 
 
 //client
