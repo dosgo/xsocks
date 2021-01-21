@@ -1,16 +1,15 @@
-package server
+package client
 
 import (
 	"fmt"
 	"github.com/miekg/dns"
 	"net"
-	"qproxy/ipcheck"
-	"qproxy/param"
-	"qproxy/tunnel"
 	"time"
+	"xSocks/comm"
+	"xSocks/param"
 )
 
-var remoteDns tunnel.RemoteDns
+var remoteDns RemoteDns
 var dnsClient *dns.Client
 /*remote to loacal*/
 func StartDns() error {
@@ -30,7 +29,7 @@ func StartDns() error {
 		ReadTimeout:  time.Duration(10) * time.Second,
 		WriteTimeout: time.Duration(10) * time.Second,
 	}
-	remoteDns=tunnel.RemoteDns{}
+	remoteDns = RemoteDns{}
 	dnsClient = &dns.Client{
 		Net:          "udp",
 		UDPSize:      4096,
@@ -74,13 +73,13 @@ func  doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	var ip string;
 	var err error;
 	if(param.LocalDns==1){
-		m1,_,err :=dnsClient.Exchange(r,"114.114.114.114:53")
+		m1,_,err := dnsClient.Exchange(r,"114.114.114.114:53")
 		if err == nil {
 			for _, v := range m1.Answer {
 				record, isType := v.(*dns.A)
 				if isType {
 					//中国Ip直接回复
-					if ipcheck.IsChinaMainlandIP(record.A.String()) {
+					if comm.IsChinaMainlandIP(record.A.String()) {
 						return m1,nil;
 					}
 				}

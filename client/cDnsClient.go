@@ -1,15 +1,15 @@
-package tunnel
+package client
 
 import (
 	"errors"
 	"fmt"
 	"io"
 	"net"
-	"qproxy/comm"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"xSocks/comm"
 )
 var dnsCache *DnsCache
 var dnsIng sync.Map
@@ -28,7 +28,7 @@ type DnsCache struct {
 }
 
 type RemoteDns struct {
-	Tunnel      comm.CommConn
+	Tunnel comm.CommConn
 	sync.Mutex
 }
 
@@ -100,7 +100,7 @@ func (rd *RemoteDns)Resolve(remoteHost string) (string,error){
 		return "",err
 	}
 	if(backHead[0]!=0x00){
-		fmt.Printf("Resolve5\r\n")
+		fmt.Printf("Resolve5 backHead:%v\r\n",backHead)
 		return "",errors.New("remote dns err");
 	}
 	//ipv4

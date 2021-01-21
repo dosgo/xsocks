@@ -6,10 +6,9 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"qproxy/client"
-	"qproxy/ipcheck"
-	"qproxy/param"
-	"qproxy/server"
+	"xSocks/client"
+	"xSocks/comm"
+	"xSocks/param"
 )
 
 
@@ -22,29 +21,33 @@ func main() {
 	flag.StringVar(&param.Password, "password", "password", "password")
 	flag.StringVar(&param.CaFile, "caFile", "", "RootCAs file")
 	flag.BoolVar(&param.SkipVerify, "skipVerify", false, "SkipVerify")
-	flag.BoolVar(&param.Tun2Socks, "tun2Socks", false, "start Tun2Socks server")
+	flag.IntVar(&param.TunType, "tunType", 0, "tun type 1.tun2sock 2.tun2Remote")
 	flag.StringVar(&param.UnixSockTun, "unixSockTun", "", "unix socket tun")
 	flag.IntVar(&param.Mux, "mux", 1, "use Multiplexer")
 	flag.IntVar(&param.LocalDns, "localDns", 1, "use local dns")
 	flag.IntVar(&param.Mtu, "mtu", 4500, "mtu")
-
-
+	flag.BoolVar(&param.TunSmartProxy,"tunSmartProxy",false,"tun Smart Proxy ")
 
 	flag.Parse()
 
 	//随机端口
 	if(param.DnsPort==""){
-		_dnsPort,_:= client.GetFreePort();
-		param.DnsPort= fmt.Sprintf("%d", _dnsPort)
+		param.DnsPort,_= comm.GetFreePort();
 	}
 
 	fmt.Printf("verison:%s\r\n",param.Version)
+	fmt.Printf("server addr:%s\r\n",param.ServerAddr)
 	fmt.Printf("socks5 addr :%s\r\n",param.Sock5Addr)
-	if(param.Tun2Socks){
-		go server.StartTunDevice("","","","","");
+	//1==tun2sock
+	if(param.TunType==1){
+		go client.StartTunDevice("","","","","");
 	}
-	go server.StartDns();
-	server.StartLocalSocks5(param.Sock5Addr);
+	//2==tun2remote tun
+	if(param.TunType==2){
+		go client.StartTun("","","","","");
+	}
+	go client.StartDns();
+	client.StartLocalSocks5(param.Sock5Addr);
 }
 func init(){
 	//android
@@ -52,7 +55,7 @@ func init(){
 		fmt.Printf("setDefaultDNS\r\n ")
 		setDefaultDNS("114.114.114.114:53");
 	}
-	ipcheck.Init()
+	comm.Init()
 }
 
 

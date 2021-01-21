@@ -4,7 +4,8 @@
 一个基于quic/websocket+tls的透明代理工具，支持智能DNS(windows 不支持)，本软件只用于学习网络原理使用编程学习练手，请勿用于非法用途，后果自负。
 
 
-#优点
+# 优点
+
  1.部署超级简单
  
  2.纯go语言编写交叉编译简单，移植简单
@@ -13,7 +14,8 @@
 
 
 
-#编译方法
+
+# 编译方法
 1.git clone https://github.com/dosgo/xSocks.git
 
 2.cd cli
@@ -23,7 +25,7 @@
 4.go build client.go  //编译客户端
 
 
-#使用方法
+# 使用方法
 一.自签名证书使用
 
   1.运行server -webPort 443 -quicPort 5002  -password  123456  //运行启动后会在当前目录生成你xx_server.key/xx_server.perm/xx_ca.perm/xx_ca.key; 4个文件。
@@ -41,8 +43,11 @@
   
   3.使用websocket+tls client   -sock5Addr "127.0.0.1:6000"  -serverAddr "wss://你证书签名的域名" -password 123456  //启动好后使用SwitchyOmega填写127.0.0.1:6000地址就可以了
   
+# Android
+  https://github.com/dosgo/xSocks-android
+  
 
-#感谢
+# 感谢
   github.com/google/netstack
   
   github.com/yinghuocho/gotun2socks

@@ -15,7 +15,7 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"qproxy/param"
+	"xSocks/param"
 	"strings"
 	"time"
 )
@@ -102,39 +102,6 @@ func webToSocks5Smux(ws *websocket.Conn) {
 }
 
 
-/*
-func startHTTPSServer(certFile, keyFile string, server *http.Server) {
-	var l net.Listener
-	base := []byte("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
-	key := [32]byte{}
-	rand.Seed(time.Now().Unix())
-	for i := 0; i < 32; i++ {
-		key[i] = base[rand.Int()%len(base)]
-	}
-	keys := [][32]byte{key}
-	crt, err := tls.LoadX509KeyPair(certFile, keyFile)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	tr := &tls.Config{NextProtos: []string{"h2"}, Certificates: []tls.Certificate{crt}, SessionTicketKey: key}
-	tr.SetSessionTicketKeys(keys)
-	log.Println(string(key[:]))
-	sm := http.NewServeMux()
-	sm.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(204)
-	})
-	server.Handler = sm
-	log.Println("Listen at:", server.Addr)
-	l, err = tls.Listen("tcp", server.Addr, tr)
-	if err != nil {
-		log.Panic(err)
-	}
-	err = server.Serve(l)
-	if err != nil {
-		log.Panic(err)
-	}
-}*/
 
 /*生成证书,
 */

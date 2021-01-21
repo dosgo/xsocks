@@ -1,40 +1,33 @@
-package server
+package client
 
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
+	"xSocks/comm"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/adapters/gonet"
 	"github.com/google/netstack/tcpip/buffer"
 	"github.com/google/netstack/tcpip/header"
-	"github.com/google/netstack/tcpip/link/channel"
-	"github.com/google/netstack/tcpip/network/ipv4"
-	"github.com/google/netstack/tcpip/stack"
-	"github.com/google/netstack/tcpip/transport/tcp"
-	"github.com/google/netstack/tcpip/transport/udp"
-	"github.com/google/netstack/waiter"
-
 	"github.com/yinghuocho/gotun2socks/tun"
 	"io"
 	"log"
 	"net"
 	"net/url"
 	"os"
-	"os/signal"
-	"qproxy/param"
 	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
+	"xSocks/param"
 )
 
 var  wrapnet uint32;
 var  mask uint32
 var  relayip net.IP
 var  port  uint16;
+
+
 
 func StartTunDevice(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS string) {
 	if(len(tunDevice)==0){
@@ -52,24 +45,14 @@ func StartTunDevice(tunDevice string,tunAddr string,tunMask string,tunGW string,
 	if(len(tunDNS)==0){
 		tunDNS="114.114.114.114";
 	}
+	//
+	var oldGw=comm.GetGateway();
 
-
-	var remoteAddr string;
-	u, err := url.Parse(param.ServerAddr)
-	fmt.Printf("u:%v-%v-%v\r\n",u.Scheme,u.Host,u.Port())
-	if(err==nil){
-		if(len(u.Port())>0){
-			remoteAddr=strings.Replace(u.Host,":"+u.Port(),"",-1)
-		}else{
-			remoteAddr=u.Host;
-		}
-	}
 	strings.Split(param.ServerAddr,":");
-	//old gw
-	var oldGw ="192.168.8.1";
 	dnsServers := strings.Split(tunDNS, ",")
 	fmt.Printf("dnsServers:%v\r\n",dnsServers)
 	var dev io.ReadWriteCloser;
+	var remoteAddr string;
 	if(len(param.UnixSockTun)>0) {
 		os.Remove(param.UnixSockTun)
 		addr, err := net.ResolveUnixAddr("unixpacket", param.UnixSockTun)
@@ -105,6 +88,15 @@ func StartTunDevice(tunDevice string,tunAddr string,tunMask string,tunGW string,
 
 		 */
 	}else{
+		if(runtime.GOOS=="windows") {
+			urlInfo, _ := url.Parse(param.ServerAddr)
+			addr, err := net.ResolveIPAddr("ip",urlInfo.Hostname())
+			if err == nil {
+				remoteAddr = addr.String()
+			}
+			fmt.Printf("remoteAddr:%s\r\n", remoteAddr)
+		}
+
 		f, err:= tun.OpenTunDevice(tunDevice, tunAddr, tunGW, tunMask, dnsServers)
 		if err != nil {
 			fmt.Println("Error listening:", err)
@@ -112,110 +104,37 @@ func StartTunDevice(tunDevice string,tunAddr string,tunMask string,tunGW string,
 		}
 		dev=f;
 	}
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch,
-		syscall.SIGHUP,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGQUIT)
-	go func() {
-		s := <-ch
-		switch s {
-		default:
-			if(runtime.GOOS=="windows") {
-				unRegRoute(tunGW, oldGw);
-			}
-			os.Exit(0);
-		}
-	}()
+
 	//windows
 	if(runtime.GOOS=="windows"){
-		regRoute(tunGW,remoteAddr,dnsServers,oldGw);
+		routeEdit(tunGW,remoteAddr,dnsServers,oldGw);
 	}
-	ForwardTransportFromIo(dev,param.Mtu,param.Sock5Addr);
+	ForwardTransportFromIo(dev,param.Mtu,);
 }
-func ForwardTransportFromIo(dev io.ReadWriteCloser,mtu int,lSocksAddr string) error {
-	var nicID tcpip.NICID =1;
-	macAddr, err := net.ParseMAC("de:ad:be:ee:ee:ef")
-	if err != nil {
-		fmt.Printf(err.Error());
-		return err
+func ForwardTransportFromIo(dev io.ReadWriteCloser,mtu int) error {
+	channelLinkID,_stack,err:=comm.GenChannelLinkID(mtu,tcpForwarder,udpForwarder);
+	if(err!=nil){
+		return err;
 	}
-	//[]string{ipv4.ProtocolName, ipv6.ProtocolName, arp.ProtocolName}, []string{tcp.ProtocolName, udp.ProtocolName},
-	s := stack.New( stack.Options{NetworkProtocols:   []stack.NetworkProtocol{ipv4.NewProtocol()},
-		TransportProtocols: []stack.TransportProtocol{tcp.NewProtocol(), udp.NewProtocol()}})
-	//转发开关,必须
-	s.SetForwarding(true);
-	var linkID stack.LinkEndpoint
-	var channelLinkID= channel.New(256, uint32(mtu),   tcpip.LinkAddress(macAddr))
-
+	defer _stack.Close();
 	// write tun
 	go func() {
+		var buffer =new(bytes.Buffer)
 		for {
 			select {
 			case pkt := <-channelLinkID.C:
-				tmpBuf:=append(pkt.Pkt.Header.View(),pkt.Pkt.Data.ToView()...)
-				if(len(tmpBuf)>0) {
-					dev.Write(tmpBuf)
+				buffer.Write(pkt.Pkt.Header.View())
+				buffer.Write(pkt.Pkt.Data.ToView())
+				//tmpBuf:=append(pkt.Pkt.Header.View(),pkt.Pkt.Data.ToView()...)
+				if(buffer.Len()>0) {
+					dev.Write(buffer.Bytes())
+					buffer.Reset()
 				}
 				break;
 			}
 		}
 	}()
-	linkID=channelLinkID;
-	if err != nil {
-		return err
-	}
-	if err := s.CreateNIC(nicID, linkID); err != nil {
-		return errors.New(err.String())
-	}
-	//promiscuous mode 必须
-	s.SetPromiscuousMode(nicID, true)
-	tcpForwarder := tcp.NewForwarder(s, 0, 256, func(r *tcp.ForwarderRequest) {
-		var wq waiter.Queue
-		ep, err := r.CreateEndpoint(&wq)
-		if err != nil {
-			fmt.Printf(err.String());
-			return
-		}
-		r.Complete(false)
-		conn:=gonet.NewConn(&wq, ep)
-		defer conn.Close();
 
-		var remoteAddr=conn.LocalAddr().String()
-		//dns ,use 8.8.8.8
-		if(strings.HasSuffix(remoteAddr,":53")){
-			dnsReq(conn,"tcp");
-			return ;
-		}
-		socksConn,err1:= net.Dial("tcp",lSocksAddr)
-		if err1 != nil {
-			log.Println(err1)
-			return
-		}
-		defer socksConn.Close();
-		if(socksCmd(socksConn,1,remoteAddr)==nil) {
-			go io.Copy(conn, socksConn)
-			io.Copy(socksConn, conn)
-		}
-	})
-	s.SetTransportProtocolHandler(tcp.ProtocolNumber, tcpForwarder.HandlePacket)
-
-	udpForwarder := udp.NewForwarder(s, func(r *udp.ForwarderRequest) {
-		var wq waiter.Queue
-		ep, err := r.CreateEndpoint(&wq)
-		if err != nil {
-			fmt.Printf("r.CreateEndpoint() = %v", err)
-		}
-		defer ep.Close()
-		conn :=gonet.NewConn(&wq, ep)
-		defer conn.Close();
-		//dns port
-		if(strings.HasSuffix(conn.LocalAddr().String(),":53")){
-			dnsReq(conn,"udp");
-		}
-	})
-	s.SetTransportProtocolHandler(udp.ProtocolNumber, udpForwarder.HandlePacket)
 
 	// read tun data
 	var buf=make([]byte,mtu)
@@ -234,6 +153,37 @@ func ForwardTransportFromIo(dev io.ReadWriteCloser,mtu int,lSocksAddr string) er
 	}
 	return nil
 }
+
+func tcpForwarder(conn *gonet.Conn)error{
+	var remoteAddr=conn.LocalAddr().String()
+	//dns ,use 8.8.8.8
+	if(strings.HasSuffix(remoteAddr,":53")){
+		dnsReq(conn,"tcp");
+		return  nil;
+	}
+	socksConn,err1:= net.Dial("tcp",param.Sock5Addr)
+	if err1 != nil {
+		log.Println(err1)
+		return nil
+	}
+	defer socksConn.Close();
+	if(socksCmd(socksConn,1,remoteAddr)==nil) {
+		go io.Copy(conn, socksConn)
+		io.Copy(socksConn, conn)
+	}
+	return nil
+}
+
+func udpForwarder(conn *gonet.Conn, ep tcpip.Endpoint)error{
+	defer conn.Close();
+	defer ep.Close();
+	//dns port
+	if(strings.HasSuffix(conn.LocalAddr().String(),":53")){
+		dnsReq(conn,"udp");
+	}
+	return nil;
+}
+
 /*to dns*/
 func dnsReq(conn *gonet.Conn,action string) error{
 	if(action=="tcp"){
@@ -248,7 +198,8 @@ func dnsReq(conn *gonet.Conn,action string) error{
 		fmt.Printf("dnsReq Tcp\r\n");
 		return nil;
 	}else {
-		buf := make([]byte, 4096)
+		var buf = poolDnsBuf.Get().([]byte)
+		defer poolDnsBuf.Put(buf)
 		var n = 0;
 		var err error;
 		n, err = conn.Read(buf)

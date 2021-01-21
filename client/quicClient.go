@@ -3,9 +3,9 @@ package client
 import (
 	"crypto/tls"
 	"github.com/lucas-clemente/quic-go"
-	"qproxy/comm"
+	"xSocks/comm"
 	"context"
-	"qproxy/param"
+	"xSocks/param"
 	"sync"
 )
 var quicDialer *QuicDialer

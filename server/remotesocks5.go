@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"xSocks/param"
 )
 
 
@@ -65,12 +66,12 @@ func handleRemoteRequest(clientConn net.Conn) {
 				host = net.IPv4(ipv4[0], ipv4[1], ipv4[2], ipv4[3]).String()
 				break;
 			case 0x03: //域名
-				fmt.Printf("host\r\n");
 				hostLen := make([]byte, 1)
 				_, err = io.ReadFull(clientConn, hostLen)
 				hostBuf := make([]byte, hostLen[0])
 				_, err = io.ReadFull(clientConn, hostBuf)
 				host = string(hostBuf) //b[4]表示域名的长度
+				fmt.Printf("host:%s\r\n",hostBuf);
 				break;
 			case 0x04: //IP V6
 				fmt.Printf("ipv6\r\n");
@@ -82,7 +83,7 @@ func handleRemoteRequest(clientConn net.Conn) {
 			portBuf := make([]byte, 2)
 			_, err = io.ReadFull(clientConn, portBuf)
 			port = strconv.Itoa(int(portBuf[0])<<8 | int(portBuf[1]))
-			server, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), 10*time.Second)
+			server, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), param.ConnectTime)
 			if err != nil {
 				log.Println(err)
 				return

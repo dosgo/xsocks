@@ -1,4 +1,4 @@
-package server
+package client
 
 import (
 	"bytes"
@@ -7,12 +7,10 @@ import (
 	"io"
 	"log"
 	"net"
-	"qproxy/client"
-	"qproxy/ipcheck"
-	"qproxy/param"
-	"qproxy/tunnel"
 	"runtime"
 	"strconv"
+	"xSocks/comm"
+	"xSocks/param"
 )
 
 
@@ -79,7 +77,7 @@ func handleLocalRequest(clientConn net.Conn) error {
 				_, err = io.ReadFull(clientConn, hostBuf)
 				ip := "8.8.8.8"; //随便一个国外的IP地址
 				//如果在列表無需解析，直接用遠程
-				_, ok := tunnel.PolluteDomainName.Load(string(hostBuf))
+				_, ok := PolluteDomainName.Load(string(hostBuf))
 				if (!ok) {
 					addr, err := net.ResolveIPAddr("ip", string(hostBuf))
 					if err == nil {
@@ -111,8 +109,8 @@ func handleLocalRequest(clientConn net.Conn) error {
 				return nil;
 			}
 			//如果是内网IP,或者是中国IP(如果被污染的IP一定返回的是国外IP地址ChinaDNS也是这个原理)
-			if ((!client.IsPublicIP(ipAddr) || ipcheck.IsChinaMainlandIP(ipAddr.String()))&&(runtime.GOOS!="windows"||!param.Tun2Socks)) {
-				server, err := net.Dial("tcp", net.JoinHostPort(ipAddr.String(), port))
+			if ((!comm.IsPublicIP(ipAddr) || comm.IsChinaMainlandIP(ipAddr.String()))&&(runtime.GOOS!="windows"||param.TunType!=1)) {
+				server, err := net.DialTimeout("tcp", net.JoinHostPort(ipAddr.String(), port),param.ConnectTime)
 				if err != nil {
 					fmt.Println(ipAddr.String(), connectHead[3], err)
 					return err
@@ -125,9 +123,9 @@ func handleLocalRequest(clientConn net.Conn) error {
 				return nil;
 			} else {
 				//保存記錄
-				tunnel.PolluteDomainName.Store(string(hostBuf), 1)
+				PolluteDomainName.Store(string(hostBuf), 1)
 				fmt.Printf("remote addr:%s port:%s\r\n", ipAddr.String(),port)
-				var stream,err=tunnel.NewTunnel();
+				var stream,err=NewTunnel();
 
 				if err != nil || stream == nil {
 					fmt.Printf("streamerror err:%v\r\n",err)
@@ -155,7 +153,7 @@ func handleLocalRequest(clientConn net.Conn) error {
 				socks5AuthBack := make([]byte, 2)
 				_, err = io.ReadFull(stream, socks5AuthBack)
 				if err != nil {
-					fmt.Printf("read remote error\r\n ")
+					fmt.Printf("read remote error err:%v\r\n ",err)
 					return err
 				}
 				go io.Copy(stream, clientConn)
@@ -172,7 +170,7 @@ func handleLocalRequest(clientConn net.Conn) error {
 /*发到远程udp处理*/
 func ToRemoteUdp(clientConn net.Conn,auth []byte,connectHead []byte) error{
 	//解析
-	var stream,err=tunnel.NewTunnel();
+	var stream,err=NewTunnel();
 	if(err!=nil){
 		return err;
 	}
@@ -241,6 +239,7 @@ func toLocalUdp(clientConn net.Conn )  error{
 	clientConn.Write(buffer.Bytes())
 
 	buf := make([]byte, 2048)
+	buf2 := make([]byte, 2048)
 	for {
 		n, udpAddr, err := udpListener.ReadFromUDP(buf[0:])
 		if err != nil {
@@ -274,12 +273,7 @@ func toLocalUdp(clientConn net.Conn )  error{
 					fmt.Println(err.Error())
 				}
 				conn.Write(b[10:])
-
-
-				buf2 := make([]byte, 2048)
 				rlen,_:=conn.Read(buf2);
-
-
 				sendBuf:=[]byte{};
 				sendBuf =append(sendBuf,b[0:10]...);//dns
 				sendBuf =append(sendBuf,buf2[0:rlen]...);//dns

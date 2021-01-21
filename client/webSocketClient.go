@@ -9,9 +9,9 @@ import (
 	"golang.org/x/net/websocket"
 	"io/ioutil"
 	"os"
-	"qproxy/param"
+	"xSocks/param"
 	"time"
-	"qproxy/comm"
+	"xSocks/comm"
 	"sync"
 )
 var wsYamuxDialer *WsYamux
