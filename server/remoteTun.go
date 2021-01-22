@@ -202,37 +202,53 @@ func udpForward(conn *gonet.Conn,ep tcpip.Endpoint) error{
 		fmt.Println(err.Error())
 		return err;
 	}
-	defer conn2.Close();
-	go func() {
-		buf := make([]byte, 65535)
-		for {
-			n, e := conn2.Read(buf)
-			if e != nil {
-				return ;
-			}
-			if _, e := conn.Write(buf[:n]); e != nil {
-				return ;
-			}
-		}
-	}()
-	buf := make([]byte, 65535)
-	for {
-		conn.SetDeadline(time.Now().Add(time.Second*120))
-		n, e := conn.Read(buf)
-		if e != nil {
-			return err;
-		}
-		conn2.SetDeadline(time.Now().Add(time.Second*120))
-		if _, e := conn2.Write(buf[:n]); e != nil {
-			return err;
-		}
-	}
+	pipe(conn,conn2)
 	return nil;
 }
 
+func pipe(conn1 net.Conn, conn2 net.Conn) {
+	defer conn1.Close()
+	defer conn2.Close()
+	chan1 := chanFromConn(conn1)
+	chan2 := chanFromConn(conn2)
+	for {
+		select {
+		case b1 := <-chan1:
+			if b1 == nil {
+				return
+			}
+			_, _ = conn2.Write(b1)
+		case b2 := <-chan2:
+			if b2 == nil {
+				return
+			}
+			_, _ = conn1.Write(b2)
+		}
+	}
+}
 
+func chanFromConn(conn net.Conn) chan []byte {
+	c := make(chan []byte)
+	go func() {
+		b := make([]byte, 65535)
+		for {
+			_ = conn.SetReadDeadline(time.Now().Add(time.Minute))
+			n, err := conn.Read(b)
+			if n > 0 {
+				res := make([]byte, n)
+				copy(res, b[:n])
+				c <- res
+			}
+			if err != nil {
+				c <- nil
+				break
+			}
+		}
+	}()
+	return c
+}
 
-/*udp 转发*/
+/*tcpForward*/
 func tcpForward(conn *gonet.Conn) error{
 	conn2, err := net.DialTimeout("tcp", conn.LocalAddr().String(),param.ConnectTime);
 	if err != nil {
