@@ -17,23 +17,29 @@ import (
 
 type ForwarderCall func(conn *gonet.Conn) error
 type UdpForwarderCall func(conn *gonet.Conn,ep tcpip.Endpoint) error
-func GenChannelLinkID(mtu int,tcpCallback ForwarderCall,udpCallback UdpForwarderCall)(*channel.Endpoint,*stack.Stack, error){
-	var nicID tcpip.NICID =1;
-	macAddr, err := net.ParseMAC("de:ad:be:ee:ee:ef")
-	if err != nil {
-		fmt.Printf(err.Error());
-		return nil,nil,err
-	}
+
+func NewNetStack() *stack.Stack{
 	//[]string{ipv4.ProtocolName, ipv6.ProtocolName, arp.ProtocolName}, []string{tcp.ProtocolName, udp.ProtocolName},
 	s := stack.New( stack.Options{NetworkProtocols:   []stack.NetworkProtocol{ipv4.NewProtocol()},
 		TransportProtocols: []stack.TransportProtocol{tcp.NewProtocol(), udp.NewProtocol()}})
 	//转发开关,必须
 	s.SetForwarding(true);
+	return s;
+}
+
+func GenChannelLinkID(s *stack.Stack,mtu int,tcpCallback ForwarderCall,udpCallback UdpForwarderCall)(*channel.Endpoint, error){
+	var nicID tcpip.NICID =1;
+	macAddr, err := net.ParseMAC("de:ad:be:ee:ee:ef")
+	if err != nil {
+		fmt.Printf(err.Error());
+		return nil,err
+	}
+
 	var linkID stack.LinkEndpoint
 	var channelLinkID= channel.New(256, uint32(mtu),   tcpip.LinkAddress(macAddr))
 	linkID=channelLinkID;
 	if err := s.CreateNIC(nicID, linkID); err != nil {
-		return nil,nil,errors.New(err.String())
+		return nil,errors.New(err.String())
 	}
 	//promiscuous mode 必须
 	s.SetPromiscuousMode(nicID, true)
@@ -65,7 +71,7 @@ func GenChannelLinkID(mtu int,tcpCallback ForwarderCall,udpCallback UdpForwarder
 	})
 	s.SetTransportProtocolHandler(udp.ProtocolNumber, udpForwarder.HandlePacket)
 
-	return channelLinkID,s,nil
+	return channelLinkID,nil
 }
 
 

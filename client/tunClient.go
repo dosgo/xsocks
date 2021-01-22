@@ -90,11 +90,12 @@ func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS
 
 func tunRecv(dev io.ReadWriteCloser ,mtu int) error{
 	if(param.TunSmartProxy) {
-		channelLinkID,_stack, err := comm.GenChannelLinkID(mtu, tcpForward, udpForward);
+		_stack:=comm.NewNetStack();
+		defer _stack.Close();
+		channelLinkID, err := comm.GenChannelLinkID(_stack,mtu, tcpForward, udpForward);
 		if (err != nil) {
 			return err;
 		}
-		defer _stack.Close();
 		// write tun
 		go func() {
 			var buffer = new(bytes.Buffer)
@@ -186,7 +187,7 @@ func (rd *TunStream) StreamSwapTun(dev comm.CommConn,mtu int){
 	}
 	go func() {
 		var packLenByte []byte = make([]byte, 2)
-		var bufByte []byte = make([]byte,mtu)
+		var bufByte []byte = make([]byte,mtu+80)
 		for {
 			n, err := dev.Read(bufByte[:])
 			if err != nil {
@@ -215,7 +216,7 @@ func (rd *TunStream) StreamSwapTun(dev comm.CommConn,mtu int){
 	}();
 
 	var packLenByte []byte = make([]byte, 2)
-	var bufByte []byte = make([]byte,mtu)
+	var bufByte []byte = make([]byte,mtu+80)
 	for {
 		_, err := io.ReadFull(rd.Tunnel, packLenByte)
 		if (err != nil) {

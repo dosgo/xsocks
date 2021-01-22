@@ -109,14 +109,15 @@ func StartTunDevice(tunDevice string,tunAddr string,tunMask string,tunGW string,
 	if(runtime.GOOS=="windows"){
 		routeEdit(tunGW,remoteAddr,dnsServers,oldGw);
 	}
-	ForwardTransportFromIo(dev,param.Mtu,);
+	ForwardTransportFromIo(dev,param.Mtu);
 }
 func ForwardTransportFromIo(dev io.ReadWriteCloser,mtu int) error {
-	channelLinkID,_stack,err:=comm.GenChannelLinkID(mtu,tcpForwarder,udpForwarder);
+	_stack:=comm.NewNetStack();
+	defer _stack.Close();
+	channelLinkID,err:=comm.GenChannelLinkID(_stack,mtu,tcpForwarder,udpForwarder);
 	if(err!=nil){
 		return err;
 	}
-	defer _stack.Close();
 	// write tun
 	go func() {
 		var buffer =new(bytes.Buffer)
@@ -137,7 +138,7 @@ func ForwardTransportFromIo(dev io.ReadWriteCloser,mtu int) error {
 
 
 	// read tun data
-	var buf=make([]byte,mtu)
+	var buf=make([]byte,mtu+80)
 	for {
 		n, e := dev.Read(buf[:])
 		if e != nil {

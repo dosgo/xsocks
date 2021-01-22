@@ -8,6 +8,7 @@ import (
 	"github.com/google/netstack/tcpip/adapters/gonet"
 	"github.com/google/netstack/tcpip/buffer"
 	"github.com/google/netstack/tcpip/header"
+	"github.com/google/netstack/tcpip/stack"
 	"io"
 	"log"
 	"net"
@@ -22,18 +23,20 @@ func StartTun(address string) error {
 	if err != nil {
 		log.Panic(err)
 	}
+	stack:=comm.NewNetStack();
+	defer  stack.Close();
 	for {
 		client, err := l.Accept()
 		if err != nil {
 			log.Panic(err)
 		}
-		go newTun(client)
+		go newTun(stack,client)
 	}
 }
 
 
 
-func newTun(client comm.CommConn) error{
+func newTun(stack *stack.Stack,client comm.CommConn) error{
 	var mtuByte []byte = make([]byte, 2)
 	//read Mtu
 	_, err := io.ReadFull(client, mtuByte)
@@ -45,12 +48,11 @@ func newTun(client comm.CommConn) error{
 	if(mtu<1){
 		mtu=1024;
 	}
-	channelLinkID,_stack,err:=comm.GenChannelLinkID(int(mtu),tcpForward,udpForward);
+	channelLinkID,err:=comm.GenChannelLinkID(stack,int(mtu),tcpForward,udpForward);
 	if(err!=nil){
 		log.Printf("err:%v\r\n")
 		return err;
 	}
-	defer _stack.Close();
 	// write tun
 	go func() {
 		var buffer =new(bytes.Buffer)
@@ -73,7 +75,8 @@ func newTun(client comm.CommConn) error{
 	}()
 
 	// read tun data
-	var buf=make([]byte,mtu)
+	var buflen=mtu+80;
+	var buf=make([]byte,buflen)
 	var packLenByte []byte = make([]byte, 2)
 	for {
 		_, err := io.ReadFull(client, packLenByte)
@@ -83,7 +86,7 @@ func newTun(client comm.CommConn) error{
 		}
 		packLen := binary.LittleEndian.Uint16(packLenByte)
 		//null
-		if(packLen<1) {
+		if(packLen<1||packLen>buflen) {
 			continue;
 		}
 		n, err:= io.ReadFull(client,buf[:int(packLen)])
