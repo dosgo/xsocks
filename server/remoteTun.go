@@ -8,7 +8,6 @@ import (
 	"github.com/google/netstack/tcpip/adapters/gonet"
 	"github.com/google/netstack/tcpip/buffer"
 	"github.com/google/netstack/tcpip/header"
-	"github.com/google/netstack/tcpip/stack"
 	"io"
 	"log"
 	"net"
@@ -23,20 +22,17 @@ func StartTun(address string) error {
 	if err != nil {
 		log.Panic(err)
 	}
-	stack:=comm.NewNetStack();
-	defer  stack.Close();
 	for {
 		client, err := l.Accept()
 		if err != nil {
 			log.Panic(err)
 		}
-		go newTun(stack,client)
+		go newTun(client)
 	}
 }
 
 
-
-func newTun(stack *stack.Stack,client comm.CommConn) error{
+func newTun(client comm.CommConn) error{
 	var mtuByte []byte = make([]byte, 2)
 	//read Mtu
 	_, err := io.ReadFull(client, mtuByte)
@@ -48,11 +44,13 @@ func newTun(stack *stack.Stack,client comm.CommConn) error{
 	if(mtu<1){
 		mtu=1024;
 	}
-	channelLinkID,err:=comm.GenChannelLinkID(stack,int(mtu),tcpForward,udpForward);
+	stack,channelLinkID,err:=comm.GenChannelLinkID(int(mtu),tcpForward,udpForward);
 	if(err!=nil){
-		log.Printf("err:%v\r\n")
+		log.Printf("err:%v\r\n",err)
 		return err;
 	}
+	defer stack.CleanupEndpoints()
+	defer stack.Close();
 	// write tun
 	go func() {
 		var buffer =new(bytes.Buffer)
@@ -71,7 +69,7 @@ func newTun(stack *stack.Stack,client comm.CommConn) error{
 					break;
 			}
 		}
-		fmt.Printf("stack recv exit \r\n");
+		fmt.Printf("channelLinkID recv exit \r\n");
 	}()
 
 	// read tun data
@@ -103,8 +101,6 @@ func newTun(stack *stack.Stack,client comm.CommConn) error{
 	}
 	return nil
 }
-
-
 
 
 /*udp 转发*/

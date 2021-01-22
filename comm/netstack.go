@@ -1,6 +1,7 @@
 package comm
 
 import (
+	"errors"
 	"fmt"
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/adapters/gonet"
@@ -10,7 +11,6 @@ import (
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
 	"github.com/google/netstack/waiter"
-	"errors"
 	"net"
 	"time"
 )
@@ -18,32 +18,31 @@ import (
 type ForwarderCall func(conn *gonet.Conn) error
 type UdpForwarderCall func(conn *gonet.Conn,ep tcpip.Endpoint) error
 
-func NewNetStack() *stack.Stack{
-	//[]string{ipv4.ProtocolName, ipv6.ProtocolName, arp.ProtocolName}, []string{tcp.ProtocolName, udp.ProtocolName},
-	s := stack.New( stack.Options{NetworkProtocols:   []stack.NetworkProtocol{ipv4.NewProtocol()},
+func GenChannelLinkID(mtu int,tcpCallback ForwarderCall,udpCallback UdpForwarderCall)(*stack.Stack,*channel.Endpoint, error){
+	_netStack := stack.New( stack.Options{NetworkProtocols:   []stack.NetworkProtocol{ipv4.NewProtocol()},
 		TransportProtocols: []stack.TransportProtocol{tcp.NewProtocol(), udp.NewProtocol()}})
 	//转发开关,必须
-	s.SetForwarding(true);
-	return s;
-}
-
-func GenChannelLinkID(s *stack.Stack,mtu int,tcpCallback ForwarderCall,udpCallback UdpForwarderCall)(*channel.Endpoint, error){
-	var nicID tcpip.NICID =1;
+	_netStack.SetForwarding(true);
+	var nicid tcpip.NICID =1;
 	macAddr, err := net.ParseMAC("de:ad:be:ee:ee:ef")
 	if err != nil {
 		fmt.Printf(err.Error());
-		return nil,err
+		_netStack.Close();
+		return _netStack,nil,err
 	}
 
 	var linkID stack.LinkEndpoint
-	var channelLinkID= channel.New(256, uint32(mtu),   tcpip.LinkAddress(macAddr))
+	var channelLinkID= channel.New(1024, uint32(mtu),   tcpip.LinkAddress(macAddr))
 	linkID=channelLinkID;
-	if err := s.CreateNIC(nicID, linkID); err != nil {
-		return nil,errors.New(err.String())
+	if err := _netStack.CreateNIC(nicid, linkID); err != nil {
+		_netStack.Close();
+		return _netStack,nil,errors.New(err.String())
 	}
 	//promiscuous mode 必须
-	s.SetPromiscuousMode(nicID, true)
-	tcpForwarder := tcp.NewForwarder(s, 0, 256, func(r *tcp.ForwarderRequest) {
+	_netStack.SetPromiscuousMode(nicid, true)
+	_netStack.SetSpoofing(nicid, true);
+
+	tcpForwarder := tcp.NewForwarder(_netStack, 0, 512, func(r *tcp.ForwarderRequest) {
 		var wq waiter.Queue
 		ep, err := r.CreateEndpoint(&wq)
 		if err != nil {
@@ -60,8 +59,9 @@ func GenChannelLinkID(s *stack.Stack,mtu int,tcpCallback ForwarderCall,udpCallba
 		defer conn.Close();
 		tcpCallback(conn);
 	})
-	s.SetTransportProtocolHandler(tcp.ProtocolNumber, tcpForwarder.HandlePacket)
-	udpForwarder := udp.NewForwarder(s, func(r *udp.ForwarderRequest) {
+	_netStack.SetTransportProtocolHandler(tcp.ProtocolNumber, tcpForwarder.HandlePacket)
+
+	udpForwarder := udp.NewForwarder( _netStack, func(r *udp.ForwarderRequest) {
 		var wq waiter.Queue
 		ep, err := r.CreateEndpoint(&wq)
 		if err != nil {
@@ -69,9 +69,9 @@ func GenChannelLinkID(s *stack.Stack,mtu int,tcpCallback ForwarderCall,udpCallba
 		}
 		go udpCallback(gonet.NewConn(&wq, ep),ep);
 	})
-	s.SetTransportProtocolHandler(udp.ProtocolNumber, udpForwarder.HandlePacket)
+	_netStack.SetTransportProtocolHandler(udp.ProtocolNumber, udpForwarder.HandlePacket)
 
-	return channelLinkID,nil
+	return _netStack,channelLinkID,nil
 }
 
 

@@ -112,12 +112,11 @@ func StartTunDevice(tunDevice string,tunAddr string,tunMask string,tunGW string,
 	ForwardTransportFromIo(dev,param.Mtu);
 }
 func ForwardTransportFromIo(dev io.ReadWriteCloser,mtu int) error {
-	_stack:=comm.NewNetStack();
-	defer _stack.Close();
-	channelLinkID,err:=comm.GenChannelLinkID(_stack,mtu,tcpForwarder,udpForwarder);
+	_stack,channelLinkID,err:=comm.GenChannelLinkID(mtu,tcpForwarder,udpForwarder);
 	if(err!=nil){
 		return err;
 	}
+	defer _stack.Close();
 	// write tun
 	go func() {
 		var buffer =new(bytes.Buffer)

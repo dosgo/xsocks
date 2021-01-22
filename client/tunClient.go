@@ -15,8 +15,8 @@ import (
 	"net/url"
 	"os"
 	"runtime"
-	"sync"
 	"strings"
+	"sync"
 	"time"
 	"xSocks/comm"
 	"xSocks/param"
@@ -44,6 +44,7 @@ func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS
 	var oldGw=comm.GetGateway();
 
 	if(len(param.UnixSockTun)>0) {
+		os.Remove(param.UnixSockTun)
 		addr, err := net.ResolveUnixAddr("unixpacket", param.UnixSockTun)
 		if err != nil {
 			return err;
@@ -51,12 +52,12 @@ func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS
 		lis, err := net.ListenUnix("unixpacket", addr)
 		if err != nil { //如果监听失败，一般是文件已存在，需要删除它
 			log.Println("UNIX Domain Socket 创 建失败，正在尝试重新创建 -> ", err)
-			os.Remove(param.UnixSockTun)
 			return err;
 		}
 		defer lis.Close() //虽然本次操作不会执行， 不过还是加上比较好
 		conn, err := lis.Accept() //开始接 受数据
 		defer conn.Close()
+		defer os.Remove(param.UnixSockTun)
 		if err != nil {                      //如果监听失败，一般是文件已存在，需要删除它
 			return err;
 		}
@@ -90,12 +91,11 @@ func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS
 
 func tunRecv(dev io.ReadWriteCloser ,mtu int) error{
 	if(param.TunSmartProxy) {
-		_stack:=comm.NewNetStack();
-		defer _stack.Close();
-		channelLinkID, err := comm.GenChannelLinkID(_stack,mtu, tcpForward, udpForward);
+		_stack,channelLinkID, err := comm.GenChannelLinkID(mtu, tcpForward, udpForward);
 		if (err != nil) {
 			return err;
 		}
+		defer _stack.Close();
 		// write tun
 		go func() {
 			var buffer = new(bytes.Buffer)
@@ -201,16 +201,20 @@ func (rd *TunStream) StreamSwapTun(dev comm.CommConn,mtu int){
 				tunnel,err:=rd.Connect(uniqueId,mtu);
 				if(err==nil){
 					rd.Tunnel=tunnel;
+				}else {
+					time.Sleep(10 * time.Second);
+					fmt.Printf("re TunStream 1 e:%v\r\n", err)
 				}
-				fmt.Printf("re TunStream 1 e:%v\r\n", err)
 			}
 			_,err=rd.Tunnel.Write(bufByte[:n])
 			if (err != nil) {
 				tunnel,err:=rd.Connect(uniqueId,mtu);
 				if(err==nil){
 					rd.Tunnel=tunnel;
+				}else {
+					time.Sleep(10 * time.Second);
+					fmt.Printf("re TunStream 2 e:%v\r\n", err)
 				}
-				fmt.Printf("re TunStream 2 e:%v\r\n", err)
 			}
 		}
 	}();
@@ -223,8 +227,10 @@ func (rd *TunStream) StreamSwapTun(dev comm.CommConn,mtu int){
 			tunnel,err:=rd.Connect(uniqueId,mtu);
 			if(err==nil){
 				rd.Tunnel=tunnel;
+			}else {
+				time.Sleep(10 * time.Second);
+				fmt.Printf("re TunStream 3 e:%v\r\n", err)
 			}
-			fmt.Printf("re TunStream 3 e:%v\r\n", err)
 		}
 		packLen := binary.LittleEndian.Uint16(packLenByte)
 		_, err = io.ReadFull(rd.Tunnel, bufByte[:int(packLen)])
@@ -232,8 +238,10 @@ func (rd *TunStream) StreamSwapTun(dev comm.CommConn,mtu int){
 			tunnel,err:=rd.Connect(uniqueId,mtu);
 			if(err==nil){
 				rd.Tunnel=tunnel;
+			}else {
+				time.Sleep(10 * time.Second);
+				fmt.Printf("re TunStream 4 e:%v\r\n", err)
 			}
-			fmt.Printf("re TunStream 4 e:%v\r\n", err)
 		}
 		_,err=dev.Write(bufByte[:int(packLen)])
 		if (err != nil) {
