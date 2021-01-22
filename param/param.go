@@ -33,4 +33,5 @@ var Password string
 var CertFile string;
 var KeyFile string;
 var TunPort string;
+var LocalTunSock string;
 

@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
 	"xSocks/comm"
 	"xSocks/param"
 	"xSocks/server"
@@ -14,7 +15,6 @@ import (
 */
 
 func main() {
-
 
 	flag.StringVar(&param.Sock5Port, "sock5Port", "", "local socks5 port")
 	flag.StringVar(&param.TunPort, "TunPort", "", "local tun port")
@@ -35,6 +35,10 @@ func main() {
 	if(param.TunPort==""){
 		param.TunPort,_= comm.GetFreePort();
 	}
+	//生成临时目录
+	param.LocalTunSock=os.TempDir()+"/"+comm.UniqueId(8)
+
+
 	fmt.Printf("verison:%s\r\n",param.Version)
 	fmt.Printf("socks5 server Port:%s\r\n",param.Sock5Port)
 	fmt.Printf("tun  Port:%s\r\n",param.TunPort)
@@ -58,7 +62,7 @@ func main() {
 	go server.StartWebSocket(publicIp+":"+param.WebPort);
 	go server.StartSctp(publicIp+":"+param.SctpPort)
 	go server.StartKcp(publicIp+":"+param.KcpPort);
-	go server.StartTun("127.0.0.1:"+param.TunPort); //local tun server
+	go server.StartTunTcp(); //local tun server
 
 	server.StartQuic(publicIp+":"+param.QuicPort);
 
