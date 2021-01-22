@@ -12,6 +12,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strings"
 	"time"
 	"xSocks/comm"
 	"xSocks/param"
@@ -188,7 +189,15 @@ func newTunTcp(client comm.CommConn) error{
 func udpForward(conn *gonet.Conn,ep tcpip.Endpoint) error{
 	defer conn.Close();
 	defer ep.Close();
-	conn2, err := net.Dial("udp", conn.LocalAddr().String());
+	var remoteAddr="";
+	//dns 8.8.8.8
+	if(strings.HasSuffix(conn.LocalAddr().String(),":53")){
+		fmt.Printf("udpForward dnsAddr:%s",conn.LocalAddr().String())
+		remoteAddr="8.8.8.8:53"
+	}else{
+		remoteAddr=conn.LocalAddr().String();
+	}
+	conn2, err := net.Dial("udp",remoteAddr);
 	if err != nil {
 		fmt.Println(err.Error())
 		return err;
