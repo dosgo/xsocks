@@ -47,11 +47,6 @@ func main() {
 	fmt.Printf("webSocket Port:%s\r\n",param.WebPort)
 	fmt.Printf("passWord:%s\r\n",param.Password)
 
-
-	//restart
-	comm.RestartRun(_start);
-}
-func _start(){
 	var publicIp="0.0.0.0";
 	_ip,err:= server.GetPublicIP();
 	if(err==nil){
