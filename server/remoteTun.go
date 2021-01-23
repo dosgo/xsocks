@@ -125,7 +125,7 @@ func udpForward(conn *gonet.Conn,ep tcpip.Endpoint) error{
 	}
 	conn2, err := net.Dial("udp",remoteAddr);
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println("udpForward"+conn.LocalAddr().String()+ err.Error())
 		return err;
 	}
 	comm.UdpPipe(conn,conn2)
@@ -138,7 +138,7 @@ func udpForward(conn *gonet.Conn,ep tcpip.Endpoint) error{
 func tcpForward(conn *gonet.Conn) error{
 	conn2, err := net.DialTimeout("tcp", conn.LocalAddr().String(),param.ConnectTime);
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println("tcpForward"+conn.LocalAddr().String()+ err.Error())
 		return err;
 	}
 	comm.TcpPipe(conn,conn2,time.Minute)

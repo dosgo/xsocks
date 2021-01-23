@@ -49,14 +49,14 @@ func GenChannelLinkID(mtu int,tcpCallback ForwarderCall,udpCallback UdpForwarder
 		var wq waiter.Queue
 		ep, err := r.CreateEndpoint(&wq)
 		if err != nil {
-			fmt.Printf(err.String());
+			fmt.Printf("CreateEndpoint"+err.String()+"\r\n");
 			r.Complete(true)
 			return
 		}
 		defer ep.Close();
 		r.Complete(false)
 		if err := setKeepalive(ep); err != nil {
-			fmt.Printf(err.Error());
+			fmt.Printf("setKeepalive"+err.Error()+"\r\n");
 		}
 		conn:=gonet.NewConn(&wq, ep)
 		defer conn.Close();

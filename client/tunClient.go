@@ -135,8 +135,7 @@ func tunRecv(dev io.ReadWriteCloser ,mtu int) error{
 			}
 		}
 	}else{
-		tunStream:=TunStream{}
-		tunStream.StreamSwapTun(dev,mtu)
+		StreamSwapTun(dev,mtu)
 	}
 	return nil
 }
@@ -145,11 +144,24 @@ func tunRecv(dev io.ReadWriteCloser ,mtu int) error{
 
 type TunStream struct {
 	Tunnel comm.CommConn
+	UniqueId string
+	Mtu int;
 	sync.Mutex
 }
+func (rd *TunStream) GetTunnel()(comm.CommConn){
+	rd.Lock();
+	defer rd.Unlock();
+	return rd.Tunnel;
+}
+func (rd *TunStream) PutTunnel(tunnel comm.CommConn){
+	rd.Lock();
+	defer rd.Unlock();
+	rd.Tunnel=tunnel;
+}
+
 
 /*send cmd  and UniqueId  and mtu*/
-func (rd *TunStream) Connect(uniqueId string,mtu int)(comm.CommConn,error){
+func  ConnectTun(uniqueId string,mtu int)(comm.CommConn,error){
 	var err error;
 	tunnel,err:=NewTunnel();
 	if err != nil {
@@ -170,20 +182,18 @@ func (rd *TunStream) Connect(uniqueId string,mtu int)(comm.CommConn,error){
 }
 
 /*  */
-func (rd *TunStream) StreamSwapTun(dev comm.CommConn,mtu int){
-	rd.Lock();
-	defer  rd.Unlock()
-	var err error;
-	//uniqueId
-	var uniqueId=comm.UniqueId(8);
-	if(rd.Tunnel==nil) {
-		for{
-			rd.Tunnel,err=rd.Connect(uniqueId,mtu);
-			if(err==nil){
-				break;
-			}else{
-				time.Sleep(10 * time.Second);
-			}
+func  StreamSwapTun(dev comm.CommConn,mtu int){
+	tunStream:=TunStream{}
+	tunStream.UniqueId=comm.UniqueId(8)
+	tunStream.Mtu=mtu;
+
+	for{
+		_tunnel,err:=ConnectTun(tunStream.UniqueId,tunStream.Mtu);
+		if(err==nil){
+			tunStream.PutTunnel(_tunnel)
+			break;
+		}else{
+			time.Sleep(10 * time.Second);
 		}
 	}
 	go func() {
@@ -201,15 +211,11 @@ func (rd *TunStream) StreamSwapTun(dev comm.CommConn,mtu int){
 			buffer.Reset()
 			buffer.Write(packLenByte)
 			buffer.Write(bufByte[:n])
-			_,err=rd.Tunnel.Write(buffer.Bytes())
+			tunnel:=tunStream.GetTunnel();
+			_,err=tunnel.Write(buffer.Bytes())
 			if (err != nil) {
-				tunnel,err:=rd.Connect(uniqueId,mtu);
-				if(err==nil){
-					rd.Tunnel=tunnel;
-				}else {
-					time.Sleep(10 * time.Second);
-					fmt.Printf("re TunStream 2 e:%v\r\n", err)
-				}
+				time.Sleep(10 * time.Second);
+				fmt.Printf("re TunStream 2 e:%v\r\n", err)
 			}
 		}
 	}();
@@ -217,11 +223,12 @@ func (rd *TunStream) StreamSwapTun(dev comm.CommConn,mtu int){
 	var packLenByte []byte = make([]byte, 2)
 	var bufByte []byte = make([]byte,mtu+80)
 	for {
-		_, err := io.ReadFull(rd.Tunnel, packLenByte)
+		tunnel:=tunStream.GetTunnel();
+		_, err := io.ReadFull(tunnel, packLenByte)
 		if (err != nil) {
-			tunnel,err:=rd.Connect(uniqueId,mtu);
+			tunnel,err:=ConnectTun(tunStream.UniqueId,tunStream.Mtu);
 			if(err==nil){
-				rd.Tunnel=tunnel;
+				tunStream.PutTunnel(tunnel)
 			}else {
 				time.Sleep(10 * time.Second);
 				fmt.Printf("re TunStream 3 e:%v\r\n", err)
@@ -231,11 +238,11 @@ func (rd *TunStream) StreamSwapTun(dev comm.CommConn,mtu int){
 		if(int(packLen)>len(bufByte)){
 			continue;
 		}
-		_, err = io.ReadFull(rd.Tunnel, bufByte[:int(packLen)])
+		_, err = io.ReadFull(tunnel, bufByte[:int(packLen)])
 		if (err != nil) {
-			tunnel,err:=rd.Connect(uniqueId,mtu);
+			tunnel,err:=ConnectTun(tunStream.UniqueId,tunStream.Mtu);
 			if(err==nil){
-				rd.Tunnel=tunnel;
+				tunStream.PutTunnel(tunnel)
 			}else {
 				time.Sleep(10 * time.Second);
 				fmt.Printf("re TunStream 4 e:%v\r\n", err)
