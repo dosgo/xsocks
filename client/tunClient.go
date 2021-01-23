@@ -102,12 +102,12 @@ func tunRecv(dev io.ReadWriteCloser ,mtu int) error{
 			for {
 				select {
 				case pkt := <-channelLinkID.C:
+					buffer.Reset()
 					buffer.Write(pkt.Pkt.Header.View())
 					buffer.Write(pkt.Pkt.Data.ToView())
 					//tmpBuf:=append(pkt.Pkt.Header.View(),pkt.Pkt.Data.ToView()...)
 					if (buffer.Len() > 0) {
 						dev.Write(buffer.Bytes())
-						buffer.Reset()
 					}
 					break;
 				}
@@ -181,13 +181,15 @@ func (rd *TunStream) StreamSwapTun(dev comm.CommConn,mtu int){
 			rd.Tunnel,err=rd.Connect(uniqueId,mtu);
 			if(err==nil){
 				break;
+			}else{
+				time.Sleep(10 * time.Second);
 			}
-			time.Sleep(30*time.Second);
 		}
 	}
 	go func() {
 		var packLenByte []byte = make([]byte, 2)
 		var bufByte []byte = make([]byte,mtu+80)
+		var buffer bytes.Buffer
 		for {
 			n, err := dev.Read(bufByte[:])
 			if err != nil {
@@ -196,17 +198,10 @@ func (rd *TunStream) StreamSwapTun(dev comm.CommConn,mtu int){
 			}
 			//fmt.Printf("dev read len:%d\r\n",n);
 			binary.LittleEndian.PutUint16(packLenByte, uint16(n))
-			_,err=rd.Tunnel.Write(packLenByte)
-			if (err != nil) {
-				tunnel,err:=rd.Connect(uniqueId,mtu);
-				if(err==nil){
-					rd.Tunnel=tunnel;
-				}else {
-					time.Sleep(10 * time.Second);
-					fmt.Printf("re TunStream 1 e:%v\r\n", err)
-				}
-			}
-			_,err=rd.Tunnel.Write(bufByte[:n])
+			buffer.Reset()
+			buffer.Write(packLenByte)
+			buffer.Write(bufByte[:n])
+			_,err=rd.Tunnel.Write(buffer.Bytes())
 			if (err != nil) {
 				tunnel,err:=rd.Connect(uniqueId,mtu);
 				if(err==nil){
@@ -261,8 +256,7 @@ func udpForward(conn *gonet.Conn, ep tcpip.Endpoint) error{
 		return err;
 	}
 	defer conn2.Close();
-	go io.Copy(conn,conn2)
-	io.Copy(conn2,conn)
+	comm.UdpPipe(conn,conn2);
 	return nil;
 }
 
@@ -273,8 +267,6 @@ func tcpForward(conn *gonet.Conn) error{
 		fmt.Println(err.Error())
 		return err;
 	}
-	defer conn2.Close();
-	go io.Copy(conn,conn2)
-	io.Copy(conn2,conn)
+	comm.TcpPipe(conn,conn2,time.Minute)
 	return nil;
 }

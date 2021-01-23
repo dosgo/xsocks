@@ -9,8 +9,8 @@ import (
 	"net"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
+	"xSocks/comm"
 	"xSocks/param"
 )
 
@@ -92,9 +92,7 @@ func handleRemoteRequest(clientConn net.Conn) {
 			clientConn.Write([]byte{0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}) //响应客户端连接成功
 			fmt.Printf("to remote\r\n")
 			//进行转发
-			go io.Copy(server, clientConn)
-			io.Copy(clientConn, server)
-			//CopyLoopTimeout();
+			comm.TcpPipe(server,clientConn,time.Minute)
 		}
 		//udp
 		if(connectHead[1]==0x03) {
@@ -202,44 +200,5 @@ func remoteUdp(client net.Conn)  error{
 		}
 	}
 
-
-
 }
 
-
-type timeoutConn struct {
-	c net.Conn
-	t time.Duration
-}
-
-func (tc timeoutConn) Read(buf []byte) (int, error) {
-	tc.c.SetDeadline(time.Now().Add(tc.t))
-	return tc.c.Read(buf)
-}
-
-func (tc timeoutConn) Write(buf []byte) (int, error) {
-	tc.c.SetDeadline(time.Now().Add(tc.t))
-	return tc.c.Write(buf)
-}
-
-func (tc timeoutConn) Close() {
-	tc.c.Close()
-}
-
-func CopyLoopTimeout(c1 net.Conn, c2 net.Conn, timeout time.Duration) {
-	tc1 := timeoutConn{c: c1, t: timeout}
-	tc2 := timeoutConn{c: c2, t: timeout}
-	var wg sync.WaitGroup
-	copyer := func(dst timeoutConn, src timeoutConn) {
-		defer wg.Done()
-		_, e := io.Copy(dst, src)
-		dst.Close()
-		if e != nil {
-			src.Close()
-		}
-	}
-	wg.Add(2)
-	go copyer(tc1, tc2)
-	go copyer(tc2, tc1)
-	wg.Wait()
-}

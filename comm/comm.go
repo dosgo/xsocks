@@ -117,3 +117,55 @@ func UniqueId(_len int) string {
 	return hex.EncodeToString(h.Sum(nil))[:_len]
 }
 
+/*udp swap*/
+func UdpPipe(src net.Conn, dst net.Conn) {
+	defer src.Close()
+	defer dst.Close()
+	chan1 := chanFromConn(src)
+	chan2 := chanFromConn(dst)
+	for {
+		select {
+		case b1 := <-chan1:
+			if b1 == nil {
+				return
+			}
+			_, _ = dst.Write(b1)
+		case b2 := <-chan2:
+			if b2 == nil {
+				return
+			}
+			_, _ = src.Write(b2)
+		}
+	}
+}
+
+/*tcp swap*/
+func TcpPipe(src net.Conn, dst net.Conn,duration time.Duration) {
+	defer src.Close()
+	defer dst.Close()
+	srcT:=TimeoutConn{src,duration}
+	dstT:=TimeoutConn{dst,duration}
+	go io.Copy(srcT, dstT)
+	io.Copy(dstT, srcT)
+}
+
+func chanFromConn(conn net.Conn) chan []byte {
+	c := make(chan []byte)
+	go func() {
+		b := make([]byte, 65535)
+		for {
+			_ = conn.SetReadDeadline(time.Now().Add(time.Minute))
+			n, err := conn.Read(b)
+			if n > 0 {
+				res := make([]byte, n)
+				copy(res, b[:n])
+				c <- res
+			}
+			if err != nil {
+				c <- nil
+				break
+			}
+		}
+	}()
+	return c
+}

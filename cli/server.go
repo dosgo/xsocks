@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"xSocks/comm"
 	"xSocks/param"
@@ -51,6 +52,10 @@ func main() {
 	if(err==nil){
 		publicIp=_ip;
 	}
+	if(comm.IsPublicIP(net.ParseIP(publicIp))&&!comm.IsChinaMainlandIP(publicIp)){
+		param.SafeDns="8.8.4.4"
+	}
+
 
 	fmt.Printf("client run: ./client   -serverAddr \"quic://"+publicIp+":"+param.QuicPort+"\" \r\n")
 	fmt.Printf("client run: ./client   -serverAddr \"wss://"+publicIp+":"+param.WebPort+"\" -caFile xx_ca.pem\r\n ")

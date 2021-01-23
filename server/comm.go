@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -66,7 +65,6 @@ func proxy(conn comm.CommConn){
 			break;
 		//to tun
 		case 0x03:
-			//toTunUnixSocket(conn);
 			toTunTcp(conn)
 			break;
 	}
@@ -84,23 +82,6 @@ func toTunTcp(conn comm.CommConn){
 	uniqueId:=string(uniqueIdByte)
 	fmt.Printf("uniqueId:%s\r\n",uniqueId)
 	var sConn net.Conn;
-	/*
-	if v,ok:=uniqueIdTun.Load(uniqueId);ok{
-		//connect tun
-		sConn,_ = v.(net.Conn)
-		var mtuByte []byte = make([]byte, 2)
-		//read Mtu
-		io.ReadFull(conn, mtuByte)
-	}else {
-		//连接tun
-		sConn, err = net.DialTimeout("tcp", "127.0.0.1:"+param.TunPort, param.ConnectTime)
-		if (err != nil) {
-			log.Printf("err:%v\r\n", param.TunPort)
-			return;
-		}
-		//save
-		uniqueIdTun.Store(uniqueId,sConn)
-	}*/
 	//连接tun
 	sConn, err = net.DialTimeout("tcp", "127.0.0.1:"+param.TunPort, param.ConnectTime)
 	if (err != nil) {
@@ -108,90 +89,18 @@ func toTunTcp(conn comm.CommConn){
 		return;
 	}
 
-	TimeoutSConn:=comm.TimeoutConn{sConn,300*time.Second}
 	switch netConn :=conn.(type) {
 		case net.Conn:
-			TimeoutConn:=comm.TimeoutConn{netConn,300*time.Second}
-			go io.Copy(TimeoutSConn, TimeoutConn)
-			io.Copy(TimeoutConn, TimeoutSConn)
+			comm.TcpPipe(netConn,sConn,time.Minute*5)
 			break;
 		default:
+			TimeoutSConn:=comm.TimeoutConn{sConn,time.Minute*5}
 			go io.Copy(TimeoutSConn, conn)
 			io.Copy(conn, TimeoutSConn)
 			break;
 	}
 }
 
-/*to tun 处理*/
-func toTunUnixSocket(conn comm.CommConn){
-	uniqueIdByte := make([]byte,8)
-	_, err := io.ReadFull(conn, uniqueIdByte)
-	if(err!=nil){
-		log.Printf("err:%v\r\n",param.TunPort)
-		return ;
-	}
-
-	var mtuByte []byte = make([]byte, 2)
-	//read Mtu
-	io.ReadFull(conn, mtuByte)
-	mtu := binary.LittleEndian.Uint16(mtuByte)
-
-	uniqueId:=string(uniqueIdByte)
-	var sConn net.Conn;
-	if v,ok:=uniqueIdTun.Load(uniqueId);ok{
-		//connect tun
-		sConn,_ = v.(net.Conn)
-	}else {
-		sConn, err = net.Dial("unixpacket", param.LocalTunSock)
-		if (err != nil) {
-			log.Printf("err:%v\r\n", param.TunPort)
-			return;
-		}
-		sConn.Write(mtuByte)
-		//save
-		uniqueIdTun.Store(uniqueId,sConn)
-	}
-
-	go func(mtu uint16) {
-		var buflen=mtu+80;
-		var buf=make([]byte,buflen)
-		var packLenByte []byte = make([]byte, 2)
-		for {
-			n, err := sConn.Read(buf)
-			if (err != nil) {
-				log.Printf("err:%v\r\n",err)
-				return ;
-			}
-			binary.LittleEndian.PutUint16(packLenByte,uint16(n))
-			conn.Write(packLenByte)
-			conn.Write(buf[:n])
-		}
-	}(mtu);
-
-	// read tun data
-	var buflen=mtu+80;
-	var buf=make([]byte,buflen)
-	var packLenByte []byte = make([]byte, 2)
-
-	for {
-		_, err := io.ReadFull(conn, packLenByte)
-		if (err != nil) {
-			log.Printf("err:%v\r\n",err)
-			return ;
-		}
-		packLen := binary.LittleEndian.Uint16(packLenByte)
-		//null
-		if(packLen<1||packLen>buflen) {
-			continue;
-		}
-		n, err:= io.ReadFull(conn,buf[:int(packLen)])
-		if (err != nil) {
-			log.Printf("err:%v\r\n",err)
-			return ;
-		}
-		sConn.Write(buf[:n])
-	}
-}
 
 
 /*dns解析*/

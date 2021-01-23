@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"time"
 	"xSocks/comm"
 
 	"github.com/google/netstack/tcpip"
@@ -123,12 +124,12 @@ func ForwardTransportFromIo(dev io.ReadWriteCloser,mtu int) error {
 		for {
 			select {
 			case pkt := <-channelLinkID.C:
+				buffer.Reset()
 				buffer.Write(pkt.Pkt.Header.View())
 				buffer.Write(pkt.Pkt.Data.ToView())
 				//tmpBuf:=append(pkt.Pkt.Header.View(),pkt.Pkt.Data.ToView()...)
 				if(buffer.Len()>0) {
 					dev.Write(buffer.Bytes())
-					buffer.Reset()
 				}
 				break;
 			}
@@ -161,15 +162,14 @@ func tcpForwarder(conn *gonet.Conn)error{
 		dnsReq(conn,"tcp");
 		return  nil;
 	}
-	socksConn,err1:= net.Dial("tcp",param.Sock5Addr)
+	socksConn,err1:= net.DialTimeout("tcp",param.Sock5Addr,time.Second*15)
 	if err1 != nil {
 		log.Println(err1)
 		return nil
 	}
 	defer socksConn.Close();
 	if(socksCmd(socksConn,1,remoteAddr)==nil) {
-		go io.Copy(conn, socksConn)
-		io.Copy(socksConn, conn)
+		comm.TcpPipe(conn,socksConn,time.Minute)
 	}
 	return nil
 }
@@ -187,47 +187,21 @@ func udpForwarder(conn *gonet.Conn, ep tcpip.Endpoint)error{
 /*to dns*/
 func dnsReq(conn *gonet.Conn,action string) error{
 	if(action=="tcp"){
-		dnsConn, err := net.Dial(action, "127.0.0.1:"+param.DnsPort);
+		dnsConn, err := net.DialTimeout(action, "127.0.0.1:"+param.DnsPort,time.Second*15);
 		if err != nil {
 			fmt.Println(err.Error())
 			return err;
 		}
-		defer dnsConn.Close();
-		go io.Copy(conn, dnsConn)
-		io.Copy(dnsConn, conn)
+		comm.TcpPipe(conn,dnsConn,time.Minute)
 		fmt.Printf("dnsReq Tcp\r\n");
 		return nil;
 	}else {
-		var buf = poolDnsBuf.Get().([]byte)
-		defer poolDnsBuf.Put(buf)
-		var n = 0;
-		var err error;
-		n, err = conn.Read(buf)
-		if err != nil {
-			fmt.Printf("c.Read() = %v", err)
-			return err;
-		}
 		dnsConn, err := net.Dial("udp", "127.0.0.1:"+param.DnsPort);
 		if err != nil {
 			fmt.Println(err.Error())
 			return err;
 		}
-		defer dnsConn.Close();
-		_, err = dnsConn.Write(buf[:n])
-		if (err != nil) {
-			fmt.Println(err.Error())
-			return err;
-		}
-		n, err = dnsConn.Read(buf);
-		if (err != nil) {
-			fmt.Println(err.Error())
-			return err;
-		}
-		_, err = conn.Write(buf[:n])
-		if (err != nil) {
-			fmt.Println(err.Error())
-			return err;
-		}
+		comm.UdpPipe(conn,dnsConn)
 	}
 	return nil;
 }

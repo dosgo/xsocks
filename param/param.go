@@ -3,7 +3,7 @@ package param
 import "time"
 
 //common
-var Version ="1.1.3-(20210122)"
+var Version ="1.1.4-(20210123)"
 
 
 //client
@@ -34,4 +34,4 @@ var CertFile string;
 var KeyFile string;
 var TunPort string;
 var LocalTunSock string;
-
+var SafeDns string="114.114.114.114";
