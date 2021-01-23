@@ -214,8 +214,7 @@ func  StreamSwapTun(dev comm.CommConn,mtu int){
 			tunnel:=tunStream.GetTunnel();
 			_,err=tunnel.Write(buffer.Bytes())
 			if (err != nil) {
-				time.Sleep(10 * time.Second);
-				fmt.Printf("re TunStream 2 e:%v\r\n", err)
+				fmt.Printf("tunnel wrtie err:%v\r\n", err)
 			}
 		}
 	}();

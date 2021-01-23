@@ -57,7 +57,7 @@ func _start(){
 	if(err==nil){
 		publicIp=_ip;
 	}
-	if(comm.IsPublicIP(net.ParseIP(publicIp))&&!comm.IsChinaMainlandIP(publicIp)){
+	if(publicIp!="0.0.0.0"&&comm.IsPublicIP(net.ParseIP(publicIp))&&!comm.IsChinaMainlandIP(publicIp)){
 		param.SafeDns="8.8.4.4"
 	}
 	fmt.Printf("client run: ./client   -serverAddr \"quic://"+publicIp+":"+param.QuicPort+"\" \r\n")
