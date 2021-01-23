@@ -237,10 +237,11 @@ func (rd *TunStream) StreamSwapTun(dev comm.CommConn,mtu int){
 				time.Sleep(10 * time.Second);
 				fmt.Printf("re TunStream 4 e:%v\r\n", err)
 			}
-		}
-		_,err=dev.Write(bufByte[:int(packLen)])
-		if (err != nil) {
-			fmt.Printf("e:%v\r\n", err)
+		}else {
+			_, err = dev.Write(bufByte[:int(packLen)])
+			if (err != nil) {
+				fmt.Printf("e:%v\r\n", err)
+			}
 		}
 	}
 }
