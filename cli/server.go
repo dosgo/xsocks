@@ -47,6 +47,11 @@ func main() {
 	fmt.Printf("webSocket Port:%s\r\n",param.WebPort)
 	fmt.Printf("passWord:%s\r\n",param.Password)
 
+
+	//restart
+	comm.RestartRun(_start);
+}
+func _start(){
 	var publicIp="0.0.0.0";
 	_ip,err:= server.GetPublicIP();
 	if(err==nil){
@@ -55,23 +60,17 @@ func main() {
 	if(comm.IsPublicIP(net.ParseIP(publicIp))&&!comm.IsChinaMainlandIP(publicIp)){
 		param.SafeDns="8.8.4.4"
 	}
-
-
 	fmt.Printf("client run: ./client   -serverAddr \"quic://"+publicIp+":"+param.QuicPort+"\" \r\n")
 	fmt.Printf("client run: ./client   -serverAddr \"wss://"+publicIp+":"+param.WebPort+"\" -caFile xx_ca.pem\r\n ")
 	fmt.Printf("client run: ./client   -serverAddr \"sctp://"+publicIp+":"+param.SctpPort+"\" \r\n ")
 	fmt.Printf("client run: ./client   -serverAddr \"kcp://"+publicIp+":"+param.KcpPort+"\" \r\n ")
-
 
 	go server.StartRemoteSocks51("127.0.0.1:"+param.Sock5Port);
 	go server.StartWebSocket(publicIp+":"+param.WebPort);
 	go server.StartSctp(publicIp+":"+param.SctpPort)
 	go server.StartKcp(publicIp+":"+param.KcpPort);
 	go server.StartTunTcp(); //local tun server
-
 	server.StartQuic(publicIp+":"+param.QuicPort);
-
 }
-
 
 

@@ -228,6 +228,9 @@ func (rd *TunStream) StreamSwapTun(dev comm.CommConn,mtu int){
 			}
 		}
 		packLen := binary.LittleEndian.Uint16(packLenByte)
+		if(int(packLen)>len(bufByte)){
+			continue;
+		}
 		_, err = io.ReadFull(rd.Tunnel, bufByte[:int(packLen)])
 		if (err != nil) {
 			tunnel,err:=rd.Connect(uniqueId,mtu);

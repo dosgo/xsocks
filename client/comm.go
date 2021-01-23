@@ -43,7 +43,10 @@ func  NewTunnel () (comm.CommConn,error){
 	}
 	//write password
 	passwordBuf := comm.GenPasswordHead(param.Password);
-	stream.Write([]byte(passwordBuf))
+	_,err=stream.Write([]byte(passwordBuf))
+	if err != nil  {
+		return nil,err
+	}
 	return stream,nil;
 }
 
