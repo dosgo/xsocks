@@ -52,8 +52,9 @@ func newTunTcp(client comm.CommConn) error{
 		log.Printf("err:%v\r\n",err)
 		return err;
 	}
-	defer stack.CleanupEndpoints()
-	defer stack.Close();
+	defer stack.Close();//3
+	defer stack.CleanupEndpoints()//2
+	defer stack.Wait();//1
 	// write tun
 	go func() {
 		var buffer =new(bytes.Buffer)
