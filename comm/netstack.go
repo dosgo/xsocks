@@ -43,11 +43,6 @@ func GenChannelLinkID(mtu int,tcpCallback ForwarderCall,udpCallback UdpForwarder
 	_netStack.SetSpoofing(nicid, true);
 
 	tcpForwarder := tcp.NewForwarder(_netStack, 0, 512, func(r *tcp.ForwarderRequest) {
-		defer func() {
-			if err := recover();err!=nil{
-				fmt.Println("tcpForwarder panic",err)
-			}
-		}()
 		var wq waiter.Queue
 		ep, err := r.CreateEndpoint(&wq)
 		if err != nil {

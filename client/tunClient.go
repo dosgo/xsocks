@@ -183,27 +183,19 @@ func  ConnectTun(uniqueId string,mtu int)(comm.CommConn,error){
 
 /*  */
 func  StreamSwapTun(dev comm.CommConn,mtu int){
-	tunStream:=TunStream{}
+	tunStream:=&TunStream{}
 	tunStream.UniqueId=comm.UniqueId(8)
 	tunStream.Mtu=mtu;
 
-	for{
-		_tunnel,err:=ConnectTun(tunStream.UniqueId,tunStream.Mtu);
-		if(err==nil){
-			tunStream.PutTunnel(_tunnel)
-			break;
-		}else{
-			time.Sleep(10 * time.Second);
-		}
-	}
-	go func() {
+	go func(_tunStream *TunStream) {
 		var packLenByte []byte = make([]byte, 2)
 		var bufByte []byte = make([]byte,mtu+80)
 		var buffer bytes.Buffer
+		var tunnel comm.CommConn
 		for {
 			n, err := dev.Read(bufByte[:])
 			if err != nil {
-				fmt.Printf("e:%v\r\n", err)
+				fmt.Printf("dev err%v\r\n", err)
 				break;
 			}
 			//fmt.Printf("dev read len:%d\r\n",n);
@@ -211,41 +203,42 @@ func  StreamSwapTun(dev comm.CommConn,mtu int){
 			buffer.Reset()
 			buffer.Write(packLenByte)
 			buffer.Write(bufByte[:n])
-			tunnel:=tunStream.GetTunnel();
-			_,err=tunnel.Write(buffer.Bytes())
-			if (err != nil) {
-				fmt.Printf("tunnel wrtie err:%v\r\n", err)
+			tunnel=_tunStream.GetTunnel();
+			if(tunnel!=nil){
+				_,err=tunnel.Write(buffer.Bytes())
+				if (err != nil) {
+					fmt.Printf("tunnel wrtie err:%v\r\n", err)
+				}
 			}
 		}
-	}();
+	}(tunStream);
 
 	var packLenByte []byte = make([]byte, 2)
 	var bufByte []byte = make([]byte,mtu+80)
+	var tunnel comm.CommConn
 	for {
-		tunnel:=tunStream.GetTunnel();
-		_, err := io.ReadFull(tunnel, packLenByte)
-		if (err != nil) {
-			tunnel,err:=ConnectTun(tunStream.UniqueId,tunStream.Mtu);
+		tunnel=tunStream.GetTunnel();
+		if(tunnel==nil){
+			_tunnel,err:=ConnectTun(tunStream.UniqueId,tunStream.Mtu);
 			if(err==nil){
-				tunStream.PutTunnel(tunnel)
+				tunStream.PutTunnel(_tunnel)
 			}else {
 				time.Sleep(10 * time.Second);
 				fmt.Printf("re TunStream 3 e:%v\r\n", err)
 			}
+			continue;
 		}
+		_, err := io.ReadFull(tunnel, packLenByte)
 		packLen := binary.LittleEndian.Uint16(packLenByte)
-		if(int(packLen)>len(bufByte)){
+		if (err != nil||int(packLen)>len(bufByte)) {
+			tunStream.PutTunnel(nil)
 			continue;
 		}
 		_, err = io.ReadFull(tunnel, bufByte[:int(packLen)])
 		if (err != nil) {
-			tunnel,err:=ConnectTun(tunStream.UniqueId,tunStream.Mtu);
-			if(err==nil){
-				tunStream.PutTunnel(tunnel)
-			}else {
-				time.Sleep(10 * time.Second);
-				fmt.Printf("re TunStream 4 e:%v\r\n", err)
-			}
+			fmt.Printf("recv pack err :%v\r\n", err)
+			tunStream.PutTunnel(nil)
+			continue;
 		}else {
 			_, err = dev.Write(bufByte[:int(packLen)])
 			if (err != nil) {

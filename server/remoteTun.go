@@ -36,6 +36,7 @@ func StartTunTcp() error {
 
 /*tcp*/
 func newTunTcp(client comm.CommConn) error{
+	defer client.Close();
 	var mtuByte []byte = make([]byte, 2)
 	//read Mtu
 	_, err := io.ReadFull(client, mtuByte)
@@ -47,14 +48,14 @@ func newTunTcp(client comm.CommConn) error{
 	if(mtu<1){
 		mtu=1024;
 	}
-	stack,channelLinkID,err:=comm.GenChannelLinkID(int(mtu),tcpForward,udpForward);
+	_,channelLinkID,err:=comm.GenChannelLinkID(int(mtu),tcpForward,udpForward);
 	if(err!=nil){
 		log.Printf("err:%v\r\n",err)
 		return err;
 	}
-	defer stack.Close();//3
-	defer stack.CleanupEndpoints()//2
-	defer stack.Wait();//1
+	//stack.
+	//defer stack.Close();//2
+//	defer stack.Wait();//1
 	// write tun
 	go func() {
 		var buffer =new(bytes.Buffer)
