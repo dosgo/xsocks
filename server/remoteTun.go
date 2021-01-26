@@ -86,7 +86,6 @@ func newTunTcp(client comm.CommConn) error{
 
 			}
 		}
-		fmt.Printf("channelLinkID recv exit \r\n");
 	}(ctx)
 
 	// read tun data

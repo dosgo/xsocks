@@ -92,7 +92,7 @@ func handleRemoteRequest(clientConn net.Conn) {
 			clientConn.Write([]byte{0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}) //响应客户端连接成功
 			fmt.Printf("to remote\r\n")
 			//进行转发
-			comm.TcpPipe(server,clientConn,time.Minute)
+			comm.TcpPipe(server,clientConn,time.Minute*10)
 		}
 		//udp
 		if(connectHead[1]==0x03) {
