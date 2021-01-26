@@ -9,6 +9,7 @@ import (
 	"github.com/google/netstack/tcpip/buffer"
 	"github.com/google/netstack/tcpip/header"
 	"io"
+	"context"
 	"log"
 	"net"
 	"strings"
@@ -53,14 +54,17 @@ func newTunTcp(client comm.CommConn) error{
 		log.Printf("err:%v\r\n",err)
 		return err;
 	}
-	//stack.
-	//defer stack.Close();//2
-//	defer stack.Wait();//1
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+
 	// write tun
-	go func() {
+	go func(_ctx context.Context) {
 		var buffer =new(bytes.Buffer)
 		var sendBuffer =new(bytes.Buffer)
 		var packLenByte []byte = make([]byte, 2)
+		defer fmt.Printf("channelLinkID recv exit \r\n");
 		for {
 			select {
 				case pkt := <-channelLinkID.C:
@@ -77,11 +81,13 @@ func newTunTcp(client comm.CommConn) error{
 							return ;
 						}
 					}
-					break;
+				case <-_ctx.Done():
+					return
+
 			}
 		}
 		fmt.Printf("channelLinkID recv exit \r\n");
-	}()
+	}(ctx)
 
 	// read tun data
 	var buflen=mtu+80;

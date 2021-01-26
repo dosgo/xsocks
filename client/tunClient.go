@@ -91,11 +91,10 @@ func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS
 
 func tunRecv(dev io.ReadWriteCloser ,mtu int) error{
 	if(param.TunSmartProxy) {
-		_stack,channelLinkID, err := comm.GenChannelLinkID(mtu, tcpForward, udpForward);
+		_,channelLinkID, err := comm.GenChannelLinkID(mtu, tcpForward, udpForward);
 		if (err != nil) {
 			return err;
 		}
-		defer _stack.Close();
 		// write tun
 		go func() {
 			var buffer = new(bytes.Buffer)
