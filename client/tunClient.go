@@ -269,6 +269,6 @@ func tcpForward(conn *gonet.Conn) error{
 		fmt.Println(err.Error())
 		return err;
 	}
-	comm.TcpPipe(conn,conn2,time.Minute)
+	comm.TcpPipe(conn,conn2,time.Minute*5)
 	return nil;
 }

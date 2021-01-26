@@ -168,7 +168,7 @@ func tcpForwarder(conn *gonet.Conn)error{
 	}
 	defer socksConn.Close();
 	if(socksCmd(socksConn,1,remoteAddr)==nil) {
-		comm.TcpPipe(conn,socksConn,time.Minute)
+		comm.TcpPipe(conn,socksConn,time.Minute*5)
 	}
 	return nil
 }
@@ -191,7 +191,7 @@ func dnsReq(conn *gonet.Conn,action string) error{
 			fmt.Println(err.Error())
 			return err;
 		}
-		comm.TcpPipe(conn,dnsConn,time.Minute)
+		comm.TcpPipe(conn,dnsConn,time.Minute*2)
 		fmt.Printf("dnsReq Tcp\r\n");
 		return nil;
 	}else {
