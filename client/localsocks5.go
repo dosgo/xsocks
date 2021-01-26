@@ -119,7 +119,7 @@ func handleLocalRequest(clientConn net.Conn) error {
 				defer server.Close()
 				clientConn.Write([]byte{0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}) //响应客户端连接成功
 				//进行转发
-				comm.TcpPipe(server,clientConn,time.Minute)
+				comm.TcpPipe(server,clientConn,time.Minute*5)
 				return nil;
 			} else {
 				//保存記錄
