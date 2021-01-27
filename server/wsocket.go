@@ -9,7 +9,6 @@ import (
 	"github.com/xtaci/smux"
 	"golang.org/x/net/websocket"
 	"github.com/hashicorp/yamux"
-	"io/ioutil"
 	"log"
 	"math/big"
 	"net"
@@ -161,16 +160,16 @@ func CreateCertificateFile(name string, cert *x509.Certificate, key *rsa.Private
 		Headers: map[string]string{},
 		Bytes:   ca_b}
 	ca_b64 := pem.EncodeToMemory(certificate)
-	ioutil.WriteFile(ca_f, ca_b64, 0777)
+	os.WriteFile(ca_f, ca_b64, 0777)
 
 	priv_f := name + ".key"
 	priv_b := x509.MarshalPKCS1PrivateKey(priv)
-	ioutil.WriteFile(priv_f, priv_b, 0777)
+	os.WriteFile(priv_f, priv_b, 0777)
 	var privateKey = &pem.Block{Type: "PRIVATE KEY",
 		Headers: map[string]string{},
 		Bytes:   priv_b}
 	priv_b64 := pem.EncodeToMemory(privateKey)
-	ioutil.WriteFile(priv_f, priv_b64, 0777)
+	os.WriteFile(priv_f, priv_b64, 0777)
 }
 
 

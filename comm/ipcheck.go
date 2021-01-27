@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/yl2chen/cidranger"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -73,9 +72,9 @@ func downloadIPTable(name string) error {
 		return nil
 	}
 	defer resp.Body.Close()
-	nowResp, _ := ioutil.ReadAll(resp.Body)
+	nowResp, _ := io.ReadAll(resp.Body)
 	if len(nowResp) > 0 {
-		ioutil.WriteFile(name, nowResp, 0644)
+		os.WriteFile(name, nowResp, 0644)
 	}
 	return nil;
 }

@@ -7,12 +7,11 @@ import (
 	"github.com/hashicorp/yamux"
 	"github.com/xtaci/smux"
 	"golang.org/x/net/websocket"
-	"io/ioutil"
 	"os"
-	"xSocks/param"
+	"sync"
 	"time"
 	"xSocks/comm"
-	"sync"
+	"xSocks/param"
 )
 var wsYamuxDialer *WsYamux
 var wsSmuxDialer *WsSmux
@@ -150,7 +149,7 @@ func getTlsConf()*tls.Config{
 		_, err := os.Stat(param.CaFile)
 		if err == nil {
 			pool := x509.NewCertPool()
-			caCrt, err := ioutil.ReadFile(param.CaFile)
+			caCrt, err := os.ReadFile(param.CaFile)
 			if err != nil {
 				return &tls.Config{};
 			}
