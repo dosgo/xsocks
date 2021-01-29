@@ -169,3 +169,4 @@ func chanFromConn(conn net.Conn) chan []byte {
 	}()
 	return c
 }
+

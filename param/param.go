@@ -28,6 +28,7 @@ var Sock5Port string
 var QuicPort string
 var WebPort string
 var SctpPort string;
+var SudpPort string;
 var KcpPort string;
 var Password string
 var CertFile string;

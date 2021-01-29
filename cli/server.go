@@ -23,6 +23,7 @@ func main() {
 	flag.StringVar(&param.WebPort, "webPort", "5003", "quic port")
 	flag.StringVar(&param.SctpPort, "sctpPort", "5004", "sctp port")
 	flag.StringVar(&param.KcpPort, "kcpPort", "5005", "kcp port")
+	flag.StringVar(&param.SudpPort, "sudpPort", "5006", "sudp port")
 	flag.StringVar(&param.Password, "password", "password", "password")
 	flag.StringVar(&param.KeyFile, "keyFile", "", "keyFile")
 	flag.StringVar(&param.CertFile, "certFile", "", "certFile")
@@ -55,16 +56,18 @@ func main() {
 	if(publicIp!="0.0.0.0"&&comm.IsPublicIP(net.ParseIP(publicIp))&&!comm.IsChinaMainlandIP(publicIp)){
 		param.SafeDns="8.8.4.4"
 	}
-	fmt.Printf("client run: ./client   -serverAddr \"quic://"+publicIp+":"+param.QuicPort+"\" \r\n")
-	fmt.Printf("client run: ./client   -serverAddr \"wss://"+publicIp+":"+param.WebPort+"\" -caFile xx_ca.pem\r\n ")
-	fmt.Printf("client run: ./client   -serverAddr \"sctp://"+publicIp+":"+param.SctpPort+"\" \r\n ")
-	fmt.Printf("client run: ./client   -serverAddr \"kcp://"+publicIp+":"+param.KcpPort+"\" \r\n ")
+	fmt.Println("client run: ./client   -serverAddr \"quic://"+publicIp+":"+param.QuicPort+"\"")
+	fmt.Println("client run: ./client   -serverAddr \"wss://"+publicIp+":"+param.WebPort+"\" -caFile xx_ca.pem")
+	fmt.Println("client run: ./client   -serverAddr \"sctp://"+publicIp+":"+param.SctpPort+"\"")
+	fmt.Println("client run: ./client   -serverAddr \"kcp://"+publicIp+":"+param.KcpPort+"\"")
+	fmt.Println("client run: ./client   -tunType 2   -serverAddr \"sudp://"+publicIp+":"+param.SudpPort+"\"")
 
 	go server.StartRemoteSocks51("127.0.0.1:"+param.Sock5Port);
 	go server.StartWebSocket(publicIp+":"+param.WebPort);
 	go server.StartSctp(publicIp+":"+param.SctpPort)
 	go server.StartKcp(publicIp+":"+param.KcpPort);
 	go server.StartTunTcp(); //local tun server
+	go server.StartSudp(publicIp+":"+param.SudpPort)
 	server.StartQuic(publicIp+":"+param.QuicPort);
 }
 

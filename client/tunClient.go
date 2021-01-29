@@ -134,7 +134,11 @@ func tunRecv(dev io.ReadWriteCloser ,mtu int) error{
 			}
 		}
 	}else{
-		StreamSwapTun(dev,mtu)
+		if (strings.HasPrefix(param.ServerAddr,"sudp")) {
+			packetSwapTun(dev, mtu);
+		}else {
+			StreamSwapTun(dev, mtu)
+		}
 	}
 	return nil
 }
@@ -180,7 +184,73 @@ func  ConnectTun(uniqueId string,mtu int)(comm.CommConn,error){
 	return tunnel,nil;
 }
 
-/*  */
+/*udp packet*/
+func  packetSwapTun(dev comm.CommConn,mtu int){
+
+	udpAddr, err := net.ResolveUDPAddr("udp4", 	param.ServerAddr[1:])
+	tunnel, err := net.DialUDP("udp4", nil, udpAddr)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	defer tunnel.Close()
+
+
+
+	go func(udpConn *net.UDPConn,_udpAddr *net.UDPAddr) {
+		videoHeader:=comm.NewVideoChat();
+		var bufByte []byte = make([]byte,mtu+80)
+		var buffer bytes.Buffer
+		var buffer2 bytes.Buffer
+		var header []byte = make([]byte, videoHeader.Size())
+		for {
+			n, err := dev.Read(bufByte[:])
+			if err != nil {
+				fmt.Printf("dev err%v\r\n", err)
+				break;
+			}
+			buffer.Reset()
+			videoHeader.Serialize(header)
+			buffer.Write(header)
+
+
+			buffer2.Reset();
+			//MTU
+			var mtuByte []byte = make([]byte, 2)
+			binary.LittleEndian.PutUint16(mtuByte,uint16(mtu))
+			buffer2.Write(mtuByte)
+			//packet
+			buffer2.Write(bufByte[:n]);
+
+			ciphertext,_:=comm.AesGcm(buffer2.Bytes(),true);
+			buffer.Write(ciphertext)
+			udpConn.WriteTo(buffer.Bytes(), _udpAddr)
+		}
+	}(tunnel,udpAddr);
+
+
+	var buffer []byte = make([]byte,65535)
+	videoHeader:=comm.NewVideoChat();
+	for {
+		n, _, err := tunnel.ReadFromUDP(buffer)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		ciphertext,err:=comm.AesGcm(buffer[videoHeader.Size():n],false);
+		if (err==nil){
+			_, err = dev.Write(ciphertext)
+			if (err != nil) {
+				fmt.Printf("e:%v\r\n", err)
+			}
+		}
+	}
+}
+
+
+
+/*tcp  Stream */
 func  StreamSwapTun(dev comm.CommConn,mtu int){
 	tunStream:=&TunStream{}
 	tunStream.UniqueId=comm.UniqueId(8)
