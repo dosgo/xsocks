@@ -66,6 +66,11 @@ func sudpRecv(buf []byte,addr *net.UDPAddr,conn *net.UDPConn,buffer bytes.Buffer
 	addrLastTime.Store(addr.String(),time.Now().Unix());
 	videoHeader:=comm.NewVideoChat();
 	ciphertext,err:=comm.AesGcm(buf[videoHeader.Size():],false);
+	if (err!=nil){
+		timeStr:=fmt.Sprintf("%d",time.Now().Unix())
+		nonce:=timeStr[:len(timeStr)-2]
+		fmt.Println("Decryption failed nonce:",nonce)
+	}
 	//read Mtu
 	mtu := binary.LittleEndian.Uint16(ciphertext[:2])
 	if(mtu<1){
@@ -80,6 +85,7 @@ func sudpRecv(buf []byte,addr *net.UDPAddr,conn *net.UDPConn,buffer bytes.Buffer
 			return;
 		}
 		tunConn.Write(ciphertext[:2])
+		addrTun.Store(addr.String(),tunConn)
 		go tunRecv(tunConn,addr,conn);
 	}else{
 		tunConn=v.(net.Conn)

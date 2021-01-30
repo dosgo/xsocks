@@ -187,7 +187,7 @@ func  ConnectTun(uniqueId string,mtu int)(comm.CommConn,error){
 /*udp packet*/
 func  packetSwapTun(dev comm.CommConn,mtu int){
 
-	udpAddr, err := net.ResolveUDPAddr("udp4", 	param.ServerAddr[1:])
+	udpAddr, err := net.ResolveUDPAddr("udp4", 	param.ServerAddr[7:])
 	tunnel, err := net.DialUDP("udp4", nil, udpAddr)
 	if err != nil {
 		fmt.Println(err)
@@ -198,7 +198,7 @@ func  packetSwapTun(dev comm.CommConn,mtu int){
 
 
 
-	go func(udpConn *net.UDPConn,_udpAddr *net.UDPAddr) {
+	go func(udpConn *net.UDPConn) {
 		videoHeader:=comm.NewVideoChat();
 		var bufByte []byte = make([]byte,mtu+80)
 		var buffer bytes.Buffer
@@ -225,9 +225,9 @@ func  packetSwapTun(dev comm.CommConn,mtu int){
 
 			ciphertext,_:=comm.AesGcm(buffer2.Bytes(),true);
 			buffer.Write(ciphertext)
-			udpConn.WriteTo(buffer.Bytes(), _udpAddr)
+			udpConn.Write(buffer.Bytes())
 		}
-	}(tunnel,udpAddr);
+	}(tunnel);
 
 
 	var buffer []byte = make([]byte,65535)
@@ -244,6 +244,10 @@ func  packetSwapTun(dev comm.CommConn,mtu int){
 			if (err != nil) {
 				fmt.Printf("e:%v\r\n", err)
 			}
+		}else{
+			timeStr:=fmt.Sprintf("%d",time.Now().Unix())
+			nonce:=timeStr[:len(timeStr)-2]
+			fmt.Println("Decryption failed nonce:",nonce);
 		}
 	}
 }
