@@ -162,6 +162,21 @@ func (rd *TunStream) PutTunnel(tunnel comm.CommConn){
 	rd.Tunnel=tunnel;
 }
 
+type TunPacket struct {
+	UdpConn *net.UDPConn
+	sync.Mutex
+}
+func (rd *TunPacket) GetPacket()(*net.UDPConn){
+	rd.Lock();
+	defer rd.Unlock();
+	return rd.UdpConn;
+}
+func (rd *TunPacket) PutPacket(tunnel *net.UDPConn){
+	rd.Lock();
+	defer rd.Unlock();
+	rd.UdpConn=tunnel;
+}
+
 
 /*send cmd  and UniqueId  and mtu*/
 func  ConnectTun(uniqueId string,mtu int)(comm.CommConn,error){
@@ -184,21 +199,21 @@ func  ConnectTun(uniqueId string,mtu int)(comm.CommConn,error){
 	return tunnel,nil;
 }
 
+func connectUdp()(*net.UDPConn,error){
+	udpAddr, err := net.ResolveUDPAddr("udp4", 	param.ServerAddr[7:])
+	if(err!=nil){
+		return nil,err;
+	}
+	return net.DialUDP("udp4", nil, udpAddr)
+}
+
+
 /*udp packet*/
 func  packetSwapTun(dev comm.CommConn,mtu int){
-
-	udpAddr, err := net.ResolveUDPAddr("udp4", 	param.ServerAddr[7:])
-	tunnel, err := net.DialUDP("udp4", nil, udpAddr)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	defer tunnel.Close()
+	tunPacket:=&TunPacket{}
 
 
-
-	go func(udpConn *net.UDPConn) {
+	go func(_tunPacket *TunPacket) {
 		videoHeader:=comm.NewVideoChat();
 		var bufByte []byte = make([]byte,mtu+80)
 		var buffer bytes.Buffer
@@ -225,18 +240,33 @@ func  packetSwapTun(dev comm.CommConn,mtu int){
 
 			ciphertext,_:=comm.AesGcm(buffer2.Bytes(),true);
 			buffer.Write(ciphertext)
-			udpConn.Write(buffer.Bytes())
+			udpConn:=_tunPacket.GetPacket();
+			if(udpConn!=nil) {
+				udpConn.Write(buffer.Bytes())
+			}
 		}
-	}(tunnel);
-
+	}(tunPacket);
 
 	var buffer []byte = make([]byte,65535)
 	videoHeader:=comm.NewVideoChat();
 	for {
+		tunnel:=tunPacket.GetPacket();
+		if(tunnel==nil){
+			_tunnel,err:=connectUdp();
+			if(err==nil){
+				tunPacket.PutPacket(_tunnel)
+			}else {
+				time.Sleep(10 * time.Second);
+				fmt.Printf("re tunPacket 3 e:%v\r\n", err)
+			}
+			continue;
+		}
+
+
 		n, _, err := tunnel.ReadFromUDP(buffer)
 		if err != nil {
-			fmt.Println(err)
-			return
+			tunPacket.PutPacket(nil)
+			continue;
 		}
 		ciphertext,err:=comm.AesGcm(buffer[videoHeader.Size():n],false);
 		if (err==nil){
