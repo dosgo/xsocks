@@ -3,8 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/miekg/dns"
 	"net"
 	"os"
+	"runtime"
 	"xSocks/comm"
 	"xSocks/param"
 	"xSocks/server"
@@ -56,6 +58,14 @@ func main() {
 	if(publicIp!="0.0.0.0"&&comm.IsPublicIP(net.ParseIP(publicIp))&&!comm.IsChinaMainlandIP(publicIp)){
 		param.SafeDns="8.8.4.4"
 	}
+	if(runtime.GOOS=="linux"){
+		config, err := dns.ClientConfigFromFile("/etc/resolv.conf")
+		if(err==nil&&len(config.Servers)>0&&config.Servers[0]!="") {
+			param.SafeDns = config.Servers[0]
+		}
+	}
+
+
 	fmt.Println("client run: ./client   -serverAddr \"quic://"+publicIp+":"+param.QuicPort+"\"")
 	fmt.Println("client run: ./client   -serverAddr \"wss://"+publicIp+":"+param.WebPort+"\" -caFile xx_ca.pem")
 	fmt.Println("client run: ./client   -serverAddr \"sctp://"+publicIp+":"+param.SctpPort+"\"")

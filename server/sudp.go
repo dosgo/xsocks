@@ -70,6 +70,7 @@ func sudpRecv(buf []byte,addr *net.UDPAddr,conn *net.UDPConn,buffer bytes.Buffer
 		timeStr:=fmt.Sprintf("%d",time.Now().Unix())
 		nonce:=timeStr[:len(timeStr)-2]
 		fmt.Println("Decryption failed nonce:",nonce)
+		return
 	}
 	//read Mtu
 	mtu := binary.LittleEndian.Uint16(ciphertext[:2])
