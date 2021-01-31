@@ -3,7 +3,7 @@ package param
 import "time"
 
 //common
-var Version ="1.1.10-(20210131)"
+var Version ="1.1.11-(20210131)"
 
 
 //client

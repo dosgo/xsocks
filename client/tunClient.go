@@ -145,33 +145,31 @@ func tunRecv(dev io.ReadWriteCloser ,mtu int) error{
 
 
 
-type TunStream struct {
+type TunConn struct {
 	Tunnel comm.CommConn
+	UdpConn *net.UDPConn
 	UniqueId string
 	Mtu int;
 	sync.Mutex
 }
-func (rd *TunStream) GetTunnel()(comm.CommConn){
+func (rd *TunConn) GetTunnel()(comm.CommConn){
 	rd.Lock();
 	defer rd.Unlock();
 	return rd.Tunnel;
 }
-func (rd *TunStream) PutTunnel(tunnel comm.CommConn){
+func (rd *TunConn) PutTunnel(tunnel comm.CommConn){
 	rd.Lock();
 	defer rd.Unlock();
 	rd.Tunnel=tunnel;
 }
 
-type TunPacket struct {
-	UdpConn *net.UDPConn
-	sync.Mutex
-}
-func (rd *TunPacket) GetPacket()(*net.UDPConn){
+
+func (rd *TunConn) GetPacket()(*net.UDPConn){
 	rd.Lock();
 	defer rd.Unlock();
 	return rd.UdpConn;
 }
-func (rd *TunPacket) PutPacket(tunnel *net.UDPConn){
+func (rd *TunConn) PutPacket(tunnel *net.UDPConn){
 	rd.Lock();
 	defer rd.Unlock();
 	rd.UdpConn=tunnel;
@@ -210,11 +208,13 @@ func connectUdp()(*net.UDPConn,error){
 
 /*udp packet*/
 func  packetSwapTun(dev comm.CommConn,mtu int){
-	tunPacket:=&TunPacket{}
-
-
-	go func(_tunPacket *TunPacket) {
-		videoHeader:=comm.NewVideoChat();
+	tunPacket:=&TunConn{}
+	videoHeader:=comm.NewVideoChat();
+	var aesGcm=comm.NewAesGcm();
+	if(aesGcm==nil){
+		fmt.Println("aesGcm init error")
+	}
+	go func(_tunPacket *TunConn) {
 		var bufByte []byte = make([]byte,mtu+80)
 		var buffer bytes.Buffer
 		var buffer2 bytes.Buffer
@@ -238,7 +238,7 @@ func  packetSwapTun(dev comm.CommConn,mtu int){
 			//packet
 			buffer2.Write(bufByte[:n]);
 
-			ciphertext,_:=comm.AesGcm(buffer2.Bytes(),true);
+			ciphertext,_:=aesGcm.AesGcm(buffer2.Bytes(),true);
 			buffer.Write(ciphertext)
 			udpConn:=_tunPacket.GetPacket();
 			if(udpConn!=nil) {
@@ -248,7 +248,6 @@ func  packetSwapTun(dev comm.CommConn,mtu int){
 	}(tunPacket);
 
 	var buffer []byte = make([]byte,65535)
-	videoHeader:=comm.NewVideoChat();
 	for {
 		tunnel:=tunPacket.GetPacket();
 		if(tunnel==nil){
@@ -268,7 +267,7 @@ func  packetSwapTun(dev comm.CommConn,mtu int){
 			tunPacket.PutPacket(nil)
 			continue;
 		}
-		ciphertext,err:=comm.AesGcm(buffer[videoHeader.Size():n],false);
+		ciphertext,err:=aesGcm.AesGcm(buffer[videoHeader.Size():n],false);
 		if (err==nil){
 			_, err = dev.Write(ciphertext)
 			if (err != nil) {
@@ -277,7 +276,7 @@ func  packetSwapTun(dev comm.CommConn,mtu int){
 		}else{
 			timeStr:=fmt.Sprintf("%d",time.Now().Unix())
 			nonce:=timeStr[:len(timeStr)-2]
-			fmt.Println("Decryption failed nonce:",nonce);
+			fmt.Println("Decryption failed nonce:",nonce,err);
 		}
 	}
 }
@@ -286,11 +285,11 @@ func  packetSwapTun(dev comm.CommConn,mtu int){
 
 /*tcp  Stream */
 func  StreamSwapTun(dev comm.CommConn,mtu int){
-	tunStream:=&TunStream{}
+	tunStream:=&TunConn{}
 	tunStream.UniqueId=comm.UniqueId(8)
 	tunStream.Mtu=mtu;
 
-	go func(_tunStream *TunStream) {
+	go func(_tunStream *TunConn) {
 		var packLenByte []byte = make([]byte, 2)
 		var bufByte []byte = make([]byte,mtu+80)
 		var buffer bytes.Buffer

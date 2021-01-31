@@ -30,7 +30,10 @@ func StartSudp(_addr string) error {
 	defer conn.Close()
 	data := make([]byte,65535)
 	var buffer bytes.Buffer
-
+	var aesGcm=comm.NewAesGcm();
+	if(aesGcm==nil){
+		fmt.Println("aesGcm init error")
+	}
 	go autoFree();
 	for {
 		n, rAddr, err := conn.ReadFromUDP(data)
@@ -38,7 +41,7 @@ func StartSudp(_addr string) error {
 			log.Println(err)
 			continue
 		}
-		sudpRecv(data[:n],rAddr,conn,buffer);
+		sudpRecv(data[:n],rAddr,conn,buffer,aesGcm);
 	}
 }
 
@@ -61,15 +64,15 @@ func autoFree(){
 }
 
 
-func sudpRecv(buf []byte,addr *net.UDPAddr,conn *net.UDPConn,buffer bytes.Buffer){
+func sudpRecv(buf []byte,addr *net.UDPAddr,conn *net.UDPConn,buffer bytes.Buffer,aesGcm *comm.AesGcm){
 	//
 	addrLastTime.Store(addr.String(),time.Now().Unix());
 	videoHeader:=comm.NewVideoChat();
-	ciphertext,err:=comm.AesGcm(buf[videoHeader.Size():],false);
+	ciphertext,err:=aesGcm.AesGcm(buf[videoHeader.Size():],false);
 	if (err!=nil){
 		timeStr:=fmt.Sprintf("%d",time.Now().Unix())
 		nonce:=timeStr[:len(timeStr)-2]
-		fmt.Println("Decryption failed nonce:",nonce)
+		fmt.Println("Decryption failed nonce:",nonce,err)
 		return
 	}
 	//read Mtu
@@ -87,7 +90,7 @@ func sudpRecv(buf []byte,addr *net.UDPAddr,conn *net.UDPConn,buffer bytes.Buffer
 		}
 		tunConn.Write(ciphertext[:2])
 		addrTun.Store(addr.String(),tunConn)
-		go tunRecv(tunConn,addr,conn);
+		go tunRecv(tunConn,addr,conn,videoHeader);
 	}else{
 		tunConn=v.(net.Conn)
 	}
@@ -99,12 +102,16 @@ func sudpRecv(buf []byte,addr *net.UDPAddr,conn *net.UDPConn,buffer bytes.Buffer
 	tunConn.Write(buffer.Bytes());
 }
 
-func tunRecv(tunConn net.Conn,addr *net.UDPAddr,udpComm *net.UDPConn){
-	videoHeader:=comm.NewVideoChat();
+func tunRecv(tunConn net.Conn,addr *net.UDPAddr,udpComm *net.UDPConn,videoHeader *comm.VideoChat){
 	var bufByte []byte = make([]byte,65535)
 	var packLenByte []byte = make([]byte, 2)
 	var header []byte = make([]byte, videoHeader.Size())
 	var buffer bytes.Buffer
+	var aesGcm=comm.NewAesGcm();
+	if(aesGcm==nil){
+		fmt.Println("aesGcm init err")
+		return
+	}
 	for {
 		_, err := io.ReadFull(tunConn, packLenByte)
 		packLen := binary.LittleEndian.Uint16(packLenByte)
@@ -119,7 +126,7 @@ func tunRecv(tunConn net.Conn,addr *net.UDPAddr,udpComm *net.UDPConn){
 			 videoHeader.Serialize(header)
 			 buffer.Reset()
 			 buffer.Write(header)
-			 ciphertext,_:=comm.AesGcm(bufByte[:n],true);
+			 ciphertext,_:=aesGcm.AesGcm(bufByte[:n],true);
 			 buffer.Write(ciphertext)
 			 udpComm.WriteTo(buffer.Bytes(), addr)
 		}
