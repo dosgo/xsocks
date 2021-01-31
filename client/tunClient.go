@@ -4,10 +4,16 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/adapters/gonet"
-	"github.com/google/netstack/tcpip/buffer"
-	"github.com/google/netstack/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
+
+	//"github.com/google/netstack/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	//"github.com/google/netstack/tcpip/adapters/gonet"
+	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
+	//"github.com/google/netstack/tcpip/buffer"
+	"gvisor.dev/gvisor/pkg/tcpip/buffer"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
+	//"github.com/google/netstack/tcpip/header"
 	"github.com/yinghuocho/gotun2socks/tun"
 	"io"
 	"log"
@@ -91,7 +97,7 @@ func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS
 
 func tunRecv(dev io.ReadWriteCloser ,mtu int) error{
 	if(param.TunSmartProxy) {
-		_,channelLinkID, err := comm.GenChannelLinkID(mtu, tcpForward, udpForward);
+		_,channelLinkID, err := comm.NewDefaultStack(mtu, tcpForward, udpForward);
 		if (err != nil) {
 			return err;
 		}
@@ -99,16 +105,18 @@ func tunRecv(dev io.ReadWriteCloser ,mtu int) error{
 		go func() {
 			var buffer = new(bytes.Buffer)
 			for {
-				select {
-				case pkt := <-channelLinkID.C:
-					buffer.Reset()
-					buffer.Write(pkt.Pkt.Header.View())
-					buffer.Write(pkt.Pkt.Data.ToView())
-					//tmpBuf:=append(pkt.Pkt.Header.View(),pkt.Pkt.Data.ToView()...)
-					if (buffer.Len() > 0) {
-						dev.Write(buffer.Bytes())
-					}
-					break;
+				pkt,res:=channelLinkID.Read()
+				if(!res){
+					continue;
+				}
+				buffer.Reset()
+				buffer.Write(pkt.Pkt.NetworkHeader().View())
+				buffer.Write(pkt.Pkt.LinkHeader().View())
+				buffer.Write(pkt.Pkt.TransportHeader().View())
+				buffer.Write(pkt.Pkt.Data.ToView())
+				//tmpBuf:=append(pkt.Pkt.Header.View(),pkt.Pkt.Data.ToView()...)
+				if (buffer.Len() > 0) {
+					dev.Write(buffer.Bytes())
 				}
 			}
 		}()
@@ -125,12 +133,12 @@ func tunRecv(dev io.ReadWriteCloser ,mtu int) error{
 			if (true) {
 				fmt.Printf("dsfsd");
 			} else {
-				tmpView := buffer.NewVectorisedView(n, []buffer.View{
+				tmpView:=buffer.NewVectorisedView(n,[]buffer.View{
 					buffer.NewViewFromBytes(buf[:n]),
 				})
-				channelLinkID.InjectInbound(header.IPv4ProtocolNumber, tcpip.PacketBuffer{
+				channelLinkID.InjectInbound(header.IPv4ProtocolNumber, stack.NewPacketBuffer(stack.PacketBufferOptions{
 					Data: tmpView,
-				})
+				}))
 			}
 		}
 	}else{
@@ -352,7 +360,7 @@ func  StreamSwapTun(dev comm.CommConn,mtu int){
 
 
 /*udp 转发*/
-func udpForward(conn *gonet.Conn, ep tcpip.Endpoint) error{
+func udpForward(conn *gonet.UDPConn, ep tcpip.Endpoint) error{
 	defer conn.Close();
 	defer ep.Close();
 	conn2, err := net.Dial("udp",conn.LocalAddr().String());
@@ -366,7 +374,7 @@ func udpForward(conn *gonet.Conn, ep tcpip.Endpoint) error{
 }
 
 /*udp 转发*/
-func tcpForward(conn *gonet.Conn) error{
+func tcpForward(conn *gonet.TCPConn) error{
 	conn2, err := net.DialTimeout("tcp", conn.LocalAddr().String(),param.ConnectTime);
 	if err != nil {
 		fmt.Println(err.Error())

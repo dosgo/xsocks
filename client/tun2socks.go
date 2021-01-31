@@ -4,14 +4,16 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"time"
 	"xSocks/comm"
-
-	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/adapters/gonet"
-	"github.com/google/netstack/tcpip/buffer"
-	"github.com/google/netstack/tcpip/header"
+	//"github.com/google/netstack/tcpip/adapters/gonet"
+	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"github.com/yinghuocho/gotun2socks/tun"
+	//"github.com/google/netstack/tcpip/buffer"
+	"gvisor.dev/gvisor/pkg/tcpip/buffer"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"io"
 	"log"
 	"net"
@@ -113,24 +115,25 @@ func StartTunDevice(tunDevice string,tunAddr string,tunMask string,tunGW string,
 	ForwardTransportFromIo(dev,param.Mtu);
 }
 func ForwardTransportFromIo(dev io.ReadWriteCloser,mtu int) error {
-	_,channelLinkID,err:=comm.GenChannelLinkID(mtu,tcpForwarder,udpForwarder);
+	_,channelLinkID,err:=comm.NewDefaultStack(mtu,tcpForwarder,udpForwarder);
 	if(err!=nil){
 		return err;
 	}
 	// write tun
 	go func() {
-		var buffer =new(bytes.Buffer)
+		var sendBuffer =new(bytes.Buffer)
 		for {
-			select {
-			case pkt := <-channelLinkID.C:
-				buffer.Reset()
-				buffer.Write(pkt.Pkt.Header.View())
-				buffer.Write(pkt.Pkt.Data.ToView())
-				//tmpBuf:=append(pkt.Pkt.Header.View(),pkt.Pkt.Data.ToView()...)
-				if(buffer.Len()>0) {
-					dev.Write(buffer.Bytes())
-				}
-				break;
+			info,res:=channelLinkID.Read()
+			if(!res){
+				continue;
+			}
+			sendBuffer.Reset()
+			sendBuffer.Write(info.Pkt.NetworkHeader().View())
+			sendBuffer.Write(info.Pkt.LinkHeader().View())
+			sendBuffer.Write(info.Pkt.TransportHeader().View())
+			sendBuffer.Write(info.Pkt.Data.ToView())
+			if(sendBuffer.Len()>0) {
+				dev.Write(sendBuffer.Bytes())
 			}
 		}
 	}()
@@ -147,18 +150,18 @@ func ForwardTransportFromIo(dev io.ReadWriteCloser,mtu int) error {
 		tmpView:=buffer.NewVectorisedView(n,[]buffer.View{
 			buffer.NewViewFromBytes(buf[:n]),
 		})
-		channelLinkID.InjectInbound(header.IPv4ProtocolNumber, tcpip.PacketBuffer{
+		channelLinkID.InjectInbound(header.IPv4ProtocolNumber, stack.NewPacketBuffer(stack.PacketBufferOptions{
 			Data: tmpView,
-		})
+		}))
 	}
 	return nil
 }
 
-func tcpForwarder(conn *gonet.Conn)error{
+func tcpForwarder(conn *gonet.TCPConn)error{
 	var remoteAddr=conn.LocalAddr().String()
 	//dns ,use 8.8.8.8
 	if(strings.HasSuffix(remoteAddr,":53")){
-		dnsReq(conn,"tcp");
+		dnsReqTcp(conn);
 		return  nil;
 	}
 	socksConn,err1:= net.DialTimeout("tcp",param.Sock5Addr,time.Second*15)
@@ -173,35 +176,34 @@ func tcpForwarder(conn *gonet.Conn)error{
 	return nil
 }
 
-func udpForwarder(conn *gonet.Conn, ep tcpip.Endpoint)error{
-	defer conn.Close();
+func udpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)error{
 	defer ep.Close();
+	defer conn.Close();
 	//dns port
 	if(strings.HasSuffix(conn.LocalAddr().String(),":53")){
-		dnsReq(conn,"udp");
+		dnsReqUdp(conn);
 	}
 	return nil;
 }
+func dnsReqUdp(conn *gonet.UDPConn) error{
 
-/*to dns*/
-func dnsReq(conn *gonet.Conn,action string) error{
-	if(action=="tcp"){
-		dnsConn, err := net.DialTimeout(action, "127.0.0.1:"+param.DnsPort,time.Second*15);
-		if err != nil {
-			fmt.Println(err.Error())
-			return err;
-		}
-		comm.TcpPipe(conn,dnsConn,time.Minute*2)
-		fmt.Printf("dnsReq Tcp\r\n");
-		return nil;
-	}else {
-		dnsConn, err := net.Dial("udp", "127.0.0.1:"+param.DnsPort);
-		if err != nil {
-			fmt.Println(err.Error())
-			return err;
-		}
-		comm.UdpPipe(conn,dnsConn)
+	dnsConn, err := net.Dial("udp", "127.0.0.1:"+param.DnsPort);
+	if err != nil {
+		fmt.Println(err.Error())
+		return err;
 	}
+	comm.UdpPipe(conn,dnsConn)
+	return nil;
+}
+/*to dns*/
+func dnsReqTcp(conn *gonet.TCPConn) error{
+	dnsConn, err := net.DialTimeout("tcp", "127.0.0.1:"+param.DnsPort,time.Second*15);
+	if err != nil {
+		fmt.Println(err.Error())
+		return err;
+	}
+	comm.TcpPipe(conn,dnsConn,time.Minute*2)
+	fmt.Printf("dnsReq Tcp\r\n");
 	return nil;
 }
 

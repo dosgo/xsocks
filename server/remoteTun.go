@@ -4,10 +4,14 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/adapters/gonet"
-	"github.com/google/netstack/tcpip/buffer"
-	"github.com/google/netstack/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
+
+	//"github.com/google/netstack/tcpip/adapters/gonet"
+	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
+	//"github.com/google/netstack/tcpip/buffer"
+	"gvisor.dev/gvisor/pkg/tcpip/buffer"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"io"
 	"context"
 	"log"
@@ -49,7 +53,7 @@ func newTunTcp(client comm.CommConn) error{
 	if(mtu<1){
 		mtu=1024;
 	}
-	_,channelLinkID,err:=comm.GenChannelLinkID(int(mtu),tcpForward,udpForward);
+	_,channelLinkID,err:=comm.NewDefaultStack(int(mtu),tcpForward,udpForward);
 	if(err!=nil){
 		log.Printf("err:%v\r\n",err)
 		return err;
@@ -67,9 +71,17 @@ func newTunTcp(client comm.CommConn) error{
 		defer fmt.Printf("channelLinkID recv exit \r\n");
 		for {
 			select {
-				case pkt := <-channelLinkID.C:
+				case <-_ctx.Done():
+					return
+				default:
+					pkt,res :=channelLinkID.Read()
+					if(!res){
+						continue;
+					}
 					buffer.Reset()
-					buffer.Write(pkt.Pkt.Header.View())
+					buffer.Write(pkt.Pkt.NetworkHeader().View())
+					buffer.Write(pkt.Pkt.LinkHeader().View())
+					buffer.Write(pkt.Pkt.TransportHeader().View())
 					buffer.Write(pkt.Pkt.Data.ToView())
 					if(buffer.Len()>0) {
 						binary.LittleEndian.PutUint16(packLenByte,uint16(buffer.Len()))
@@ -81,9 +93,6 @@ func newTunTcp(client comm.CommConn) error{
 							return ;
 						}
 					}
-				case <-_ctx.Done():
-					return
-
 			}
 		}
 	}(ctx)
@@ -111,16 +120,16 @@ func newTunTcp(client comm.CommConn) error{
 		tmpView:=buffer.NewVectorisedView(n,[]buffer.View{
 			buffer.NewViewFromBytes(buf[:n]),
 		})
-		channelLinkID.InjectInbound(header.IPv4ProtocolNumber, tcpip.PacketBuffer{
+		channelLinkID.InjectInbound(header.IPv4ProtocolNumber, stack.NewPacketBuffer(stack.PacketBufferOptions{
 			Data: tmpView,
-		})
+		}))
 	}
 	return nil
 }
 
 
 /*udp 转发*/
-func udpForward(conn *gonet.Conn,ep tcpip.Endpoint) error{
+func udpForward(conn *gonet.UDPConn,ep tcpip.Endpoint) error{
 	defer ep.Close();
 	var remoteAddr="";
 	//dns 8.8.8.8
@@ -142,7 +151,7 @@ func udpForward(conn *gonet.Conn,ep tcpip.Endpoint) error{
 
 
 /*tcpForward*/
-func tcpForward(conn *gonet.Conn) error{
+func tcpForward(conn *gonet.TCPConn) error{
 	conn2, err := net.DialTimeout("tcp", conn.LocalAddr().String(),param.ConnectTime);
 	if err != nil {
 		fmt.Println("tcpForward"+conn.LocalAddr().String()+ err.Error())
