@@ -28,11 +28,11 @@ const (
 	maxBufferSize = 4 << 20 // 4 MiB
 
 	// minBufferSize is the smallest size of a receive or send buffer.
-	minBufferSize = 4 << 10 // 4 KiB
+	minBufferSize =4 << 10 // 4096 bytes.
 
 	// defaultBufferSize is the default size of the send/recv buffer for
 	// a transport endpoint.
-	defaultBufferSize = 212 << 10 // 212 KiB
+	defaultBufferSize = 1 << 20 // 1MB
 
 	// defaultTimeToLive specifies the default TTL used by stack.
 	defaultTimeToLive uint8 = 64
