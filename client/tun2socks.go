@@ -128,8 +128,8 @@ func ForwardTransportFromIo(dev io.ReadWriteCloser,mtu int) error {
 				continue;
 			}
 			sendBuffer.Reset()
+			//buffer.Write(pkt.Pkt.LinkHeader().View())
 			sendBuffer.Write(info.Pkt.NetworkHeader().View())
-			sendBuffer.Write(info.Pkt.LinkHeader().View())
 			sendBuffer.Write(info.Pkt.TransportHeader().View())
 			sendBuffer.Write(info.Pkt.Data.ToView())
 			if(sendBuffer.Len()>0) {

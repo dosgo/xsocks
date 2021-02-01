@@ -110,8 +110,8 @@ func tunRecv(dev io.ReadWriteCloser ,mtu int) error{
 					continue;
 				}
 				buffer.Reset()
+				//buffer.Write(pkt.Pkt.LinkHeader().View())
 				buffer.Write(pkt.Pkt.NetworkHeader().View())
-				buffer.Write(pkt.Pkt.LinkHeader().View())
 				buffer.Write(pkt.Pkt.TransportHeader().View())
 				buffer.Write(pkt.Pkt.Data.ToView())
 				//tmpBuf:=append(pkt.Pkt.Header.View(),pkt.Pkt.Data.ToView()...)

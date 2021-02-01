@@ -79,8 +79,8 @@ func newTunTcp(client comm.CommConn) error{
 						continue;
 					}
 					buffer.Reset()
+					//buffer.Write(pkt.Pkt.LinkHeader().View())
 					buffer.Write(pkt.Pkt.NetworkHeader().View())
-					buffer.Write(pkt.Pkt.LinkHeader().View())
 					buffer.Write(pkt.Pkt.TransportHeader().View())
 					buffer.Write(pkt.Pkt.Data.ToView())
 					if(buffer.Len()>0) {
