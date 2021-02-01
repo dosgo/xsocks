@@ -134,7 +134,7 @@ func udpForward(conn *gonet.UDPConn,ep tcpip.Endpoint) error{
 	var remoteAddr="";
 	//dns 8.8.8.8
 	if(strings.HasSuffix(conn.LocalAddr().String(),":53")){
-		fmt.Printf("udpForward dnsAddr:%s",conn.LocalAddr().String()+"SafeDns:"+param.SafeDns+"\r\n")
+		fmt.Printf("udpForward dnsAddr:%s",conn.LocalAddr().String()+"localAddr:"+conn.RemoteAddr().String()+"SafeDns:"+param.SafeDns+"\r\n")
 		remoteAddr=param.SafeDns+":53"
 	}else{
 		remoteAddr=conn.LocalAddr().String();

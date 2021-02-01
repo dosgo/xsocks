@@ -53,6 +53,7 @@ func autoFree(){
 			if(lastTime+600<time.Now().Unix()){
 				_v2,ok:=addrTun.Load(k)
 				if ok{
+					fmt.Println("auto Free close")
 					tunConn:=_v2.(net.Conn)
 					tunConn.Close();
 					addrTun.Delete(k)
@@ -109,6 +110,7 @@ func tunRecv(tunConn net.Conn,addr *net.UDPAddr,udpComm *net.UDPConn,videoHeader
 	var header []byte = make([]byte, videoHeader.Size())
 	var buffer bytes.Buffer
 	var aesGcm=comm.NewAesGcm();
+	defer  addrTun.Delete(addr.String())
 	if(aesGcm==nil){
 		fmt.Println("aesGcm init err")
 		return
@@ -122,7 +124,6 @@ func tunRecv(tunConn net.Conn,addr *net.UDPAddr,udpComm *net.UDPConn,videoHeader
 		n, err := io.ReadFull(tunConn, bufByte[:int(packLen)])
 		if (err != nil) {
 			fmt.Printf("recv pack err :%v\r\n", err)
-			addrTun.Delete(addr.String())
 			break;
 		}else {
 			 videoHeader.Serialize(header)
