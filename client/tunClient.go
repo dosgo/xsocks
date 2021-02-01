@@ -250,7 +250,11 @@ func  packetSwapTun(dev comm.CommConn,mtu int){
 			buffer.Write(ciphertext)
 			udpConn:=_tunPacket.GetPacket();
 			if(udpConn!=nil) {
-				udpConn.Write(buffer.Bytes())
+				_,err=udpConn.Write(buffer.Bytes())
+				if(err!=nil){
+					udpConn.Close();
+					_tunPacket.PutPacket(nil)
+				}
 			}
 		}
 	}(tunPacket);

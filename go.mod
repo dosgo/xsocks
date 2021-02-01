@@ -18,5 +18,5 @@ require (
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/net v0.0.0-20210119194325-5f4716e94777
 	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
-	gvisor.dev/gvisor v0.0.0-20201120201937-2c83e92a9ad6 // indirect
+	gvisor.dev/gvisor v0.0.0-20201215175918-b0f23fb7e0cf // indirect
 )

@@ -55,6 +55,7 @@ func autoFree(){
 				if ok{
 					tunConn:=_v2.(net.Conn)
 					tunConn.Close();
+					addrTun.Delete(k)
 				}
 			}
 			return true
@@ -121,6 +122,7 @@ func tunRecv(tunConn net.Conn,addr *net.UDPAddr,udpComm *net.UDPConn,videoHeader
 		n, err := io.ReadFull(tunConn, bufByte[:int(packLen)])
 		if (err != nil) {
 			fmt.Printf("recv pack err :%v\r\n", err)
+			addrTun.Delete(addr.String())
 			break;
 		}else {
 			 videoHeader.Serialize(header)
