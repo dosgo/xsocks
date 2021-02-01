@@ -198,9 +198,6 @@ func NewDefaultStack(mtu int,tcpCallback ForwarderCall,udpCallback UdpForwarderC
 
 
 func setKeepalive(ep tcpip.Endpoint) error {
-	if err := ep.SetSockOptBool(tcpip.KeepaliveEnabledOption, true); err != nil {
-		return fmt.Errorf("set keepalive: %s", err)
-	}
 	idleOpt := tcpip.KeepaliveIdleOption(60 * time.Second)
 	if err := ep.SetSockOpt(&idleOpt); err != nil {
 		return fmt.Errorf("set keepalive idle: %s", err)
