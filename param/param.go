@@ -3,7 +3,7 @@ package param
 import "time"
 
 //common
-var Version ="1.2.3-(20210201)"
+var Version ="1.2.4-(20210202)"
 
 
 //client
@@ -14,7 +14,7 @@ var SkipVerify bool;
 var TunType int;
 var UnixSockTun string;
 var DnsPort string;
-var Mux int;
+var MuxNum int;
 var LocalDns int;  //use local dns
 var TunSmartProxy bool;
 

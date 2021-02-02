@@ -41,7 +41,7 @@ func (qd *QuicDialer) Dial(quicAddr string) (comm.CommConn, error) {
 		NextProtos:         []string{"quic-echo-example"},
 	}
 
-	if qd.sess == nil || param.Mux!=1{
+	if qd.sess == nil || param.MuxNum==0{
 		sess, err := quic.DialAddr(quicAddr, tlsConf, quicConfig)
 		if err != nil {
 			return nil, err

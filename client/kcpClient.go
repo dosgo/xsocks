@@ -35,7 +35,7 @@ func (qd *KcpInfo) Dial(url string) (comm.CommConn, error) {
 	//conf.KeepAliveInterval=59* time.Second;
 	//conf.KeepAliveTimeout=60*time.Second;
 
-	if qd.sess == nil||param.Mux!=1 {
+	if qd.sess == nil||param.MuxNum==0 {
 		wsConn,err:=connectKcp(url);
 		if(err!=nil){
 			return nil,err;

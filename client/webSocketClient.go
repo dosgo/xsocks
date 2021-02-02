@@ -8,6 +8,8 @@ import (
 	"github.com/xtaci/smux"
 	"golang.org/x/net/websocket"
 	"os"
+	"math/rand"
+	"errors"
 	"sync"
 	"time"
 	"xSocks/comm"
@@ -21,15 +23,14 @@ func init(){
 }
 
 type WsYamux struct {
-	sess           *yamux.Session
+	sess           []*yamux.Session
 	sync.Mutex
 }
 
 type WsSmux struct {
-	sess           *smux.Session
+	sess          [] *smux.Session
 	sync.Mutex
 }
-
 
 
 
@@ -48,40 +49,59 @@ func (qd *WsYamux) Dial(url string) (comm.CommConn, error) {
 	conf.AcceptBacklog=256;
 	conf.KeepAliveInterval=59* time.Second;
 	conf.MaxStreamWindowSize=512*1024;
-	if qd.sess == nil||param.Mux!=1 {
-		wsConn,err:=dialAddr(url);
-		if(err!=nil){
-			return nil,err;
-		}
-		session, err := yamux.Client(wsConn, conf)
-		if err != nil {
-			return nil,err;
-		}
-		if(err!=nil){
-			return nil,err;
-		}
-		qd.sess=session;
+
+	if(qd.sess==nil){
+		qd.sess=make([]*yamux.Session, 0)
 	}
 
-	// Open a new stream
-	stream, err := qd.sess.Open()
-	if err != nil {
-		qd.sess.Close()
+	if(param.MuxNum==0){
 		wsConn,err:=dialAddr(url);
 		if(err!=nil){
 			return nil,err;
 		}
 		session, err := yamux.Client(wsConn, conf)
-		if(err!=nil){
+		if err != nil {
 			return nil,err;
 		}
-		qd.sess=session;
-		stream, err = qd.sess.Open()
-		if err != nil {
-			return nil, err
+		return session.Open()
+	}else{
+		if len(qd.sess) < param.MuxNum {
+			wsConn, err := dialAddr(url);
+			if (err != nil) {
+				return nil, err;
+			}
+			session, err := yamux.Client(wsConn, conf)
+			if err != nil {
+				return nil, err;
+			}
+			qd.sess = append(qd.sess, session)
 		}
+		if(len(qd.sess)<1){
+			return nil,errors.New("sess null");
+		}
+		sessIndex:=rand.Intn(len(qd.sess))
+		sess:=qd.sess[sessIndex]
+		// Open a new stream
+		stream, err :=sess.Open()
+		if err != nil {
+			qd.sess=append(qd.sess[:sessIndex], qd.sess[sessIndex+1:]...)
+			sess.Close()
+			wsConn,err:=dialAddr(url);
+			if(err!=nil){
+				return nil,err;
+			}
+			session, err := yamux.Client(wsConn, conf)
+			if(err!=nil){
+				return nil,err;
+			}
+			qd.sess=append(qd.sess,session)
+			stream, err = session.Open()
+			if err != nil {
+				return nil, err
+			}
+		}
+		return stream, nil
 	}
-	return stream, nil
 }
 
 
@@ -93,7 +113,7 @@ func (qd *WsSmux) Dial(url string) (comm.CommConn, error) {
 	conf.KeepAliveInterval=59* time.Second;
 	conf.KeepAliveTimeout=60*time.Second;
 
-	if qd.sess == nil||param.Mux!=1 {
+	if param.MuxNum==0 {
 		wsConn,err:=dialAddr(url);
 		if(err!=nil){
 			return nil,err;
@@ -102,13 +122,29 @@ func (qd *WsSmux) Dial(url string) (comm.CommConn, error) {
 		if(err!=nil){
 			return nil,err;
 		}
-		qd.sess=session;
+		return session.OpenStream()
 	}
 
+
+
+	if len(qd.sess) < param.MuxNum {
+		wsConn,err:=dialAddr(url);
+		if(err!=nil){
+			return nil,err;
+		}
+		session, err := smux.Client(wsConn, conf)
+		if(err!=nil){
+			return nil,err;
+		}
+		qd.sess=append(qd.sess,session)
+	}
+	sessIndex:=rand.Intn(len(qd.sess))
+	sess:=qd.sess[sessIndex]
+
 	// Open a new stream
-	stream, err := qd.sess.OpenStream()
+	stream, err := sess.OpenStream()
 	if err != nil {
-		qd.sess.Close()
+		sess.Close()
 		wsConn,err:=dialAddr(url);
 		if(err!=nil){
 			return nil,err;
@@ -117,8 +153,8 @@ func (qd *WsSmux) Dial(url string) (comm.CommConn, error) {
 		if err != nil {
 			return nil,err;
 		}
-		qd.sess=session;
-		stream, err = qd.sess.OpenStream()
+		qd.sess=append(qd.sess,session)
+		stream, err = session.OpenStream()
 		if err != nil {
 			return nil, err
 		}
