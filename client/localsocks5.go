@@ -22,18 +22,85 @@ func StartLocalSocks5(address string) {
 	if err != nil {
 		log.Panic(err)
 	}
+
+
+	//start udpProxy
+	udpAddr,err:=startUdpProxy();
+	if err != nil {
+		log.Panic(err)
+	}
 	for {
 		client, err := l.Accept()
 		if err != nil {
 			log.Panic(err)
 		}
-		go handleLocalRequest(client)
+		go handleLocalRequest(client,udpAddr)
 	}
 }
 
 
+func startUdpProxy() ( *net.UDPAddr ,error){
+	udpAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
+	if err != nil {
+		return nil,err
+	}
+	udpListener, err := net.ListenUDP("udp", udpAddr)
+	if err != nil {
+		return nil,err
+	}
+	buf := make([]byte, 2048)
+	buf2 := make([]byte, 2048)
+
+	go func() {
+		for {
+			n, udpAddr, err := udpListener.ReadFromUDP(buf[0:])
+			if err != nil {
+				break;
+			}
+			b := buf[0:n]
+			/*
+			   +----+------+------+----------+----------+----------+
+			   |RSV | FRAG | ATYP | DST.ADDR | DST.PORT |   DATA   |
+			   +----+------+------+----------+----------+----------+
+			   |  2 |   1  |   1  | Variable |     2    | Variable |
+			   +----+------+------+----------+----------+----------+
+			*/
+			if b[2] != 0x00 {
+				fmt.Printf(" WARN: FRAG do not support.\n")
+				continue
+			}
+
+			switch b[3] {
+			case 0x01: //ipv4
+				dstAddr := &net.UDPAddr{
+					IP:   net.IPv4(b[4], b[5], b[6], b[7]),
+					Port: int(b[8])*256 + int(b[9]),
+				}
+				//dns
+				if(dstAddr.Port==53){
+					addr:=fmt.Sprintf("%s:%d",dstAddr.IP,dstAddr.Port);
+					fmt.Printf("addr:%s\r\n",addr)
+					var conn net.Conn
+					if conn, err = net.Dial("udp", addr); err != nil {
+						fmt.Println(err.Error())
+					}
+					conn.Write(b[10:])
+					rlen,_:=conn.Read(buf2);
+					sendBuf:=[]byte{};
+					sendBuf =append(sendBuf,b[0:10]...);//dns
+					sendBuf =append(sendBuf,buf2[0:rlen]...);//dns
+					udpListener.WriteToUDP(sendBuf,udpAddr)
+					defer conn.Close()
+				}
+			}
+		}
+	}()
+	return udpAddr,nil;
+}
+
+
 /*local use  smart dns*/
-func handleLocalRequest(clientConn net.Conn) error {
+func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 	if clientConn == nil {
 		return nil
 	}
@@ -162,55 +229,35 @@ func handleLocalRequest(clientConn net.Conn) error {
 		}
 		//UDP  代理
 		if connectHead[1]==0x03 {
-			toLocalUdp(clientConn);
+			//toLocalUdp(clientConn);
+			udpProxy(clientConn,udpAddr);
 		}
 	}
 	return nil;
 }
-/*发到远程udp处理*/
-func ToRemoteUdp(clientConn net.Conn,auth []byte,connectHead []byte) error{
-	//解析
-	var stream,err=NewTunnel();
+
+
+/*udp to */
+func udpProxy(clientConn net.Conn,udpAddr *net.UDPAddr )  error{
+	//
+	temp := make([]byte, 6)
+	_, err := io.ReadFull(clientConn, temp)
 	if(err!=nil){
 		return err;
 	}
-	defer stream.Close()
-	cmdBuf := make([]byte, 1)
-	cmdBuf[0] = 0x02; //cmd 0x02 to socks5
-	stream.Write(cmdBuf);
-	//写入sock5认证头
-	stream.Write(auth)
-	//获取认证丢弃
-	socks5AuthBack := make([]byte, 2)
-	_, err = io.ReadFull(stream, socks5AuthBack)
-	if err != nil {
-		return err
-	}
-	//写入sock5请求head
-	stream.Write(connectHead)
-	//获取请求的IP跟端口
-	ip_port := make([]byte, 6)
-	_, err = io.ReadFull(clientConn, ip_port)
-	//写入请求IP+port
-	stream.Write(ip_port)
-
-
-	//获取返回的服务器IP跟端口
-	tmpBuf:= make([]byte, 10)
-	_, err = io.ReadFull(stream, tmpBuf)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("tmpBuf:%v\r\n",tmpBuf)
-	ipAddr := net.IPv4(tmpBuf[4], tmpBuf[5], tmpBuf[6], tmpBuf[7])
-	port := strconv.Itoa(int(tmpBuf[8])<<8 | int(tmpBuf[9]))
-	fmt.Printf("listen :%s--%s\r\n",ipAddr,port)
-	clientConn.Write(tmpBuf);
+	bindPort := udpAddr.Port
+	//版本 | 代理的应答 |　保留1字节　| 地址类型 | 代理服务器地址 | 绑定的代理端口
+	bindMsg := []byte{0x05, 0x00, 0x00, 0x01}
+	buffer := bytes.NewBuffer(bindMsg)
+	binary.Write(buffer, binary.BigEndian, udpAddr.IP.To4())
+	binary.Write(buffer, binary.BigEndian, uint16(bindPort))
+	clientConn.Write(buffer.Bytes())
 	return nil;
 }
 
+
 /*udp to */
-func toLocalUdp(clientConn net.Conn )  error{
+func toLocalUdpold(clientConn net.Conn )  error{
 	//
 	temp := make([]byte, 6)
 	_, err := io.ReadFull(clientConn, temp)
