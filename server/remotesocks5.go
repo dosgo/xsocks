@@ -2,20 +2,19 @@ package server
 
 import (
 	"bytes"
-	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"strconv"
+	"context"
 	"sync"
 	"time"
 	"xSocks/comm"
 	"xSocks/param"
 )
 
-var udpNat sync.Map
+
 
 func StartRemoteSocks51(address string) {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
@@ -24,10 +23,11 @@ func StartRemoteSocks51(address string) {
 		log.Panic(err)
 	}
 	//start udpProxy
-	udpAddr,err:=startUdpProxy();
+	udpAddr,err:=startUdpProxy("127.0.0.1:"+param.Sock5UdpPort);
 	if err != nil {
 		log.Panic(err)
 	}
+	param.Sock5UdpPort=fmt.Sprintf("%d",udpAddr.Port);
 
 	for {
 		client, err := l.Accept()
@@ -38,8 +38,8 @@ func StartRemoteSocks51(address string) {
 	}
 }
 
-func startUdpProxy() ( *net.UDPAddr ,error){
-	udpAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
+func startUdpProxy(address string) ( *net.UDPAddr ,error){
+	udpAddr, err := net.ResolveUDPAddr("udp", address)
 	if err != nil {
 		return nil,err
 	}
@@ -48,7 +48,7 @@ func startUdpProxy() ( *net.UDPAddr ,error){
 		return nil,err
 	}
 	buf := make([]byte, 65535)
-
+	var udpNat sync.Map
 	go func() {
 		for {
 			n, localAddr, err := udpListener.ReadFromUDP(buf[0:])
@@ -56,67 +56,52 @@ func startUdpProxy() ( *net.UDPAddr ,error){
 				break;
 			}
 			data := buf[0:n]
-			dstAddr,dataStart,err:=UdpHeadDecode(data);
+			dstAddr,dataStart,err:=comm.UdpHeadDecode(data);
 			if(err!=nil||dstAddr==nil){
 				continue;
 			}
-			natKey:=localAddr.String()+"_"+dstAddr.String()
-			var remoteConn net.Conn
-			_conn,ok:=udpNat.Load(natKey)
-			if !ok{
-				remoteConn, err = net.Dial("udp", dstAddr.String());
-				if err != nil {
-					break;
-				}
-				natSawp(udpListener,natKey,data[:dataStart],localAddr,remoteConn);
-			}else{
-				remoteConn=_conn.(net.Conn)
-			}
-			remoteConn.Write(data[dataStart:])
+			natSawp(udpListener,udpNat,data,dataStart,localAddr,dstAddr);
 		}
 	}()
 	return udpAddr,nil;
 }
 
 /*udp nat sawp*/
-func natSawp(udpGate *net.UDPConn,natKey string,udpHead []byte,localAddr *net.UDPAddr,  remoteConn net.Conn){
-	buf:= make([]byte, 65535)
-	var buffer bytes.Buffer
-	udpNat.Store(natKey,remoteConn)
-	defer udpNat.Delete(natKey);
-	defer remoteConn.Close()
-	go func() {
-		for {
-			//remoteConn.SetDeadline();
-			n, err:= remoteConn.Read(buf);
-			if(err!=nil){
-				return ;
-			}
-			buffer.Reset();
-			buffer.Write(udpHead)
-			buffer.Write(buf[:n])
-			udpGate.WriteToUDP(buffer.Bytes(), localAddr)
+func natSawp(udpGate *net.UDPConn,udpNat sync.Map,data []byte,dataStart int,localAddr *net.UDPAddr, dstAddr *net.UDPAddr){
+	natKey:=localAddr.String()+"_"+dstAddr.String()
+	var remoteConn net.Conn
+	_conn,ok:=udpNat.Load(natKey)
+	if !ok{
+		remoteConn, err := net.Dial("udp", dstAddr.String());
+		if err != nil {
+			return
 		}
-	}()
-}
-
-
-func udpProxyRes(clientConn net.Conn,udpAddr *net.UDPAddr )  error{
-	//
-	temp := make([]byte, 6)
-	_, err := io.ReadFull(clientConn, temp)
-	if(err!=nil){
-		return err;
+		buf:= make([]byte, 65535)
+		var buffer bytes.Buffer
+		udpNat.Store(natKey,remoteConn)
+		defer udpNat.Delete(natKey);
+		defer remoteConn.Close()
+		go func() {
+			for {
+				//remoteConn.SetDeadline();
+				remoteConn.SetReadDeadline(time.Now().Add(60*10*time.Second))
+				n, err:= remoteConn.Read(buf);
+				if(err!=nil){
+					return ;
+				}
+				buffer.Reset();
+				buffer.Write(comm.UdpHeadEncode(dstAddr))
+				buffer.Write(buf[:n])
+				udpGate.WriteToUDP(buffer.Bytes(), localAddr)
+			}
+		}()
+	}else{
+		remoteConn=_conn.(net.Conn)
 	}
-	bindPort := udpAddr.Port
-	//版本 | 代理的应答 |　保留1字节　| 地址类型 | 代理服务器地址 | 绑定的代理端口
-	bindMsg := []byte{0x05, 0x00, 0x00, 0x01}
-	buffer := bytes.NewBuffer(bindMsg)
-	binary.Write(buffer, binary.BigEndian, udpAddr.IP.To4())
-	binary.Write(buffer, binary.BigEndian, uint16(bindPort))
-	clientConn.Write(buffer.Bytes())
-	return nil;
+	remoteConn.Write(data[dataStart:])
 }
+
+
 
 
 /*remote use*/
@@ -134,8 +119,6 @@ func handleRemoteRequest(clientConn net.Conn,udpAddr *net.UDPAddr) {
 		//resp auth
 		clientConn.Write([]byte{0x05, 0x00})
 	}
-
-
 	connectHead:= make([]byte,4)
 	_, err = io.ReadFull(clientConn, connectHead)
 	if err != nil {
@@ -184,12 +167,12 @@ func handleRemoteRequest(clientConn net.Conn,udpAddr *net.UDPAddr) {
 		}
 		//udp
 		if(connectHead[1]==0x03) {
-			udpProxyRes(clientConn,udpAddr);
+			comm.UdpProxyRes(clientConn,udpAddr);
 		}
 	}
 }
 
-/*test single user*/
+/*single user test*/
 func startUdpGate() ( *net.UDPAddr ,error){
 	udpAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
 	if err != nil {
@@ -201,27 +184,63 @@ func startUdpGate() ( *net.UDPAddr ,error){
 	}
 	buf := make([]byte, 65535)
 	var gateNat sync.Map
+	var gateNatTime sync.Map
 	var buffer bytes.Buffer
+	var lastTime=time.Now().Unix();
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func(_ctx context.Context){
+		ticker := time.NewTicker(time.Second * 60)
+		defer ticker.Stop();
+		for {
+			gateNatTime.Range(func(_k, _v interface{}) bool {
+				lastTime := _v.(int64)
+				if (lastTime+600 < time.Now().Unix()) {
+					gateNat.Delete(_k)
+					gateNatTime.Delete(_k)
+				}
+				return true
+			})
+			select {
+				case  <-ticker.C:
+					fmt.Println("d")
+				case <-_ctx.Done():
+					return
+					break;
+			}
+		}
+	}(ctx)
+
 	go func() {
 		for {
+			udpListener.SetDeadline(time.Now().Add(30*time.Second))
 			n, recvAddr, err := udpListener.ReadFromUDP(buf[0:])
 			if err != nil {
+				continue;
+			}
+			if(lastTime+60*10<time.Now().Unix()){
 				break;
 			}
+
+			lastTime=time.Now().Unix();
+
 			data := buf[0:n]
 			_udpAddr,ok:=gateNat.Load(recvAddr.String())
 			//client to remote
 			if !ok{
 				var dstAddr *net.UDPAddr
-				dstAddr,dataStart,err:=UdpHeadDecode(data);
+				dstAddr,dataStart,err:=comm.UdpHeadDecode(data);
 				if(err!=nil||dstAddr==nil){
 					continue;
 				}
 				gateNat.Store(dstAddr.String(),recvAddr)
+				gateNatTime.Store(dstAddr.String(),time.Now().Unix())
 				udpListener.WriteTo(data[dataStart:],dstAddr)
 			}else{
 				buffer.Reset()
-				buffer.Write(UdpHeadEncode(recvAddr))
+				buffer.Write(comm.UdpHeadEncode(recvAddr))
 				buffer.Write(data)
 				//remote to client
 				udpListener.WriteTo(buffer.Bytes(),_udpAddr.(*net.UDPAddr))
@@ -230,54 +249,3 @@ func startUdpGate() ( *net.UDPAddr ,error){
 	}()
 	return udpAddr,nil;
 }
-
-func UdpHeadDecode(data []byte) ( *net.UDPAddr,int, error){
-
-	/*
-	   +----+------+------+----------+----------+----------+
-	   |RSV | FRAG | ATYP | DST.ADDR | DST.PORT |   DATA   |
-	   +----+------+------+----------+----------+----------+
-	   |  2 |   1  |   1  | Variable |     2    | Variable |
-	   +----+------+------+----------+----------+----------+
-	*/
-	if data[2] != 0x00 {
-		return nil,0,errors.New("WARN: FRAG do not support");
-	}
-
-	var dstAddr *net.UDPAddr
-	var dataStart=0;
-	switch data[3] {
-	case 0x01: //ipv4
-		dstAddr = &net.UDPAddr{
-			IP:   net.IPv4(data[4], data[5], data[6], data[7]),
-			Port: int(data[8])*256 + int(data[9]),
-		}
-		dataStart=10;
-		break;
-	case 0x03: //domain
-		domainLen := int(data[4])
-		domain := string(data[5 : 5+domainLen])
-		ipAddr, err := net.ResolveIPAddr("ip", domain)
-		if err != nil {
-			return nil,0,errors.New(fmt.Sprintf("Error -> domain %s dns query err:%v\n", domain, err));
-		}
-		dstAddr = &net.UDPAddr{
-			IP:   ipAddr.IP,
-			Port: int(data[5+domainLen])*256 + int(data[6+domainLen]),
-		}
-		dataStart=6+domainLen;
-		break;
-	default:
-		return nil,0,errors.New(fmt.Sprintf( " WARN: ATYP %v do not support.\n", data[3]));
-
-	}
-	return dstAddr,dataStart,nil;
-}
-func UdpHeadEncode(addr *net.UDPAddr) (  []byte) {
-	bindMsg := []byte{0x05, 0x00, 0x00, 0x01}
-	buffer := bytes.NewBuffer(bindMsg)
-	binary.Write(buffer, binary.BigEndian, addr.IP.To4())
-	binary.Write(buffer, binary.BigEndian, uint16(addr.Port))
-	return buffer.Bytes();
-}
-

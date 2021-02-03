@@ -18,6 +18,7 @@ import (
 	"log"
 	"net"
 	"net/url"
+	"context"
 	"os"
 	"runtime"
 	"strconv"
@@ -75,21 +76,6 @@ func StartTunDevice(tunDevice string,tunAddr string,tunMask string,tunGW string,
 		}
 		dev=conn;
 		defer conn.Close()
-		/*
-		laddr, err := net.ResolveUnixAddr("unixgram",param.UnixSockTun)
-		if err != nil {
-			return ;
-		}
-
-		conn, err := net.ListenUnixgram("unixgram", laddr)
-		if err != nil {                      //如果监听失败，一般是文件已存在，需要删除它
-			log.Println("UNIX Domain Socket 创 建失败，正在尝试重新创建 -> ", err)
-			os.Remove(param.UnixSockTun)
-			return ;
-		}
-		dev=conn;
-
-		 */
 	}else{
 		if(runtime.GOOS=="windows") {
 			urlInfo, _ := url.Parse(param.ServerAddr)
@@ -119,13 +105,17 @@ func ForwardTransportFromIo(dev io.ReadWriteCloser,mtu int) error {
 	if(err!=nil){
 		return err;
 	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// write tun
-	go func() {
+	go func(_ctx context.Context) {
 		var sendBuffer =new(bytes.Buffer)
 		for {
-			info,res:=channelLinkID.Read()
+			info,res:=channelLinkID.ReadContext(_ctx)
 			if(!res){
-				continue;
+				break;
 			}
 			sendBuffer.Reset()
 			//buffer.Write(pkt.Pkt.LinkHeader().View())
@@ -136,7 +126,7 @@ func ForwardTransportFromIo(dev io.ReadWriteCloser,mtu int) error {
 				dev.Write(sendBuffer.Bytes())
 			}
 		}
-	}()
+	}(ctx)
 
 
 	// read tun data

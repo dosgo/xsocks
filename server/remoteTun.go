@@ -70,30 +70,26 @@ func newTunTcp(client comm.CommConn) error{
 		var packLenByte []byte = make([]byte, 2)
 		defer fmt.Printf("channelLinkID recv exit \r\n");
 		for {
-			select {
-				case <-_ctx.Done():
-					return
-				default:
-					pkt,res :=channelLinkID.Read()
-					if(!res){
-						continue;
+				//pkt,res :=channelLinkID.ReadContext(_ctx)
+				pkt,res :=channelLinkID.ReadContext(_ctx)
+				if(!res){
+					break;
+				}
+				buffer.Reset()
+				//buffer.Write(pkt.Pkt.LinkHeader().View())
+				buffer.Write(pkt.Pkt.NetworkHeader().View())
+				buffer.Write(pkt.Pkt.TransportHeader().View())
+				buffer.Write(pkt.Pkt.Data.ToView())
+				if(buffer.Len()>0) {
+					binary.LittleEndian.PutUint16(packLenByte,uint16(buffer.Len()))
+					sendBuffer.Reset()
+					sendBuffer.Write(packLenByte)
+					sendBuffer.Write(buffer.Bytes())
+					_,err=client.Write(sendBuffer.Bytes())
+					if(err!=nil){
+						return ;
 					}
-					buffer.Reset()
-					//buffer.Write(pkt.Pkt.LinkHeader().View())
-					buffer.Write(pkt.Pkt.NetworkHeader().View())
-					buffer.Write(pkt.Pkt.TransportHeader().View())
-					buffer.Write(pkt.Pkt.Data.ToView())
-					if(buffer.Len()>0) {
-						binary.LittleEndian.PutUint16(packLenByte,uint16(buffer.Len()))
-						sendBuffer.Reset()
-						sendBuffer.Write(packLenByte)
-						sendBuffer.Write(buffer.Bytes())
-						_,err=client.Write(sendBuffer.Bytes())
-						if(err!=nil){
-							return ;
-						}
-					}
-			}
+				}
 		}
 	}(ctx)
 

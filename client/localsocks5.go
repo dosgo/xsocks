@@ -9,6 +9,7 @@ import (
 	"net"
 	"runtime"
 	"strconv"
+	"sync"
 	"time"
 	"xSocks/comm"
 	"xSocks/param"
@@ -49,54 +50,125 @@ func startUdpProxy() ( *net.UDPAddr ,error){
 		return nil,err
 	}
 	buf := make([]byte, 2048)
-	buf2 := make([]byte, 2048)
-
+	var udpNat sync.Map
+	var remoteUdpNat sync.Map
 	go func() {
 		for {
-			n, udpAddr, err := udpListener.ReadFromUDP(buf[0:])
+			n, localAddr, err := udpListener.ReadFromUDP(buf[0:])
 			if err != nil {
 				break;
 			}
-			b := buf[0:n]
-			/*
-			   +----+------+------+----------+----------+----------+
-			   |RSV | FRAG | ATYP | DST.ADDR | DST.PORT |   DATA   |
-			   +----+------+------+----------+----------+----------+
-			   |  2 |   1  |   1  | Variable |     2    | Variable |
-			   +----+------+------+----------+----------+----------+
-			*/
-			if b[2] != 0x00 {
-				fmt.Printf(" WARN: FRAG do not support.\n")
-				continue
+			data := buf[0:n]
+			dstAddr,dataStart,err:=comm.UdpHeadDecode(data);
+			if(err!=nil||dstAddr==nil){
+				continue;
 			}
-
-			switch b[3] {
-			case 0x01: //ipv4
-				dstAddr := &net.UDPAddr{
-					IP:   net.IPv4(b[4], b[5], b[6], b[7]),
-					Port: int(b[8])*256 + int(b[9]),
-				}
-				//dns
-				if(dstAddr.Port==53){
-					addr:=fmt.Sprintf("%s:%d",dstAddr.IP,dstAddr.Port);
-					fmt.Printf("addr:%s\r\n",addr)
-					var conn net.Conn
-					if conn, err = net.Dial("udp", addr); err != nil {
-						fmt.Println(err.Error())
-					}
-					conn.Write(b[10:])
-					rlen,_:=conn.Read(buf2);
-					sendBuf:=[]byte{};
-					sendBuf =append(sendBuf,b[0:10]...);//dns
-					sendBuf =append(sendBuf,buf2[0:rlen]...);//dns
-					udpListener.WriteToUDP(sendBuf,udpAddr)
-					defer conn.Close()
-				}
+			//本地转发
+			if ((!comm.IsPublicIP(dstAddr.IP) || comm.IsChinaMainlandIP(dstAddr.IP.String()))&&(runtime.GOOS!="windows"||param.TunType!=1)) {
+				natSawp(udpListener,udpNat,data,dataStart,localAddr,dstAddr);
+			} else{
+				remoteUdpProxy(udpListener,data,remoteUdpNat,localAddr);
 			}
 		}
 	}()
 	return udpAddr,nil;
 }
+
+
+func remoteUdpProxy(udpGate *net.UDPConn,data []byte, remoteUdpNat sync.Map,localAddr *net.UDPAddr) error{
+	natKey:=localAddr.String()
+	var tunnel net.Conn
+	_conn,ok:=remoteUdpNat.Load(natKey)
+	if !ok{
+		sendBuf:=[]byte{};
+		//cmd
+		sendBuf =append(sendBuf,0x01);//dns\
+		var err error;
+		tunnel, err:= NewTunnel();
+		if(err!=nil){
+			return err;
+		}
+		_,err=tunnel.Write(sendBuf)
+		if(err!=nil){
+			return err;
+		}
+		go func() {
+			remoteUdpNat.Store(natKey,tunnel)
+			defer remoteUdpNat.Delete(natKey);
+			defer tunnel.Close()
+			var packLenByte []byte = make([]byte, 2)
+			var bufByte []byte = make([]byte,65535)
+			for {
+				//remoteConn.SetDeadline();
+				tunnel.SetDeadline(time.Now().Add(60*10*time.Second))
+				_, err := io.ReadFull(tunnel, packLenByte)
+				packLen := binary.LittleEndian.Uint16(packLenByte)
+				if (err != nil||int(packLen)>len(bufByte)) {
+					break;
+				}
+				tunnel.SetDeadline(time.Now().Add(300*time.Second))
+				_, err = io.ReadFull(tunnel, bufByte[:int(packLen)])
+				if (err != nil) {
+					break;
+				}else {
+					_, err = udpGate.Write(bufByte[:int(packLen)])
+					if (err != nil) {
+						fmt.Printf("e:%v\r\n", err)
+					}
+				}
+			}
+		}()
+	}else{
+		tunnel=_conn.(net.Conn)
+	}
+	var packLenByte []byte = make([]byte, 2)
+	var buffer bytes.Buffer
+	//fmt.Printf("dev read len:%d\r\n",n);
+	binary.LittleEndian.PutUint16(packLenByte, uint16(len(data)))
+	buffer.Reset()
+	buffer.Write(packLenByte)
+	buffer.Write(data)
+	tunnel.Write(buffer.Bytes())
+	return nil;
+}
+
+
+
+/*udp nat sawp*/
+func natSawp(udpGate *net.UDPConn,udpNat sync.Map,data []byte,dataStart int,localAddr *net.UDPAddr, dstAddr *net.UDPAddr){
+	natKey:=localAddr.String()+"_"+dstAddr.String()
+	var remoteConn net.Conn
+	_conn,ok:=udpNat.Load(natKey)
+	if !ok{
+		remoteConn, err := net.Dial("udp", dstAddr.String());
+		if err != nil {
+			return
+		}
+		buf:= make([]byte, 65535)
+		var buffer bytes.Buffer
+		udpNat.Store(natKey,remoteConn)
+		defer udpNat.Delete(natKey);
+		defer remoteConn.Close()
+		go func() {
+			for {
+				//remoteConn.SetDeadline();
+				remoteConn.SetReadDeadline(time.Now().Add(60*10*time.Second))
+				n, err:= remoteConn.Read(buf);
+				if(err!=nil){
+					return ;
+				}
+				buffer.Reset();
+				buffer.Write(comm.UdpHeadEncode(dstAddr))
+				buffer.Write(buf[:n])
+				udpGate.WriteToUDP(buffer.Bytes(), localAddr)
+			}
+		}()
+	}else{
+		remoteConn=_conn.(net.Conn)
+	}
+	remoteConn.Write(data[dataStart:])
+}
+
 
 
 /*local use  smart dns*/
@@ -230,105 +302,9 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 		//UDP  代理
 		if connectHead[1]==0x03 {
 			//toLocalUdp(clientConn);
-			udpProxy(clientConn,udpAddr);
+			comm.UdpProxyRes(clientConn,udpAddr);
 		}
 	}
 	return nil;
 }
 
-
-/*udp to */
-func udpProxy(clientConn net.Conn,udpAddr *net.UDPAddr )  error{
-	//
-	temp := make([]byte, 6)
-	_, err := io.ReadFull(clientConn, temp)
-	if(err!=nil){
-		return err;
-	}
-	bindPort := udpAddr.Port
-	//版本 | 代理的应答 |　保留1字节　| 地址类型 | 代理服务器地址 | 绑定的代理端口
-	bindMsg := []byte{0x05, 0x00, 0x00, 0x01}
-	buffer := bytes.NewBuffer(bindMsg)
-	binary.Write(buffer, binary.BigEndian, udpAddr.IP.To4())
-	binary.Write(buffer, binary.BigEndian, uint16(bindPort))
-	clientConn.Write(buffer.Bytes())
-	return nil;
-}
-
-
-/*udp to */
-func toLocalUdpold(clientConn net.Conn )  error{
-	//
-	temp := make([]byte, 6)
-	_, err := io.ReadFull(clientConn, temp)
-	if(err!=nil){
-		return err;
-	}
-
-	udpAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
-	if err != nil {
-		return err
-	}
-	udpListener, err := net.ListenUDP("udp", udpAddr)
-	if err != nil {
-		return err
-	}
-	defer udpListener.Close()
-
-	udpListAddr, err := net.ResolveUDPAddr("udp", udpListener.LocalAddr().String())
-	bindPort := udpListAddr.Port
-
-	//版本 | 代理的应答 |　保留1字节　| 地址类型 | 代理服务器地址 | 绑定的代理端口
-	bindMsg := []byte{0x05, 0x00, 0x00, 0x01}
-	buffer := bytes.NewBuffer(bindMsg)
-	binary.Write(buffer, binary.BigEndian, udpAddr.IP.To4())
-	binary.Write(buffer, binary.BigEndian, uint16(bindPort))
-	clientConn.Write(buffer.Bytes())
-
-	buf := make([]byte, 2048)
-	buf2 := make([]byte, 2048)
-	for {
-		n, udpAddr, err := udpListener.ReadFromUDP(buf[0:])
-		if err != nil {
-			return err
-		}
-		b := buf[0:n]
-		/*
-		   +----+------+------+----------+----------+----------+
-		   |RSV | FRAG | ATYP | DST.ADDR | DST.PORT |   DATA   |
-		   +----+------+------+----------+----------+----------+
-		   |  2 |   1  |   1  | Variable |     2    | Variable |
-		   +----+------+------+----------+----------+----------+
-		*/
-		if b[2] != 0x00 {
-			fmt.Printf(" WARN: FRAG do not support.\n")
-			continue
-		}
-
-		switch b[3] {
-		case 0x01: //ipv4
-			dstAddr := &net.UDPAddr{
-				IP:   net.IPv4(b[4], b[5], b[6], b[7]),
-				Port: int(b[8])*256 + int(b[9]),
-			}
-			//dns
-			if(dstAddr.Port==53){
-				addr:=fmt.Sprintf("%s:%d",dstAddr.IP,dstAddr.Port);
-				fmt.Printf("addr:%s\r\n",addr)
-				var conn net.Conn
-				if conn, err = net.Dial("udp", addr); err != nil {
-					fmt.Println(err.Error())
-				}
-				conn.Write(b[10:])
-				rlen,_:=conn.Read(buf2);
-				sendBuf:=[]byte{};
-				sendBuf =append(sendBuf,b[0:10]...);//dns
-				sendBuf =append(sendBuf,buf2[0:rlen]...);//dns
-				udpListener.WriteToUDP(sendBuf,udpAddr)
-				defer conn.Close()
-
-			}
-		}
-
-	}
-}

@@ -3,7 +3,7 @@ package param
 import "time"
 
 //common
-var Version ="1.2.4-(20210202)"
+var Version ="1.2.5-(20210203)"
 
 
 //client
@@ -25,9 +25,9 @@ var ConnectTime =10*time.Second;
 
 //server
 var Sock5Port string
+var Sock5UdpPort string
 var QuicPort string
 var WebPort string
-var SctpPort string;
 var SudpPort string;
 var KcpPort string;
 var Password string

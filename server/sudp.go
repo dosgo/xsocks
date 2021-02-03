@@ -58,6 +58,7 @@ func autoFree(){
 					tunConn.Close();
 					addrTun.Delete(k)
 				}
+				addrLastTime.Delete(_k)
 			}
 			return true
 		})

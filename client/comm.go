@@ -30,9 +30,6 @@ func  NewTunnel () (comm.CommConn,error){
 	if (strings.HasPrefix(param.ServerAddr,"quic")) {
 		stream, err = NewQuicDialer().Dial(param.ServerAddr[7:])
 	}
-	if (strings.HasPrefix(param.ServerAddr,"sctp")) {
-		stream, err = NewSctpDialer().Dial(param.ServerAddr[7:])
-	}
 	if (strings.HasPrefix(param.ServerAddr,"kcp")) {
 		stream, err = NewKcpDialer().Dial(param.ServerAddr[6:])
 	}

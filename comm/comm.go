@@ -12,9 +12,8 @@ import (
 )
 
 type CommConn interface {
-	 io.Reader
-	 io.Writer
-	 io.Closer
+	SetDeadline(t time.Time) error
+	io.ReadWriteCloser
 }
 
 
@@ -55,6 +54,18 @@ func GetFreePort() (string, error) {
 	defer l.Close()
 	return fmt.Sprintf("%d", l.Addr().(*net.TCPAddr).Port), nil
 }
+
+
+func GetFreeUdpPort() (string, error) {
+	addr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
+	l, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		return "0", err
+	}
+	defer l.Close()
+	return fmt.Sprintf("%d", l.LocalAddr().(*net.UDPAddr).Port), nil
+}
+
 
 
 func IsPublicIP(ip net.IP) bool {

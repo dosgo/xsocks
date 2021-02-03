@@ -10,6 +10,8 @@ import (
 	"xSocks/comm"
 	"xSocks/param"
 	"xSocks/server"
+
+	//"xSocks/server"
 )
 
 /*服务功能
@@ -23,7 +25,6 @@ func main() {
 	flag.StringVar(&param.TunPort, "TunPort", "", "local tun port")
 	flag.StringVar(&param.QuicPort, "quicPort", "5002", "quic port")
 	flag.StringVar(&param.WebPort, "webPort", "5003", "quic port")
-	flag.StringVar(&param.SctpPort, "sctpPort", "5004", "sctp port")
 	flag.StringVar(&param.KcpPort, "kcpPort", "5005", "kcp port")
 	flag.StringVar(&param.SudpPort, "sudpPort", "5006", "sudp port")
 	flag.StringVar(&param.Password, "password", "password", "password")
@@ -32,6 +33,9 @@ func main() {
 	flag.IntVar(&param.Mtu, "mtu", 4500, "mtu")
 	flag.Parse()
 
+	if(param.Sock5UdpPort==""){
+		param.Sock5UdpPort,_= comm.GetFreeUdpPort();
+	}
 	//随机端口
 	if(param.Sock5Port==""){
 		param.Sock5Port,_= comm.GetFreePort();
@@ -68,14 +72,12 @@ func main() {
 
 	fmt.Println("client run: ./client   -serverAddr \"quic://"+publicIp+":"+param.QuicPort+"\"")
 	fmt.Println("client run: ./client   -serverAddr \"wss://"+publicIp+":"+param.WebPort+"\" -caFile xx_ca.pem")
-	fmt.Println("client run: ./client   -serverAddr \"sctp://"+publicIp+":"+param.SctpPort+"\"")
 	fmt.Println("client run: ./client   -serverAddr \"kcp://"+publicIp+":"+param.KcpPort+"\"")
 	fmt.Println("client run: ./client   -tunType 2   -serverAddr \"sudp://"+publicIp+":"+param.SudpPort+"\"")
 
 
 	go server.StartRemoteSocks51("127.0.0.1:"+param.Sock5Port);
 	go server.StartWebSocket(publicIp+":"+param.WebPort);
-	go server.StartSctp(publicIp+":"+param.SctpPort)
 	go server.StartKcp(publicIp+":"+param.KcpPort);
 	go server.StartTunTcp(); //local tun server
 	go server.StartSudp(publicIp+":"+param.SudpPort)

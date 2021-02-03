@@ -1,6 +1,8 @@
 package server
 
 import (
+	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -67,8 +69,61 @@ func proxy(conn comm.CommConn){
 		case 0x03:
 			toTunTcp(conn)
 			break;
+			//to udp socket
+		case 0x04:
+			tcpToUdpProxy(conn);
+			break;
 	}
 }
+
+/*转发到本地的udp网关*/
+func tcpToUdpProxy(conn comm.CommConn){
+	var packLenByte []byte = make([]byte, 2)
+	var bufByte []byte = make([]byte,65535)
+	remoteConn, err := net.Dial("udp", "127.0.0.1:"+param.Sock5UdpPort);
+	if(err!=nil){
+		return
+	}
+	defer remoteConn.Close()
+	for {
+		//remoteConn.SetDeadline();
+		conn.SetDeadline(time.Now().Add(60*10*time.Second))
+		_, err := io.ReadFull(conn, packLenByte)
+		packLen := binary.LittleEndian.Uint16(packLenByte)
+		if (err != nil||int(packLen)>len(bufByte)) {
+			break;
+		}
+		conn.SetDeadline(time.Now().Add(300*time.Second))
+		_, err = io.ReadFull(conn, bufByte[:int(packLen)])
+		if (err != nil) {
+			break;
+		}else {
+			_, err = remoteConn.Write(bufByte[:int(packLen)])
+			if (err != nil) {
+				fmt.Printf("e:%v\r\n", err)
+			}
+		}
+	}
+	go func() {
+		var bufByte1 []byte = make([]byte,65535)
+		var buffer bytes.Buffer
+		var packLenByte []byte = make([]byte, 2)
+		for {
+			remoteConn.SetDeadline(time.Now().Add(60*10*time.Second))
+			n, err := remoteConn.Read(bufByte1)
+			if err != nil {
+				break;
+			}
+			buffer.Reset()
+			binary.LittleEndian.PutUint16(packLenByte, uint16(n))
+			buffer.Write(packLenByte)
+			buffer.Write(bufByte1[:n])
+			//remote to client
+			conn.Write(buffer.Bytes())
+		}
+	}();
+}
+
 
 
 /*to tun 处理*/

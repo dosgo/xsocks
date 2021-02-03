@@ -215,7 +215,7 @@ func connectUdp()(*net.UDPConn,error){
 
 
 /*udp packet*/
-func  packetSwapTun(dev comm.CommConn,mtu int){
+func  packetSwapTun(dev  io.ReadWriteCloser,mtu int){
 	tunPacket:=&TunConn{}
 	videoHeader:=comm.NewVideoChat();
 	var aesGcm=comm.NewAesGcm();
@@ -296,7 +296,7 @@ func  packetSwapTun(dev comm.CommConn,mtu int){
 
 
 /*tcp  Stream */
-func  StreamSwapTun(dev comm.CommConn,mtu int){
+func  StreamSwapTun(dev io.ReadWriteCloser,mtu int){
 	tunStream:=&TunConn{}
 	tunStream.UniqueId=comm.UniqueId(8)
 	tunStream.Mtu=mtu;
