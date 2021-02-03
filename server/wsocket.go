@@ -63,8 +63,9 @@ func webHandler(w http.ResponseWriter, req *http.Request){
 func webToSocks5Yamux(ws *websocket.Conn) {
 	conf:=yamux.DefaultConfig();
 	conf.AcceptBacklog=1024;
-	conf.KeepAliveInterval=59* time.Second;
-	conf.MaxStreamWindowSize=512*1024;
+	conf.KeepAliveInterval=52* time.Second;
+	conf.MaxStreamWindowSize=1024*1024;
+	conf.ConnectionWriteTimeout=20* time.Second;
 	// Setup server side of yamux
 	session, err := yamux.Server(ws, conf)
 	if err != nil {

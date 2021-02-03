@@ -131,7 +131,6 @@ func handleRemoteRequest(clientConn net.Conn,udpAddr *net.UDPAddr) {
 			var host, port string
 			switch connectHead[3] {
 			case 0x01: //IP V4
-				fmt.Printf("ipv4\r\n");
 				ipv4 := make([]byte, 4)
 				_, err = io.ReadFull(clientConn, ipv4)
 				host = net.IPv4(ipv4[0], ipv4[1], ipv4[2], ipv4[3]).String()
@@ -161,7 +160,6 @@ func handleRemoteRequest(clientConn net.Conn,udpAddr *net.UDPAddr) {
 			}
 			defer server.Close()
 			clientConn.Write([]byte{0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}) //响应客户端连接成功
-			fmt.Printf("to remote\r\n")
 			//进行转发
 			comm.TcpPipe(server,clientConn,time.Minute*10)
 		}

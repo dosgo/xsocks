@@ -46,9 +46,10 @@ func (qd *WsYamux) Dial(url string) (comm.CommConn, error) {
 	qd.Lock()
 	defer qd.Unlock()
 	conf:=yamux.DefaultConfig();
-	conf.AcceptBacklog=256;
-	conf.KeepAliveInterval=59* time.Second;
-	conf.MaxStreamWindowSize=512*1024;
+	conf.AcceptBacklog=512;
+	conf.KeepAliveInterval=52* time.Second;
+	conf.MaxStreamWindowSize=1024*1024;
+	conf.ConnectionWriteTimeout=20* time.Second;
 
 	if(qd.sess==nil){
 		qd.sess=make([]*yamux.Session, 0)
