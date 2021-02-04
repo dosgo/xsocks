@@ -135,7 +135,7 @@ func udpForward(conn *gonet.UDPConn,ep tcpip.Endpoint) error{
 	}else{
 		remoteAddr=conn.LocalAddr().String();
 	}
-	conn2, err := net.Dial("udp",remoteAddr);
+	conn2, err := net.DialTimeout("udp",remoteAddr,time.Second*15);
 	if err != nil {
 		fmt.Println("udpForward"+conn.LocalAddr().String()+ err.Error())
 		return err;

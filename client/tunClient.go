@@ -367,7 +367,7 @@ func  StreamSwapTun(dev io.ReadWriteCloser,mtu int){
 func udpForward(conn *gonet.UDPConn, ep tcpip.Endpoint) error{
 	defer conn.Close();
 	defer ep.Close();
-	conn2, err := net.Dial("udp",conn.LocalAddr().String());
+	conn2, err := net.DialTimeout("udp",conn.LocalAddr().String(),param.ConnectTime);
 	if err != nil {
 		fmt.Println(err.Error())
 		return err;

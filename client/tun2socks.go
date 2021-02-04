@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
@@ -176,8 +177,7 @@ func udpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)error{
 	return nil;
 }
 func dnsReqUdp(conn *gonet.UDPConn) error{
-
-	dnsConn, err := net.Dial("udp", "127.0.0.1:"+param.DnsPort);
+	dnsConn, err := net.DialTimeout("udp", "127.0.0.1:"+param.DnsPort,time.Second*15);
 	if err != nil {
 		fmt.Println(err.Error())
 		return err;
@@ -201,12 +201,6 @@ func dnsReqTcp(conn *gonet.TCPConn) error{
 func socksCmd(socksConn net.Conn,cmd uint8,host string) error{
 	//socks5 auth
 	socksConn.Write([]byte{0x05, 0x01,0x00});
-	authBack := make([]byte, 2)
-	_, err:= io.ReadFull(socksConn, authBack)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
 	//connect head
 	hosts:=strings.Split(host,":");
 	rAddr:=net.ParseIP(hosts[0])
@@ -218,11 +212,26 @@ func socksCmd(socksConn net.Conn,cmd uint8,host string) error{
 	//port
 	binary.Write(buffer, binary.BigEndian, uint16(_port))
 	socksConn.Write(buffer.Bytes());
-	conectBack := make([]byte, 10)
-	_, err = io.ReadFull(socksConn, conectBack)
+
+	//recv auth back
+	authBack := make([]byte, 2)
+	_, err:= io.ReadFull(socksConn, authBack)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	if authBack[0]!=0x05||authBack[1]!=0x00 {
+		log.Println("auth error")
+		return errors.New("auth error");
+	}
+
+	//recv connectBack
+	connectBack := make([]byte, 10)
+	_, err = io.ReadFull(socksConn, connectBack)
 	if err!= nil {
 		log.Println(err)
 		return err
 	}
+
 	return nil;
 }

@@ -72,7 +72,7 @@ func natSawp(udpGate *net.UDPConn,udpNat sync.Map,data []byte,dataStart int,loca
 	var remoteConn net.Conn
 	_conn,ok:=udpNat.Load(natKey)
 	if !ok{
-		remoteConn, err := net.Dial("udp", dstAddr.String());
+		remoteConn, err := net.DialTimeout("udp", dstAddr.String(),time.Second*15);
 		if err != nil {
 			return
 		}

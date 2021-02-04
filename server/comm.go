@@ -62,8 +62,7 @@ func proxy(conn comm.CommConn){
 			}
 			defer sConn.Close();
 			//交换数据
-			go io.Copy(sConn, conn)
-			io.Copy(conn, sConn)
+			comm.TcpPipe(sConn,conn,time.Minute*10)
 			break;
 		//to tun
 		case 0x03:
@@ -80,7 +79,7 @@ func proxy(conn comm.CommConn){
 func tcpToUdpProxy(conn comm.CommConn){
 	var packLenByte []byte = make([]byte, 2)
 	var bufByte []byte = make([]byte,65535)
-	remoteConn, err := net.Dial("udp", "127.0.0.1:"+param.Sock5UdpPort);
+	remoteConn, err := net.DialTimeout("udp", "127.0.0.1:"+param.Sock5UdpPort,time.Second*15);
 	if(err!=nil){
 		return
 	}
@@ -143,17 +142,7 @@ func toTunTcp(conn comm.CommConn){
 		log.Printf("err:%v\r\n", param.TunPort)
 		return;
 	}
-
-	switch netConn :=conn.(type) {
-		case net.Conn:
-			comm.TcpPipe(netConn,sConn,time.Minute*5)
-			break;
-		default:
-			TimeoutSConn:=comm.TimeoutConn{sConn,time.Minute*5}
-			go io.Copy(TimeoutSConn, conn)
-			io.Copy(conn, TimeoutSConn)
-			break;
-	}
+	comm.TcpPipe(conn,sConn,time.Minute*5)
 }
 
 

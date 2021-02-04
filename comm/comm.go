@@ -18,7 +18,7 @@ type CommConn interface {
 
 
 type TimeoutConn struct {
-	Conn net.Conn
+	Conn CommConn
 	TimeOut time.Duration;
 }
 
@@ -151,7 +151,7 @@ func UdpPipe(src net.Conn, dst net.Conn) {
 }
 
 /*tcp swap*/
-func TcpPipe(src net.Conn, dst net.Conn,duration time.Duration) {
+func TcpPipe(src CommConn, dst CommConn,duration time.Duration) {
 	defer src.Close()
 	defer dst.Close()
 	srcT:=TimeoutConn{src,duration}

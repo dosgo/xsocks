@@ -15,7 +15,6 @@ import (
 
 
 var addrTun sync.Map
-var addrLastTime sync.Map
 
 func StartSudp(_addr string) error {
 	addr, err := net.ResolveUDPAddr("udp", _addr)
@@ -34,7 +33,6 @@ func StartSudp(_addr string) error {
 	if(aesGcm==nil){
 		fmt.Println("aesGcm init error")
 	}
-	go autoFree();
 	for {
 		n, rAddr, err := conn.ReadFromUDP(data)
 		if err != nil {
@@ -45,31 +43,10 @@ func StartSudp(_addr string) error {
 	}
 }
 
-func autoFree(){
-	for{
-		addrLastTime.Range(func(_k, _v interface{}) bool {
-			lastTime:=_v.(int64)
-			k:=_k.(string)
-			if(lastTime+600<time.Now().Unix()){
-				_v2,ok:=addrTun.Load(k)
-				if ok{
-					fmt.Println("auto Free close")
-					tunConn:=_v2.(net.Conn)
-					tunConn.Close();
-					addrTun.Delete(k)
-				}
-				addrLastTime.Delete(_k)
-			}
-			return true
-		})
-		time.Sleep(time.Second*60);
-	}
-}
+
 
 
 func sudpRecv(buf []byte,addr *net.UDPAddr,conn *net.UDPConn,buffer bytes.Buffer,aesGcm *comm.AesGcm){
-	//
-	addrLastTime.Store(addr.String(),time.Now().Unix());
 	videoHeader:=comm.NewVideoChat();
 	ciphertext,err:=aesGcm.AesGcm(buf[videoHeader.Size():],false);
 	if (err!=nil){
@@ -117,11 +94,13 @@ func tunRecv(tunConn net.Conn,addr *net.UDPAddr,udpComm *net.UDPConn,videoHeader
 		return
 	}
 	for {
+		tunConn.SetReadDeadline(time.Now().Add(60*time.Minute))
 		_, err := io.ReadFull(tunConn, packLenByte)
 		packLen := binary.LittleEndian.Uint16(packLenByte)
 		if (err != nil||int(packLen)>len(bufByte)) {
 			break;
 		}
+		tunConn.SetReadDeadline(time.Now().Add(60*time.Minute))
 		n, err := io.ReadFull(tunConn, bufByte[:int(packLen)])
 		if (err != nil) {
 			fmt.Printf("recv pack err :%v\r\n", err)

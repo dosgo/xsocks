@@ -140,7 +140,7 @@ func natSawp(udpGate *net.UDPConn,udpNat sync.Map,data []byte,dataStart int,loca
 	var remoteConn net.Conn
 	_conn,ok:=udpNat.Load(natKey)
 	if !ok{
-		remoteConn, err := net.Dial("udp", dstAddr.String());
+		remoteConn, err := net.DialTimeout("udp", dstAddr.String(),time.Second*15);
 		if err != nil {
 			return
 		}
@@ -295,8 +295,7 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 					fmt.Printf("read remote error err:%v\r\n ",err)
 					return err
 				}
-				go io.Copy(stream, clientConn)
-				io.Copy(clientConn, stream)
+				comm.TcpPipe(stream,clientConn,time.Minute*10);
 			}
 		}
 		//UDP  代理
