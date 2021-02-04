@@ -104,6 +104,7 @@ func StartTunDevice(tunDevice string,tunAddr string,tunMask string,tunGW string,
 func ForwardTransportFromIo(dev io.ReadWriteCloser,mtu int) error {
 	_,channelLinkID,err:=comm.NewDefaultStack(mtu,tcpForwarder,udpForwarder);
 	if(err!=nil){
+		log.Printf("err:%v",err)
 		return err;
 	}
 
@@ -135,7 +136,7 @@ func ForwardTransportFromIo(dev io.ReadWriteCloser,mtu int) error {
 	for {
 		n, e := dev.Read(buf[:])
 		if e != nil {
-			fmt.Printf("e:%v\r\n",e)
+			log.Printf("err:%v",err)
 			break;
 		}
 		tmpView:=buffer.NewVectorisedView(n,[]buffer.View{
@@ -157,7 +158,7 @@ func tcpForwarder(conn *gonet.TCPConn)error{
 	}
 	socksConn,err1:= net.DialTimeout("tcp",param.Sock5Addr,time.Second*15)
 	if err1 != nil {
-		log.Println(err1)
+		log.Printf("err:%v",err1)
 		return nil
 	}
 	defer socksConn.Close();

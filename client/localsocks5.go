@@ -187,6 +187,7 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 	auth:= make([]byte,3)
 	_, err := io.ReadFull(clientConn, auth)
 	if err != nil {
+		log.Printf("err:%v",err);
 		return err
 	}
 	if(auth[0]==0x05){
@@ -197,6 +198,7 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 	connectHead:= make([]byte,4)
 	_, err = io.ReadFull(clientConn, connectHead)
 	if err != nil {
+		log.Printf("err:%v",err);
 		return err
 	}
 
@@ -274,7 +276,7 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 				var stream,err=NewTunnel();
 
 				if err != nil || stream == nil {
-					fmt.Printf("streamerror err:%v\r\n",err)
+					log.Printf("err:%v\r\n",err);
 					return err
 				}
 				defer stream.Close()

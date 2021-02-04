@@ -114,6 +114,7 @@ func handleRemoteRequest(clientConn net.Conn,udpAddr *net.UDPAddr) {
 	auth:= make([]byte,3)
 	_, err := io.ReadFull(clientConn, auth)
 	if err != nil {
+		log.Printf("err:%v\r\n",err);
 		return
 	}
 	if(auth[0]==0x05){
@@ -123,6 +124,7 @@ func handleRemoteRequest(clientConn net.Conn,udpAddr *net.UDPAddr) {
 	connectHead:= make([]byte,4)
 	_, err = io.ReadFull(clientConn, connectHead)
 	if err != nil {
+		log.Printf("err:%v\r\n",err);
 		return
 	}
 
