@@ -69,12 +69,15 @@ func webToSocks5Yamux(ws *websocket.Conn) {
 	// Setup server side of yamux
 	session, err := yamux.Server(ws, conf)
 	if err != nil {
+		log.Printf("err:%v\r\n",err);
 		return;
 	}
+	defer  session.Close();
 	for {
 		// Accept a stream
 		stream, err := session.Accept()
 		if err != nil {
+			log.Printf("err:%v\r\n",err);
 			return ;
 		}
 		go proxy(stream)
@@ -89,12 +92,15 @@ func webToSocks5Smux(ws *websocket.Conn) {
 	// Setup server side of yamux
 	session, err := smux.Server(ws, conf)
 	if err != nil {
+		log.Printf("err:%v\r\n",err);
 		return;
 	}
+	defer  session.Close();
 	for {
 		// Accept a stream
 		stream, err := session.AcceptStream()
 		if err != nil {
+			log.Printf("err:%v\r\n",err);
 			return ;
 		}
 		go proxy(stream)

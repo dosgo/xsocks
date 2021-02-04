@@ -32,7 +32,7 @@ func proxy(conn comm.CommConn){
 	defer poolAuthHeadBuf.Put(authHead)
 	_, err := io.ReadFull(conn, authHead[:16])
 	if err != nil {
-		fmt.Printf("err:%v\r\n",err)
+		log.Printf("err:%v\r\n",err);
 		return
 	}
 	//autherr;
