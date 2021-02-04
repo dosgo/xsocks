@@ -24,9 +24,8 @@ func StartLocalSocks5(address string) {
 		log.Panic(err)
 	}
 
-
 	//start udpProxy
-	udpAddr,err:=startUdpProxy();
+	udpAddr,err:=startUdpProxy("127.0.0.1:"+param.Sock5UdpPort);
 	if err != nil {
 		log.Panic(err)
 	}
@@ -40,8 +39,8 @@ func StartLocalSocks5(address string) {
 }
 
 
-func startUdpProxy() ( *net.UDPAddr ,error){
-	udpAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
+func startUdpProxy(addr string) ( *net.UDPAddr ,error){
+	udpAddr, err := net.ResolveUDPAddr("udp", addr)
 	if err != nil {
 		return nil,err
 	}
@@ -49,7 +48,7 @@ func startUdpProxy() ( *net.UDPAddr ,error){
 	if err != nil {
 		return nil,err
 	}
-	buf := make([]byte, 2048)
+	buf := make([]byte, 65535)
 	var udpNat sync.Map
 	var remoteUdpNat sync.Map
 	go func() {
@@ -76,20 +75,23 @@ func startUdpProxy() ( *net.UDPAddr ,error){
 
 
 func remoteUdpProxy(udpGate *net.UDPConn,data []byte, remoteUdpNat sync.Map,localAddr *net.UDPAddr) error{
+	fmt.Printf("remoteUdpProxy local addr :%v\r\n",localAddr);
 	natKey:=localAddr.String()
-	var tunnel net.Conn
+	var tunnel comm.CommConn
 	_conn,ok:=remoteUdpNat.Load(natKey)
 	if !ok{
 		sendBuf:=[]byte{};
 		//cmd
-		sendBuf =append(sendBuf,0x01);//dns\
+		sendBuf =append(sendBuf,0x04);//dns\
 		var err error;
-		tunnel, err:= NewTunnel();
+		tunnel, err= NewTunnel();
 		if(err!=nil){
+			log.Printf("err:%v\r\n",err);
 			return err;
 		}
 		_,err=tunnel.Write(sendBuf)
 		if(err!=nil){
+			log.Printf("err:%v\r\n",err);
 			return err;
 		}
 		go func() {
@@ -104,16 +106,18 @@ func remoteUdpProxy(udpGate *net.UDPConn,data []byte, remoteUdpNat sync.Map,loca
 				_, err := io.ReadFull(tunnel, packLenByte)
 				packLen := binary.LittleEndian.Uint16(packLenByte)
 				if (err != nil||int(packLen)>len(bufByte)) {
+					log.Printf("err:%v\r\n",err);
 					break;
 				}
 				tunnel.SetDeadline(time.Now().Add(300*time.Second))
 				_, err = io.ReadFull(tunnel, bufByte[:int(packLen)])
 				if (err != nil) {
+					log.Printf("err:%v\r\n",err);
 					break;
 				}else {
-					_, err = udpGate.Write(bufByte[:int(packLen)])
+					_, err = udpGate.WriteToUDP(bufByte[:int(packLen)],localAddr)
 					if (err != nil) {
-						fmt.Printf("e:%v\r\n", err)
+						log.Printf("err:%v\r\n",err);
 					}
 				}
 			}
@@ -138,9 +142,10 @@ func remoteUdpProxy(udpGate *net.UDPConn,data []byte, remoteUdpNat sync.Map,loca
 func natSawp(udpGate *net.UDPConn,udpNat sync.Map,data []byte,dataStart int,localAddr *net.UDPAddr, dstAddr *net.UDPAddr){
 	natKey:=localAddr.String()+"_"+dstAddr.String()
 	var remoteConn net.Conn
+	var err error
 	_conn,ok:=udpNat.Load(natKey)
 	if !ok{
-		remoteConn, err := net.DialTimeout("udp", dstAddr.String(),time.Second*15);
+		remoteConn, err = net.DialTimeout("udp", dstAddr.String(),time.Second*15);
 		if err != nil {
 			return
 		}
@@ -148,13 +153,14 @@ func natSawp(udpGate *net.UDPConn,udpNat sync.Map,data []byte,dataStart int,loca
 		var buffer bytes.Buffer
 		udpNat.Store(natKey,remoteConn)
 		defer udpNat.Delete(natKey);
-		defer remoteConn.Close()
 		go func() {
+			defer remoteConn.Close()
 			for {
 				//remoteConn.SetDeadline();
 				remoteConn.SetReadDeadline(time.Now().Add(60*10*time.Second))
 				n, err:= remoteConn.Read(buf);
 				if(err!=nil){
+					log.Printf("err:%v\r\n",err);
 					return ;
 				}
 				buffer.Reset();
@@ -253,6 +259,7 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 				server, err := net.DialTimeout("tcp", net.JoinHostPort(ipAddr.String(), port),param.ConnectTime)
 				if err != nil {
 					fmt.Println(ipAddr.String(), connectHead[3], err)
+					log.Printf("err:%v\r\n",err);
 					return err
 				}
 				defer server.Close()

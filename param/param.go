@@ -22,10 +22,10 @@ var TunSmartProxy bool;
 //comm
 var Mtu int;
 var ConnectTime =10*time.Second;
+var Sock5UdpPort string
 
 //server
 var Sock5Port string
-var Sock5UdpPort string
 var QuicPort string
 var WebPort string
 var SudpPort string;

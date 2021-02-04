@@ -132,8 +132,8 @@ func UniqueId(_len int) string {
 func UdpPipe(src net.Conn, dst net.Conn) {
 	defer src.Close()
 	defer dst.Close()
-	chan1 := chanFromConn(src)
-	chan2 := chanFromConn(dst)
+	chan1 := ChanFromConn(src,time.Minute*5)
+	chan2 := ChanFromConn(dst,time.Minute*5)
 	for {
 		select {
 		case b1 := <-chan1:
@@ -160,12 +160,12 @@ func TcpPipe(src CommConn, dst CommConn,duration time.Duration) {
 	io.Copy(dstT, srcT)
 }
 
-func chanFromConn(conn net.Conn) chan []byte {
+func ChanFromConn(conn net.Conn,duration time.Duration) chan []byte {
 	c := make(chan []byte)
 	go func() {
 		b := make([]byte, 65535)
 		for {
-			_ = conn.SetReadDeadline(time.Now().Add(time.Minute))
+			_ = conn.SetReadDeadline(time.Now().Add(duration))
 			n, err := conn.Read(b)
 			if n > 0 {
 				res := make([]byte, n)

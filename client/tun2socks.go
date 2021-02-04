@@ -173,6 +173,8 @@ func udpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)error{
 	//dns port
 	if(strings.HasSuffix(conn.LocalAddr().String(),":53")){
 		dnsReqUdp(conn);
+	}else{
+		socksUdpGate(conn);
 	}
 	return nil;
 }
@@ -196,6 +198,44 @@ func dnsReqTcp(conn *gonet.TCPConn) error{
 	fmt.Printf("dnsReq Tcp\r\n");
 	return nil;
 }
+
+
+/*to socks5 udp gate */
+func socksUdpGate(conn *gonet.UDPConn) error{
+	gateConn, err := net.DialTimeout("udp", "127.0.0.1:"+param.Sock5UdpPort,time.Second*15);
+	if err != nil {
+		fmt.Println(err.Error())
+		return err;
+	}
+	defer conn.Close()
+	defer gateConn.Close()
+	srcChan := comm.ChanFromConn(conn,time.Minute*5)
+	dstChan := comm.ChanFromConn(gateConn,time.Minute*5)
+	dstAddr,_:=net.ResolveUDPAddr("udp",conn.LocalAddr().String())
+	var buffer bytes.Buffer
+	for {
+		select {
+			case b1 := <-srcChan:
+				if b1 == nil {
+					return nil;
+				}
+				buffer.Reset()
+				buffer.Write(comm.UdpHeadEncode(dstAddr))
+				buffer.Write(b1)
+				_, _ = gateConn.Write(buffer.Bytes())
+			case b2 := <-dstChan:
+				if b2 == nil {
+					return nil;
+				}
+				_,dataStart,err:=comm.UdpHeadDecode(b2)
+				if err != nil {
+					return nil;
+				}
+				_, _ = conn.Write(b2[dataStart:])
+		}
+	}
+}
+
 
 /*to socks5*/
 func socksCmd(socksConn net.Conn,cmd uint8,host string) error{
@@ -232,6 +272,5 @@ func socksCmd(socksConn net.Conn,cmd uint8,host string) error{
 		log.Println(err)
 		return err
 	}
-
 	return nil;
 }

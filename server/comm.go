@@ -81,28 +81,11 @@ func tcpToUdpProxy(conn comm.CommConn){
 	var bufByte []byte = make([]byte,65535)
 	remoteConn, err := net.DialTimeout("udp", "127.0.0.1:"+param.Sock5UdpPort,time.Second*15);
 	if(err!=nil){
+		log.Printf("err:%v\r\n",err);
 		return
 	}
 	defer remoteConn.Close()
-	for {
-		//remoteConn.SetDeadline();
-		conn.SetDeadline(time.Now().Add(60*10*time.Second))
-		_, err := io.ReadFull(conn, packLenByte)
-		packLen := binary.LittleEndian.Uint16(packLenByte)
-		if (err != nil||int(packLen)>len(bufByte)) {
-			break;
-		}
-		conn.SetDeadline(time.Now().Add(300*time.Second))
-		_, err = io.ReadFull(conn, bufByte[:int(packLen)])
-		if (err != nil) {
-			break;
-		}else {
-			_, err = remoteConn.Write(bufByte[:int(packLen)])
-			if (err != nil) {
-				fmt.Printf("e:%v\r\n", err)
-			}
-		}
-	}
+
 	go func() {
 		var bufByte1 []byte = make([]byte,65535)
 		var buffer bytes.Buffer
@@ -111,6 +94,7 @@ func tcpToUdpProxy(conn comm.CommConn){
 			remoteConn.SetDeadline(time.Now().Add(60*10*time.Second))
 			n, err := remoteConn.Read(bufByte1)
 			if err != nil {
+				log.Printf("err:%v\r\n",err);
 				break;
 			}
 			buffer.Reset()
@@ -121,6 +105,29 @@ func tcpToUdpProxy(conn comm.CommConn){
 			conn.Write(buffer.Bytes())
 		}
 	}();
+
+	for {
+		//remoteConn.SetDeadline();
+		conn.SetDeadline(time.Now().Add(60*10*time.Second))
+		_, err := io.ReadFull(conn, packLenByte)
+		packLen := binary.LittleEndian.Uint16(packLenByte)
+		if (err != nil||int(packLen)>len(bufByte)) {
+			log.Printf("err:%v\r\n",err);
+			break;
+		}
+		conn.SetDeadline(time.Now().Add(300*time.Second))
+		_, err = io.ReadFull(conn, bufByte[:int(packLen)])
+		if (err != nil) {
+			log.Printf("err:%v\r\n",err);
+			break;
+		}else {
+			_, err = remoteConn.Write(bufByte[:int(packLen)])
+			if (err != nil) {
+				log.Printf("err:%v\r\n",err);
+			}
+		}
+	}
+
 }
 
 
@@ -193,7 +200,6 @@ func GetPublicIP() (ip string, err error) {
 	for _, addr = range addrs {
 		// 这个网络地址是IP地址: ipv4, ipv6
 		if ipNet, isIpNet = addr.(*net.IPNet); isIpNet && !ipNet.IP.IsLoopback() {
-
 			//
 			if(ipNet.IP.To4() != nil){
 				if(comm.IsPublicIP(ipNet.IP)){

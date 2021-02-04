@@ -31,19 +31,25 @@ func main() {
 	flag.Parse()
 
 	//随机端口
-	if(param.DnsPort==""){
+	if param.DnsPort=="" {
 		param.DnsPort,_= comm.GetFreePort();
 	}
+
+	if param.Sock5UdpPort=="" {
+		param.Sock5UdpPort,_= comm.GetFreeUdpPort();
+	}
+
 
 	fmt.Printf("verison:%s\r\n",param.Version)
 	fmt.Printf("server addr:%s\r\n",param.ServerAddr)
 	fmt.Printf("socks5 addr :%s\r\n",param.Sock5Addr)
+	fmt.Printf("Sock5UdpPort:%s\r\n",param.Sock5UdpPort)
 	//1==tun2sock
-	if(param.TunType==1){
+	if param.TunType==1 {
 		go client.StartTunDevice("","","","","");
 	}
 	//2==tun2remote tun
-	if(param.TunType==2){
+	if param.TunType==2 {
 		go client.StartTun("","","","","");
 	}
 	go client.StartDns();

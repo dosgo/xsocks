@@ -28,7 +28,6 @@ func StartRemoteSocks51(address string) {
 		log.Panic(err)
 	}
 	param.Sock5UdpPort=fmt.Sprintf("%d",udpAddr.Port);
-
 	for {
 		client, err := l.Accept()
 		if err != nil {
@@ -68,11 +67,13 @@ func startUdpProxy(address string) ( *net.UDPAddr ,error){
 
 /*udp nat sawp*/
 func natSawp(udpGate *net.UDPConn,udpNat sync.Map,data []byte,dataStart int,localAddr *net.UDPAddr, dstAddr *net.UDPAddr){
+	fmt.Printf("natSawp localAddr:%v dstAddr:%v\r\n",localAddr,dstAddr)
 	natKey:=localAddr.String()+"_"+dstAddr.String()
 	var remoteConn net.Conn
+	var err error
 	_conn,ok:=udpNat.Load(natKey)
 	if !ok{
-		remoteConn, err := net.DialTimeout("udp", dstAddr.String(),time.Second*15);
+		remoteConn, err = net.DialTimeout("udp", dstAddr.String(),time.Second*15);
 		if err != nil {
 			return
 		}
@@ -80,13 +81,13 @@ func natSawp(udpGate *net.UDPConn,udpNat sync.Map,data []byte,dataStart int,loca
 		var buffer bytes.Buffer
 		udpNat.Store(natKey,remoteConn)
 		defer udpNat.Delete(natKey);
-		defer remoteConn.Close()
-		go func() {
+		go func(_remoteConn net.Conn) {
+			defer _remoteConn.Close()
 			for {
-				//remoteConn.SetDeadline();
-				remoteConn.SetReadDeadline(time.Now().Add(60*10*time.Second))
-				n, err:= remoteConn.Read(buf);
+				_remoteConn.SetReadDeadline(time.Now().Add(60*10*time.Second))
+				n, err:= _remoteConn.Read(buf);
 				if(err!=nil){
+					log.Printf("err:%v\r\n",err);
 					return ;
 				}
 				buffer.Reset();
@@ -94,7 +95,7 @@ func natSawp(udpGate *net.UDPConn,udpNat sync.Map,data []byte,dataStart int,loca
 				buffer.Write(buf[:n])
 				udpGate.WriteToUDP(buffer.Bytes(), localAddr)
 			}
-		}()
+		}(remoteConn)
 	}else{
 		remoteConn=_conn.(net.Conn)
 	}
