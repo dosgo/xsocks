@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/yamux"
 	"github.com/xtaci/smux"
 	"golang.org/x/net/websocket"
+	"log"
 	"os"
 	"math/rand"
 	"errors"
@@ -45,63 +46,64 @@ func NewWsSmuxDialer() *WsSmux {
 func (qd *WsYamux) Dial(url string) (comm.CommConn, error) {
 	qd.Lock()
 	defer qd.Unlock()
-	conf:=yamux.DefaultConfig();
-	conf.AcceptBacklog=512;
-	conf.KeepAliveInterval=52* time.Second;
-	conf.MaxStreamWindowSize=1024*1024;
-	conf.ConnectionWriteTimeout=20* time.Second;
-
 	if(qd.sess==nil){
-		qd.sess=make([]*yamux.Session, 0)
+		qd.sess=make([]*yamux.Session,0)
 	}
-
 	if(param.MuxNum==0){
-		wsConn,err:=dialAddr(url);
+		session,err:=newYamuxSession(url);
 		if(err!=nil){
-			return nil,err;
-		}
-		session, err := yamux.Client(wsConn, conf)
-		if err != nil {
+			log.Printf("err:%v\r\n",err);
 			return nil,err;
 		}
 		return session.Open()
 	}else{
 		if len(qd.sess) < param.MuxNum {
-			wsConn, err := dialAddr(url);
-			if (err != nil) {
-				return nil, err;
+			session,err:=newYamuxSession(url);
+			if err==nil {
+				qd.sess=append(qd.sess,session)
+			}else{
+				log.Printf("err:%v\r\n",err);
 			}
-			session, err := yamux.Client(wsConn, conf)
-			if err != nil {
-				return nil, err;
-			}
-			qd.sess = append(qd.sess, session)
 		}
 		if(len(qd.sess)<1){
 			return nil,errors.New("sess null");
 		}
-		sessIndex:=rand.Intn(len(qd.sess))
-		sess:=qd.sess[sessIndex]
-		// Open a new stream
-		stream, err :=sess.Open()
-		if err != nil {
-			qd.sess=append(qd.sess[:sessIndex], qd.sess[sessIndex+1:]...)
-			sess.Close()
-			wsConn,err:=dialAddr(url);
-			if(err!=nil){
-				return nil,err;
+		var sessIndex=0;
+		var retryNum=0;
+		for {
+			if(retryNum>3){
+				break;
 			}
-			session, err := yamux.Client(wsConn, conf)
-			if(err!=nil){
-				return nil,err;
+			sessIndex=rand.Intn(len(qd.sess))
+			sess:=qd.sess[sessIndex]
+			if sess.IsClosed()  {
+				qd.sess=append(qd.sess[:sessIndex], qd.sess[sessIndex+1:]...)
+				sess.Close()
+				session,err:=newYamuxSession(url);
+				if(err==nil){
+					qd.sess=append(qd.sess,session)
+				}else{
+					log.Printf("err:%v\r\n",err);
+				}
+				retryNum++;
+				continue;
 			}
-			qd.sess=append(qd.sess,session)
-			stream, err = session.Open()
-			if err != nil {
-				return nil, err
+			stream, err :=sess.Open()
+			if err!=nil  {
+				qd.sess=append(qd.sess[:sessIndex], qd.sess[sessIndex+1:]...)
+				sess.Close()
+				session,err:=newYamuxSession(url);
+				if(err==nil){
+					qd.sess=append(qd.sess,session)
+				}else{
+					log.Printf("err:%v\r\n",err);
+				}
+				retryNum++;
+				continue;
 			}
+			return stream, nil
 		}
-		return stream, nil
+		return nil,errors.New("retryNum>3");
 	}
 }
 
@@ -162,7 +164,18 @@ func (qd *WsSmux) Dial(url string) (comm.CommConn, error) {
 	}
 	return stream, nil
 }
-
+func newYamuxSession(url string)(*yamux.Session, error){
+	conf:=yamux.DefaultConfig();
+	conf.AcceptBacklog=512;
+	conf.KeepAliveInterval=52* time.Second;
+	conf.MaxStreamWindowSize=1024*1024;
+	conf.ConnectionWriteTimeout=20* time.Second;
+	wsConn, err := dialAddr(url);
+	if (err != nil) {
+		return nil, err;
+	}
+	return yamux.Client(wsConn, conf)
+}
 
 func dialAddr(url string)(*websocket.Conn, error){
 	config, err := websocket.NewConfig(url, url)
