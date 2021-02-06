@@ -157,6 +157,7 @@ func tunRecv(dev io.ReadWriteCloser ,mtu int) error{
 type TunConn struct {
 	Tunnel comm.CommConn
 	UdpConn *udpHeader.UdpConn
+	UdpAddr *net.UDPAddr
 	UniqueId string
 	Mtu int;
 	sync.Mutex
@@ -232,7 +233,7 @@ func  packetSwapTun(dev  io.ReadWriteCloser,mtu int){
 		for {
 			n, err := dev.Read(bufByte[:])
 			if err != nil {
-				fmt.Printf("dev err%v\r\n", err)
+				log.Printf("dev err%v\r\n", err)
 				break;
 			}
 
@@ -246,12 +247,15 @@ func  packetSwapTun(dev  io.ReadWriteCloser,mtu int){
 			buffer2.Write(bufByte[:n]);
 			ciphertext,err:=aesGcm.AesGcm(buffer2.Bytes(),true);
 			udpConn:=_tunPacket.GetPacket();
-			if(udpConn!=nil&&ciphertext==nil) {
+			if(udpConn!=nil&&err==nil) {
 				_,err=udpConn.Write(ciphertext)
 				if(err!=nil){
+					log.Printf("err:%v\r\n",err)
 					udpConn.Close();
 					_tunPacket.PutPacket(nil)
 				}
+			}else{
+				log.Printf("err:%v\r\n",err)
 			}
 		}
 	}(tunPacket);

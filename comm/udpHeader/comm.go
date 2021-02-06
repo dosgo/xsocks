@@ -59,7 +59,12 @@ func (c *UdpConn) LocalAddr() net.Addr {
 }
 
 func (c *UdpConn) Write(b []byte) (int, error) {
-	return c.conn.Write(b)
+	var header []byte = make([]byte, c.vc.Size())
+	c.vc.Serialize(header)
+	c.buffer.Reset()
+	c.buffer.Write(header)
+	c.buffer.Write(b)
+	return c.conn.Write(c.buffer.Bytes())
 }
 
 func (c *UdpConn) SetDeadline(t time.Time) error {
