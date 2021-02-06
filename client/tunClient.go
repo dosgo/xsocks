@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
+	"xSocks/comm/udpHeader"
 
 	//"github.com/google/netstack/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -155,7 +156,7 @@ func tunRecv(dev io.ReadWriteCloser ,mtu int) error{
 
 type TunConn struct {
 	Tunnel comm.CommConn
-	UdpConn *net.UDPConn
+	UdpConn *udpHeader.UdpConn
 	UniqueId string
 	Mtu int;
 	sync.Mutex
@@ -172,12 +173,12 @@ func (rd *TunConn) PutTunnel(tunnel comm.CommConn){
 }
 
 
-func (rd *TunConn) GetPacket()(*net.UDPConn){
+func (rd *TunConn) GetPacket()(*udpHeader.UdpConn){
 	rd.Lock();
 	defer rd.Unlock();
 	return rd.UdpConn;
 }
-func (rd *TunConn) PutPacket(tunnel *net.UDPConn){
+func (rd *TunConn) PutPacket(tunnel *udpHeader.UdpConn){
 	rd.Lock();
 	defer rd.Unlock();
 	rd.UdpConn=tunnel;
@@ -205,37 +206,35 @@ func  ConnectTun(uniqueId string,mtu int)(comm.CommConn,error){
 	return tunnel,nil;
 }
 
-func connectUdp()(*net.UDPConn,error){
+func connectUdp()(*udpHeader.UdpConn,error){
 	udpAddr, err := net.ResolveUDPAddr("udp4", 	param.ServerAddr[7:])
-	if(err!=nil){
+	if err!=nil {
 		return nil,err;
 	}
-	return net.DialUDP("udp4", nil, udpAddr)
+	_conn,err:=net.DialUDP("udp4", nil, udpAddr)
+	if err!=nil {
+		return nil,err;
+	}
+	return udpHeader.NewUdpConn(_conn),nil;
 }
 
 
 /*udp packet*/
 func  packetSwapTun(dev  io.ReadWriteCloser,mtu int){
 	tunPacket:=&TunConn{}
-	videoHeader:=comm.NewVideoChat();
 	var aesGcm=comm.NewAesGcm();
 	if(aesGcm==nil){
 		fmt.Println("aesGcm init error")
 	}
 	go func(_tunPacket *TunConn) {
 		var bufByte []byte = make([]byte,mtu+80)
-		var buffer bytes.Buffer
 		var buffer2 bytes.Buffer
-		var header []byte = make([]byte, videoHeader.Size())
 		for {
 			n, err := dev.Read(bufByte[:])
 			if err != nil {
 				fmt.Printf("dev err%v\r\n", err)
 				break;
 			}
-			buffer.Reset()
-			videoHeader.Serialize(header)
-			buffer.Write(header)
 
 
 			buffer2.Reset();
@@ -245,12 +244,10 @@ func  packetSwapTun(dev  io.ReadWriteCloser,mtu int){
 			buffer2.Write(mtuByte)
 			//packet
 			buffer2.Write(bufByte[:n]);
-
-			ciphertext,_:=aesGcm.AesGcm(buffer2.Bytes(),true);
-			buffer.Write(ciphertext)
+			ciphertext,err:=aesGcm.AesGcm(buffer2.Bytes(),true);
 			udpConn:=_tunPacket.GetPacket();
-			if(udpConn!=nil) {
-				_,err=udpConn.Write(buffer.Bytes())
+			if(udpConn!=nil&&ciphertext==nil) {
+				_,err=udpConn.Write(ciphertext)
 				if(err!=nil){
 					udpConn.Close();
 					_tunPacket.PutPacket(nil)
@@ -274,12 +271,12 @@ func  packetSwapTun(dev  io.ReadWriteCloser,mtu int){
 		}
 
 
-		n, _, err := tunnel.ReadFromUDP(buffer)
+		n, _, err := tunnel.ReadFrom(buffer)
 		if err != nil {
 			tunPacket.PutPacket(nil)
 			continue;
 		}
-		ciphertext,err:=aesGcm.AesGcm(buffer[videoHeader.Size():n],false);
+		ciphertext,err:=aesGcm.AesGcm(buffer[:n],false);
 		if (err==nil){
 			_, err = dev.Write(ciphertext)
 			if (err != nil) {

@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 	"xSocks/comm"
+	"xSocks/comm/udpHeader"
 	"xSocks/param"
 )
 
@@ -22,10 +23,11 @@ func StartSudp(_addr string) error {
 		log.Println(err)
 		return err;
 	}
-	conn, err := net.ListenUDP("udp", addr)
+	_conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
 		return err;
 	}
+	conn:=udpHeader.NewUdpConn(_conn);
 	defer conn.Close()
 	data := make([]byte,65535)
 	var buffer bytes.Buffer
@@ -34,7 +36,7 @@ func StartSudp(_addr string) error {
 		fmt.Println("aesGcm init error")
 	}
 	for {
-		n, rAddr, err := conn.ReadFromUDP(data)
+		n, rAddr, err := conn.ReadFrom(data)
 		if err != nil {
 			log.Println(err)
 			continue
@@ -44,11 +46,8 @@ func StartSudp(_addr string) error {
 }
 
 
-
-
-func sudpRecv(buf []byte,addr *net.UDPAddr,conn *net.UDPConn,buffer bytes.Buffer,aesGcm *comm.AesGcm){
-	videoHeader:=comm.NewVideoChat();
-	ciphertext,err:=aesGcm.AesGcm(buf[videoHeader.Size():],false);
+func sudpRecv(buf []byte,addr net.Addr,conn *udpHeader.UdpConn,buffer bytes.Buffer,aesGcm *comm.AesGcm){
+	ciphertext,err:=aesGcm.AesGcm(buf,false);
 	if (err!=nil){
 		timeStr:=fmt.Sprintf("%d",time.Now().Unix())
 		nonce:=timeStr[:len(timeStr)-2]
@@ -70,7 +69,7 @@ func sudpRecv(buf []byte,addr *net.UDPAddr,conn *net.UDPConn,buffer bytes.Buffer
 		}
 		tunConn.Write(ciphertext[:2])
 		addrTun.Store(addr.String(),tunConn)
-		go tunRecv(tunConn,addr,conn,videoHeader);
+		go tunRecv(tunConn,addr,conn);
 	}else{
 		tunConn=v.(net.Conn)
 	}
@@ -82,11 +81,9 @@ func sudpRecv(buf []byte,addr *net.UDPAddr,conn *net.UDPConn,buffer bytes.Buffer
 	tunConn.Write(buffer.Bytes());
 }
 
-func tunRecv(tunConn net.Conn,addr *net.UDPAddr,udpComm *net.UDPConn,videoHeader *comm.VideoChat){
+func tunRecv(tunConn net.Conn,addr net.Addr,udpComm *udpHeader.UdpConn){
 	var bufByte []byte = make([]byte,65535)
 	var packLenByte []byte = make([]byte, 2)
-	var header []byte = make([]byte, videoHeader.Size())
-	var buffer bytes.Buffer
 	var aesGcm=comm.NewAesGcm();
 	defer  addrTun.Delete(addr.String())
 	if(aesGcm==nil){
@@ -106,12 +103,12 @@ func tunRecv(tunConn net.Conn,addr *net.UDPAddr,udpComm *net.UDPConn,videoHeader
 			fmt.Printf("recv pack err :%v\r\n", err)
 			break;
 		}else {
-			 videoHeader.Serialize(header)
-			 buffer.Reset()
-			 buffer.Write(header)
-			 ciphertext,_:=aesGcm.AesGcm(bufByte[:n],true);
-			 buffer.Write(ciphertext)
-			 udpComm.WriteTo(buffer.Bytes(), addr)
+			 ciphertext,err:=aesGcm.AesGcm(bufByte[:n],true);
+			 if(err==nil) {
+				 udpComm.WriteTo(ciphertext, addr)
+			 }else{
+			 	log.Printf("err:%v\r\n",err);
+			 }
 		}
 	}
 }
