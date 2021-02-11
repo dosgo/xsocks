@@ -1,7 +1,6 @@
 package client
 
 import (
-	"context"
 	"crypto/tls"
 	"errors"
 	"github.com/lucas-clemente/quic-go"
@@ -21,6 +20,7 @@ func init(){
 
 type QuicDialer struct {
 	sess           quic.Session
+	udpConn  *udpHeader.UdpConn;
 	sync.Mutex
 }
 
@@ -28,9 +28,25 @@ func NewQuicDialer() *QuicDialer {
 	return quicDialer
 }
 
+func ClearQuicDialer(){
+	sess:=quicDialer.GetSess();
+	if(sess!=nil) {
+		sess.CloseWithError(2021, "OpenStreamSync error")
+	}
+}
+
+
 func (qd *QuicDialer) Connect(quicAddr string) error{
 	qd.Lock();
 	defer qd.Unlock();
+	if(qd.udpConn!=nil){
+		qd.udpConn.Close();
+	}
+	if(qd.sess!=nil){
+		qd.sess.CloseWithError(2021, "OpenStreamSync error")
+	}
+
+
 	var quicConfig = &quic.Config{
 		MaxIncomingStreams:                    100,
 		MaxIncomingUniStreams:                 100,              // disable unidirectional streams
@@ -57,6 +73,7 @@ func (qd *QuicDialer) Connect(quicAddr string) error{
 		return err
 	}
 	qd.sess = sess
+	qd.udpConn=udpConn;
 	return nil;
 }
 
@@ -66,24 +83,33 @@ func (qd *QuicDialer) GetSess() quic.Session{
 	return qd.sess
 }
 
+func isActive(s quic.Session) bool {
+	select {
+	case <-s.Context().Done():
+		return false
+	default:
+		return true
+	}
+}
+
+
 
 func (qd *QuicDialer) Dial(quicAddr string) (comm.CommConn, error) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+
 	var retryNum=0;
 	for{
 		if retryNum>3 {
 			break;
 		}
 		sess:=qd.GetSess();
-		if sess==nil {
+		if sess==nil||!isActive(sess){
 			qd.Connect(quicAddr);
 			retryNum++;
 			continue;
 		}
-		stream, err := qd.sess.OpenStreamSync(ctx)
+		stream, err := qd.sess.OpenStream()
 		if err != nil {
-			qd.sess.CloseWithError(2021, "OpenStreamSync error")
+			log.Printf("err:%v\r\n",err)
 			qd.Connect(quicAddr);
 			retryNum++;
 			continue;

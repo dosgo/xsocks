@@ -9,6 +9,7 @@ import (
 	"net"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 	"xSocks/comm"
@@ -182,6 +183,7 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 	if clientConn == nil {
 		return nil
 	}
+	clientConn.SetDeadline(time.Now().Add(time.Second*20))
 	defer clientConn.Close()
 
 	auth:= make([]byte,3)
@@ -211,7 +213,7 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 			var hostBuf []byte;
 			var hostBufLen []byte
 			ipv4 := make([]byte, 4)
-
+			ipv6 := make([]byte, 16)
 			//解析
 			switch connectHead[3] {
 			case 0x01: //IP V4
@@ -238,7 +240,6 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 				break;
 			case 0x04: //IP V6
 				fmt.Printf("ipv6\r\n");
-				ipv6 := make([]byte, 16)
 				_, err = io.ReadFull(clientConn, ipv6)
 				ipAddr = net.IP{ipv6[0], ipv6[1], ipv6[2], ipv6[3], ipv6[4], ipv6[5], ipv6[6], ipv6[7], ipv6[8], ipv6[9], ipv6[10], ipv6[11], ipv6[12], ipv6[13], ipv6[14], ipv6[15]}
 
@@ -248,20 +249,21 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 				break;
 			}
 
-			portBuf := make([]byte, 2)
-			_, err = io.ReadFull(clientConn, portBuf)
-			port = strconv.Itoa(int(portBuf[0])<<8 | int(portBuf[1]))
-
 			//解析失败直接关闭
 			if(ipAddr==nil||ipAddr.String()=="0.0.0.0"){
 				return nil;
 			}
+
+			portBuf := make([]byte, 2)
+			_, err = io.ReadFull(clientConn, portBuf)
+			port = strconv.Itoa(int(portBuf[0])<<8 | int(portBuf[1]))
+
+
 			//如果是内网IP,或者是中国IP(如果被污染的IP一定返回的是国外IP地址ChinaDNS也是这个原理)
 			if ((!comm.IsPublicIP(ipAddr) || comm.IsChinaMainlandIP(ipAddr.String()))&&(runtime.GOOS!="windows"||param.TunType!=1)) {
 				server, err := net.DialTimeout("tcp", net.JoinHostPort(ipAddr.String(), port),param.ConnectTime)
 				if err != nil {
-					fmt.Println(ipAddr.String(), connectHead[3], err)
-					log.Printf("err:%v\r\n",err);
+					log.Printf("host:%s err:%v\r\n", net.JoinHostPort(ipAddr.String(), port),err);
 					return err
 				}
 				defer server.Close()
@@ -272,35 +274,47 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 			} else {
 				//保存記錄
 				PolluteDomainName.Store(string(hostBuf), 1)
-				fmt.Printf("remote addr:%s port:%s\r\n", ipAddr.String(),port)
 				var stream,err=NewTunnel();
-
 				if err != nil || stream == nil {
 					log.Printf("err:%v\r\n",err);
 					return err
 				}
+				var buffer bytes.Buffer
 				defer stream.Close()
-				cmdBuf := make([]byte, 1)
-				cmdBuf[0] = 0x02; //cmd 0x02 to socks5
-				stream.Write(cmdBuf);
-				//写入sock5认证头
-				stream.Write(auth)
-				//写入sock5请求head
-				stream.Write(connectHead)
+				buffer.Reset()
+				buffer.WriteByte(0x02)//cmd 0x02 to socks5
+				buffer.Write(auth)//写入sock5认证头
+				buffer.Write(connectHead)//写入sock5请求head
+
+
 				//使用host
 				if (connectHead[3] == 0x03) {
-					stream.Write(hostBufLen)
-					stream.Write(hostBuf)
-				} else {
-					binary.Write(stream, binary.BigEndian, ipAddr.To4())
+					buffer.Write(hostBufLen)
+					buffer.Write(hostBuf)
+				}else if (connectHead[3] == 0x01) {
+					buffer.Write(ipv4)
+				} else if (connectHead[3] == 0x04) {
+					buffer.Write(ipv6)
 				}
 				//写入端口
-				stream.Write(portBuf)
-
+				buffer.Write(portBuf)
+				stream.SetDeadline(time.Now().Add(time.Second*45))
+				_, err =stream.Write(buffer.Bytes());
+				if err != nil {
+					if strings.Contains(err.Error(),"deadline"){
+						ResetTunnel();
+					}
+					fmt.Printf("read remote error err:%v errStr:%s\r\n ",err)
+					return err
+				}
 				//read auth back
 				socks5AuthBack := make([]byte, 2)
+				stream.SetDeadline(time.Now().Add(time.Second*45))
 				_, err = io.ReadFull(stream, socks5AuthBack)
 				if err != nil {
+					if strings.Contains(err.Error(),"deadline"){
+						ResetTunnel()
+					}
 					fmt.Printf("read remote error err:%v\r\n ",err)
 					return err
 				}

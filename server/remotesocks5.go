@@ -110,6 +110,7 @@ func handleRemoteRequest(clientConn net.Conn,udpAddr *net.UDPAddr) {
 	if clientConn == nil {
 		return
 	}
+	clientConn.SetDeadline(time.Now().Add(time.Second*59))
 	defer clientConn.Close()
 	auth:= make([]byte,3)
 	_, err := io.ReadFull(clientConn, auth)
@@ -120,6 +121,9 @@ func handleRemoteRequest(clientConn net.Conn,udpAddr *net.UDPAddr) {
 	if(auth[0]==0x05){
 		//resp auth
 		clientConn.Write([]byte{0x05, 0x00})
+	}else{
+		log.Printf("auth[0]!=0x05\r\n");
+		return
 	}
 	connectHead:= make([]byte,4)
 	_, err = io.ReadFull(clientConn, connectHead)
@@ -153,6 +157,12 @@ func handleRemoteRequest(clientConn net.Conn,udpAddr *net.UDPAddr) {
 				host = net.IP{ipv6[0], ipv6[1], ipv6[2], ipv6[3], ipv6[4], ipv6[5], ipv6[6], ipv6[7], ipv6[8], ipv6[9], ipv6[10], ipv6[11], ipv6[12], ipv6[13], ipv6[14], ipv6[15]}.String()
 				break;
 			}
+			if(len(host)==0){
+				log.Println("host null\r\n");
+				return
+			}
+
+
 			portBuf := make([]byte, 2)
 			_, err = io.ReadFull(clientConn, portBuf)
 			port = strconv.Itoa(int(portBuf[0])<<8 | int(portBuf[1]))
