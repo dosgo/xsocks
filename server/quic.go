@@ -16,8 +16,8 @@ import (
 
 func StartQuic(_addr string) error {
 	var quicConfig = &quic.Config{
-		MaxIncomingStreams:                    100,
-		MaxIncomingUniStreams:                 100,              // disable unidirectional streams
+		MaxIncomingStreams:                    32,
+		MaxIncomingUniStreams:                 -1,              // disable unidirectional streams
 		KeepAlive: true,
 		MaxReceiveStreamFlowControlWindow:5*1024*1024,
 		MaxReceiveConnectionFlowControlWindow:5*1024*1024,

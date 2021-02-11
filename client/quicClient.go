@@ -31,7 +31,7 @@ func NewQuicDialer() *QuicDialer {
 func ClearQuicDialer(){
 	sess:=quicDialer.GetSess();
 	if(sess!=nil) {
-		sess.CloseWithError(2021, "OpenStreamSync error")
+		sess.CloseWithError(2021, "deadlocks error close")
 	}
 }
 
@@ -48,8 +48,8 @@ func (qd *QuicDialer) Connect(quicAddr string) error{
 
 
 	var quicConfig = &quic.Config{
-		MaxIncomingStreams:                    100,
-		MaxIncomingUniStreams:                 100,              // disable unidirectional streams
+		MaxIncomingStreams:                    32,
+		MaxIncomingUniStreams:                 -1,              // disable unidirectional streams
 		KeepAlive: true,
 	}
 	tlsConf := &tls.Config{
