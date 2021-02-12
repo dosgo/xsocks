@@ -53,12 +53,12 @@ func newTunTcp(client comm.CommConn) error{
 	if(mtu<1){
 		mtu=1024;
 	}
-	_,channelLinkID,err:=comm.NewDefaultStack(int(mtu),tcpForward,udpForward);
+	_stack,channelLinkID,err:=comm.NewDefaultStack(int(mtu),tcpForward,udpForward);
 	if(err!=nil){
 		log.Printf("err:%v\r\n",err)
 		return err;
 	}
-
+	defer  _stack.Close();
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

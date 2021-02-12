@@ -108,7 +108,7 @@ func (qd *QuicDialer) Dial(quicAddr string) (comm.CommConn, error) {
 			retryNum++;
 			continue;
 		}
-		stream, err := qd.sess.OpenStream()
+		stream, err := sess.OpenStream()
 		if err != nil {
 			log.Printf("err:%v\r\n",err)
 			qd.Connect(quicAddr);
