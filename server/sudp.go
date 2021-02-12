@@ -91,13 +91,13 @@ func tunRecv(tunConn net.Conn,addr net.Addr,udpComm *udpHeader.UdpConn){
 		return
 	}
 	for {
-		tunConn.SetReadDeadline(time.Now().Add(60*time.Minute))
+		tunConn.SetReadDeadline(time.Now().Add(60*time.Second))
 		_, err := io.ReadFull(tunConn, packLenByte)
 		packLen := binary.LittleEndian.Uint16(packLenByte)
 		if (err != nil||int(packLen)>len(bufByte)) {
 			break;
 		}
-		tunConn.SetReadDeadline(time.Now().Add(60*time.Minute))
+		tunConn.SetReadDeadline(time.Now().Add(60*time.Second))
 		n, err := io.ReadFull(tunConn, bufByte[:int(packLen)])
 		if (err != nil) {
 			fmt.Printf("recv pack err :%v\r\n", err)

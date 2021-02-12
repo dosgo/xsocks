@@ -9,7 +9,6 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"time"
 	"xSocks/comm"
 	"xSocks/param"
 )
@@ -45,7 +44,6 @@ func  NewTunnel () (comm.CommConn,error){
 	if err != nil  {
 		return nil,err
 	}
-	stream.SetDeadline(time.Now().Add(time.Second*50))
 	return stream,nil;
 }
 

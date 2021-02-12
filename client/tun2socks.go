@@ -185,7 +185,7 @@ func dnsReqUdp(conn *gonet.UDPConn) error{
 		fmt.Println(err.Error())
 		return err;
 	}
-	comm.UdpPipe(conn,dnsConn)
+	comm.UdpPipe(conn,dnsConn,time.Minute*5)
 	return nil;
 }
 /*to dns*/
@@ -210,30 +210,35 @@ func socksUdpGate(conn *gonet.UDPConn) error{
 	}
 	defer conn.Close()
 	defer gateConn.Close()
-	srcChan := comm.ChanFromConn(conn,time.Minute*5)
-	dstChan := comm.ChanFromConn(gateConn,time.Minute*5)
 	dstAddr,_:=net.ResolveUDPAddr("udp",conn.LocalAddr().String())
-	var buffer bytes.Buffer
-	for {
-		select {
-			case b1 := <-srcChan:
-				if b1 == nil {
-					return nil;
-				}
-				buffer.Reset()
-				buffer.Write(comm.UdpHeadEncode(dstAddr))
-				buffer.Write(b1)
-				_, _ = gateConn.Write(buffer.Bytes())
-			case b2 := <-dstChan:
-				if b2 == nil {
-					return nil;
-				}
-				_,dataStart,err:=comm.UdpHeadDecode(b2)
-				if err != nil {
-					return nil;
-				}
-				_, _ = conn.Write(b2[dataStart:])
+
+	go func() {
+		var buffer bytes.Buffer
+		var b1=make([]byte,65535);
+		for {
+			conn.SetReadDeadline(time.Now().Add(3*time.Minute))
+			n,err:=conn.Read(b1);
+			if err != nil {
+				return ;
+			}
+			buffer.Reset()
+			buffer.Write(comm.UdpHeadEncode(dstAddr))
+			buffer.Write(b1[:n])
+			_, _ = gateConn.Write(buffer.Bytes())
 		}
+	}()
+	for {
+		var b2=make([]byte,65535);
+		gateConn.SetReadDeadline(time.Now().Add(3*time.Minute))
+		n,err:=gateConn.Read(b2);
+		if err != nil {
+			return err;
+		}
+		_,dataStart,err:=comm.UdpHeadDecode(b2[:n])
+		if err != nil {
+			return nil;
+		}
+		_, _ = conn.Write(b2[dataStart:])
 	}
 }
 

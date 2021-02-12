@@ -189,6 +189,7 @@ func (rd *TunConn) PutPacket(tunnel *udpHeader.UdpConn){
 /*send cmd  and UniqueId  and mtu*/
 func  ConnectTun(uniqueId string,mtu int)(comm.CommConn,error){
 	var err error;
+	ResetTunnel();
 	tunnel,err:=NewTunnel();
 	if err != nil {
 		fmt.Printf("connect tunnel err:%v\r\n",err)
@@ -374,7 +375,7 @@ func udpForward(conn *gonet.UDPConn, ep tcpip.Endpoint) error{
 		return err;
 	}
 	defer conn2.Close();
-	comm.UdpPipe(conn,conn2);
+	comm.UdpPipe(conn,conn2,time.Minute*5);
 	return nil;
 }
 

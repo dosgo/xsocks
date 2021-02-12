@@ -9,8 +9,10 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
+	"time"
 	"xSocks/comm"
 	"xSocks/comm/udpHeader"
+	"xSocks/param"
 )
 var quicDialer *QuicDialer
 
@@ -44,9 +46,17 @@ func (qd *QuicDialer) Connect(quicAddr string) error{
 	if(qd.sess!=nil){
 		qd.sess.CloseWithError(2021, "OpenStreamSync error")
 	}
+	var maxIdleTimeout=time.Second*30;
+
+	if(param.TunType==2){
+		//tun mode
+		maxIdleTimeout=time.Minute*5;
+	}
+
 	var quicConfig = &quic.Config{
 	//	MaxIncomingStreams:                    32,
 	//	MaxIncomingUniStreams:                 -1,              // disable unidirectional streams
+		MaxIdleTimeout:maxIdleTimeout,
 		KeepAlive: true,
 	}
 

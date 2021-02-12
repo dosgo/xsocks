@@ -128,10 +128,12 @@ func newTunTcp(client comm.CommConn) error{
 func udpForward(conn *gonet.UDPConn,ep tcpip.Endpoint) error{
 	defer ep.Close();
 	var remoteAddr="";
+	var duration time.Duration=time.Second*100;
 	//dns 8.8.8.8
 	if(strings.HasSuffix(conn.LocalAddr().String(),":53")){
 		fmt.Printf("udpForward dnsAddr:%s",conn.LocalAddr().String()+"localAddr:"+conn.RemoteAddr().String()+"SafeDns:"+param.SafeDns+"\r\n")
 		remoteAddr=param.SafeDns+":53"
+		duration=time.Second*15;
 	}else{
 		remoteAddr=conn.LocalAddr().String();
 	}
@@ -140,7 +142,7 @@ func udpForward(conn *gonet.UDPConn,ep tcpip.Endpoint) error{
 		fmt.Println("udpForward"+conn.LocalAddr().String()+ err.Error())
 		return err;
 	}
-	comm.UdpPipe(conn,conn2)
+	comm.UdpPipe(conn,conn2,duration)
 	return nil;
 }
 

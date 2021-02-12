@@ -129,25 +129,13 @@ func UniqueId(_len int) string {
 }
 
 /*udp swap*/
-func UdpPipe(src net.Conn, dst net.Conn) {
+func UdpPipe(src net.Conn, dst net.Conn,duration time.Duration) {
 	defer src.Close()
 	defer dst.Close()
-	chan1 := ChanFromConn(src,time.Minute*5)
-	chan2 := ChanFromConn(dst,time.Minute*5)
-	for {
-		select {
-		case b1 := <-chan1:
-			if b1 == nil {
-				return
-			}
-			_, _ = dst.Write(b1)
-		case b2 := <-chan2:
-			if b2 == nil {
-				return
-			}
-			_, _ = src.Write(b2)
-		}
-	}
+	srcT:=TimeoutConn{src,duration}
+	dstT:=TimeoutConn{dst,duration}
+	go io.Copy(srcT, dstT)
+	io.Copy(dstT, srcT)
 }
 
 /*tcp swap*/
@@ -160,24 +148,4 @@ func TcpPipe(src CommConn, dst CommConn,duration time.Duration) {
 	io.Copy(dstT, srcT)
 }
 
-func ChanFromConn(conn net.Conn,duration time.Duration) chan []byte {
-	c := make(chan []byte)
-	go func() {
-		b := make([]byte, 65535)
-		for {
-			_ = conn.SetReadDeadline(time.Now().Add(duration))
-			n, err := conn.Read(b)
-			if n > 0 {
-				res := make([]byte, n)
-				copy(res, b[:n])
-				c <- res
-			}
-			if err != nil {
-				c <- nil
-				break
-			}
-		}
-	}()
-	return c
-}
 
