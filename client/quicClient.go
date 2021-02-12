@@ -4,9 +4,11 @@ import (
 	"crypto/tls"
 	"errors"
 	"github.com/lucas-clemente/quic-go"
+	"fmt"
 	"log"
 	"net"
 	"sync"
+	"sync/atomic"
 	"xSocks/comm"
 	"xSocks/comm/udpHeader"
 )
@@ -15,7 +17,7 @@ var quicDialer *QuicDialer
 func init(){
 	quicDialer= &QuicDialer{}
 }
-
+var num int64=0;
 
 
 type QuicDialer struct {
@@ -39,19 +41,16 @@ func ClearQuicDialer(){
 func (qd *QuicDialer) Connect(quicAddr string) error{
 	qd.Lock();
 	defer qd.Unlock();
-	if(qd.udpConn!=nil){
-		qd.udpConn.Close();
-	}
 	if(qd.sess!=nil){
 		qd.sess.CloseWithError(2021, "OpenStreamSync error")
 	}
-
-
 	var quicConfig = &quic.Config{
-		MaxIncomingStreams:                    32,
-		MaxIncomingUniStreams:                 -1,              // disable unidirectional streams
+	//	MaxIncomingStreams:                    32,
+	//	MaxIncomingUniStreams:                 -1,              // disable unidirectional streams
 		KeepAlive: true,
 	}
+
+
 	tlsConf := &tls.Config{
 		InsecureSkipVerify: true,
 		NextProtos:         []string{"quic-echo-example"},
@@ -74,6 +73,7 @@ func (qd *QuicDialer) Connect(quicAddr string) error{
 	}
 	qd.sess = sess
 	qd.udpConn=udpConn;
+	atomic.StoreInt64(&num,0)
 	return nil;
 }
 
@@ -95,8 +95,9 @@ func isActive(s quic.Session) bool {
 
 
 func (qd *QuicDialer) Dial(quicAddr string) (comm.CommConn, error) {
-
+	atomic.AddInt64(&num,1)
 	var retryNum=0;
+	fmt.Printf("num:%d\r\n",num);
 	for{
 		if retryNum>3 {
 			break;
