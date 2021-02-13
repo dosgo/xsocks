@@ -3,7 +3,7 @@ package param
 import "time"
 
 //common
-var Version ="1.3.2-(20210213)"
+var Version ="1.3.3-(20210213)"
 
 
 //client
@@ -33,6 +33,5 @@ var KcpPort string;
 var Password string
 var CertFile string;
 var KeyFile string;
-var TunPort string;
 var LocalTunSock string;
 var SafeDns string="114.114.114.114";

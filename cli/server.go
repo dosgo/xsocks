@@ -22,7 +22,6 @@ import (
 func main() {
 
 	flag.StringVar(&param.Sock5Port, "sock5Port", "", "local socks5 port")
-	flag.StringVar(&param.TunPort, "TunPort", "", "local tun port")
 	flag.StringVar(&param.QuicPort, "quicPort", "5002", "quic port")
 	flag.StringVar(&param.WebPort, "webPort", "5003", "quic port")
 	flag.StringVar(&param.KcpPort, "kcpPort", "5005", "kcp port")
@@ -40,16 +39,12 @@ func main() {
 	if(param.Sock5Port==""){
 		param.Sock5Port,_= comm.GetFreePort();
 	}
-	if(param.TunPort==""){
-		param.TunPort,_= comm.GetFreePort();
-	}
 	//生成临时目录
 	param.LocalTunSock=os.TempDir()+"/"+comm.UniqueId(8)
 
 
 	fmt.Printf("verison:%s\r\n",param.Version)
 	fmt.Printf("socks5 server Port:%s\r\n",param.Sock5Port)
-	fmt.Printf("tun  Port:%s\r\n",param.TunPort)
 	fmt.Printf("Quic Port:%s\r\n",param.QuicPort)
 	fmt.Printf("webSocket Port:%s\r\n",param.WebPort)
 	fmt.Printf("passWord:%s\r\n",param.Password)
@@ -79,7 +74,6 @@ func main() {
 	go server.StartRemoteSocks51("127.0.0.1:"+param.Sock5Port);
 	go server.StartWebSocket(publicIp+":"+param.WebPort);
 	go server.StartKcp(publicIp+":"+param.KcpPort);
-	go server.StartTunTcp(); //local tun server
 	go server.StartSudp(publicIp+":"+param.SudpPort)
 	server.StartQuic(publicIp+":"+param.QuicPort);
 }

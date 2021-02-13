@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -66,7 +67,7 @@ func proxy(conn comm.CommConn){
 			break;
 		//to tun
 		case 0x03:
-			toTunTcp(conn)
+			tcpToTun(conn)
 			break;
 			//to udp socket
 		case 0x04:
@@ -133,23 +134,83 @@ func tcpToUdpProxy(conn comm.CommConn){
 
 
 /*to tun 处理*/
-func toTunTcp(conn comm.CommConn){
+func tcpToTun(conn comm.CommConn){
 	uniqueIdByte := make([]byte,8)
 	_, err := io.ReadFull(conn, uniqueIdByte)
 	if(err!=nil){
-		log.Printf("err:%v\r\n",param.TunPort)
+		log.Printf("err:%v\r\n",err)
 		return ;
 	}
 	uniqueId:=string(uniqueIdByte)
 	fmt.Printf("uniqueId:%s\r\n",uniqueId)
-	var sConn net.Conn;
-	//连接tun
-	sConn, err = net.DialTimeout("tcp", "127.0.0.1:"+param.TunPort, param.ConnectTime)
-	if (err != nil) {
-		log.Printf("err:%v\r\n", param.TunPort)
+	var mtuByte []byte = make([]byte, 2)
+	//read Mtu
+	_, err = io.ReadFull(conn, mtuByte)
+	if(err!=nil){
+		log.Printf("err:%v\r\n")
+		return ;
+	}
+	mtu := binary.LittleEndian.Uint16(mtuByte)
+	if(mtu<1){
+		mtu=1024;
+	}
+	_stack,channelLinkID,err:=StartTunStack(mtu);
+	if(err!=nil){
 		return;
 	}
-	comm.TcpPipe(conn,sConn,time.Minute*5)
+	defer _stack.Close();
+	var buffer =new(bytes.Buffer)
+	defer fmt.Printf("channelLinkID recv exit \r\n");
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() {
+		var sendBuffer =new(bytes.Buffer)
+		var packLenByte []byte = make([]byte, 2)
+		for {
+			pkt,res :=channelLinkID.ReadContext(ctx)
+			if(!res){
+				break;
+			}
+			buffer.Reset()
+			buffer.Write(pkt.Pkt.NetworkHeader().View())
+			buffer.Write(pkt.Pkt.TransportHeader().View())
+			buffer.Write(pkt.Pkt.Data.ToView())
+			if(buffer.Len()>0) {
+				binary.LittleEndian.PutUint16(packLenByte,uint16(buffer.Len()))
+				sendBuffer.Reset()
+				sendBuffer.Write(packLenByte)
+				sendBuffer.Write(buffer.Bytes())
+				_,err=conn.Write(sendBuffer.Bytes())
+				if(err!=nil){
+					return ;
+				}
+			}
+		}
+
+	}()
+	var buflen=mtu+80;
+	var buf=make([]byte,buflen)
+	var packLenByte []byte = make([]byte, 2)
+	for {
+		conn.SetDeadline(time.Now().Add(time.Minute*3))
+		_, err := io.ReadFull(conn, packLenByte)
+		if (err != nil) {
+			log.Printf("err:%v\r\n", err)
+			return;
+		}
+		packLen := binary.LittleEndian.Uint16(packLenByte)
+		//null
+		if (packLen < 1 || packLen > buflen) {
+			continue;
+		}
+		conn.SetDeadline(time.Now().Add(time.Minute*3))
+		n, err := io.ReadFull(conn, buf[:int(packLen)])
+		if (err != nil) {
+			log.Printf("err:%v\r\n", err)
+			return;
+		}
+		InjectInbound(channelLinkID,buf[:n])
+	}
 }
 
 
