@@ -15,7 +15,7 @@ func GetCidrRandIp(cidr string) (string) {
 	seg3MinIp, seg3MaxIp := getIpSeg3Range(ipSegs, maskLen)
 	seg4MinIp, seg4MaxIp := getIpSeg4Range(ipSegs, maskLen)
 	ipPrefix := ipSegs[0] + "." + ipSegs[1] + "."
-	return ipPrefix+strconv.Itoa(rand.IntnRange(seg3MinIp,seg3MaxIp))+strconv.Itoa(rand.IntnRange(seg4MinIp,seg4MaxIp));
+	return ipPrefix+strconv.Itoa(rand.IntnRange(seg3MinIp,seg3MaxIp))+"."+strconv.Itoa(rand.IntnRange(seg4MinIp,seg4MaxIp));
 }
 
 func getCidrIpRange(cidr string) (string, string) {

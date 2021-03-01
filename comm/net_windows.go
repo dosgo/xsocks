@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strings"
 	"log"
 	"syscall"
@@ -144,15 +145,42 @@ loop:
 }
 
 func SetDNSServer(gwIp string,ip string){
+	oldDns:=getDnsServer(gwIp);
 	lAdds,err:=GetLocalAddresses();
+	var iName="";
 	if err==nil {
 		for _, v := range lAdds {
 			if strings.Index(v.GateWay,gwIp)!=-1 {
-				exec.Command("netsh", "interface","ip","set","dnsservers",v.Name,"static",ip).Output()
+				iName=v.Name;
 				break;
 			}
 		}
 	}
+
+	fmt.Printf("oldDns:%s ip:%s\r\n",oldDns,ip)
+
+
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT)
+	go func() {
+		s := <-ch
+		switch s {
+		default:
+			if oldDns!="" {
+				out,_:=exec.Command("netsh", "interface","ip","set","dnsservers",iName,"static",oldDns).Output()
+				log.Printf("out:%s\r\n",string(out))
+			}
+			os.Exit(0);
+		}
+	}()
+
+	out,_:=exec.Command("netsh", "interface","ip","set","dnsservers",iName,"static",ip).Output()
+
+	log.Printf("out:%s\r\n",string(out))
 }
 
 
@@ -164,7 +192,7 @@ func getDnsServer(gwIp string)string{
 		return "";
 	}
 	for _,v:=range adapters{
-		if(v.DefaultIPGateway[0]==gwIp){
+		if len(v.DefaultIPGateway)>0&&v.DefaultIPGateway[0]==gwIp {
 			return v.DNSServerSearchOrder[0];
 		}
 	}

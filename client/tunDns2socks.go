@@ -33,10 +33,9 @@ var tunMask="255.255.255.0"
 
 
 func StartTunDns(tunDevice string,_tunAddr string,_tunMask string,tunGW string,tunDNS string) {
-	dnsPort,_:= comm.GetFreePort();
-	_startSmartDns(dnsPort)
+	_startSmartDns("53")
+	comm.SetDNSServer(comm.GetGateway(),"127.0.0.1");
 	_startTun(tunDevice,_tunAddr,_tunMask,tunGW,tunDNS);
-	comm.SetDNSServer(comm.GetGateway(),"127.0.0.1:"+dnsPort);
 }
 
 
@@ -61,7 +60,6 @@ func _startTun(tunDevice string,_tunAddr string,_tunMask string,tunGW string,tun
 
 	strings.Split(param.ServerAddr,":");
 	dnsServers := strings.Split(tunDNS, ",")
-	fmt.Printf("dnsServers:%v\r\n",dnsServers)
 	var dev io.ReadWriteCloser;
 	var remoteAddr string;
 	if len(param.UnixSockTun)>0 {
@@ -106,6 +104,8 @@ func _startTun(tunDevice string,_tunAddr string,_tunMask string,tunGW string,tun
 
 
 func dnsTcpForwarder(conn *gonet.TCPConn)error{
+
+	log.Printf("tcpAddr:%s\r\n",conn.LocalAddr().String())
 	remoteAddr:=dnsToAddr(conn.LocalAddr().String())
 	if remoteAddr==""{
 		conn.Close();
@@ -125,6 +125,7 @@ func dnsTcpForwarder(conn *gonet.TCPConn)error{
 }
 
 func dnsUdpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)error{
+	//log.Printf("udpAddr:%s\r\n",conn.LocalAddr().String())
 	defer ep.Close();
 	defer conn.Close();
 	remoteAddr:=dnsToAddr(conn.LocalAddr().String())
@@ -172,7 +173,7 @@ func _startSmartDns(dnsPort string) error {
 		WriteTimeout: time.Duration(10) * time.Second,
 	}
 	go udpServer.ListenAndServe();
-	tcpServer.ListenAndServe();
+	go tcpServer.ListenAndServe();
 	return nil;
 }
 
@@ -186,6 +187,7 @@ func (tunDns *TunDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	m.Authoritative = false
 	domain := r.Question[0].Name
 	var ip string;
+	fmt.Printf("domain:%s\r\n",domain)
 	if param.SmartDns==1 {
 		ipAddr, err := net.ResolveIPAddr("ip", domain[0 : len(domain)-1])
 		if err == nil {
@@ -199,9 +201,9 @@ func (tunDns *TunDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 			}
 		}
 	}
-
+	fmt.Printf("domain2:%s\r\n",domain)
 	masks:=net.ParseIP(tunMask)
-	maskAddr:=net.IPNet{net.ParseIP(tunAddr),net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}
+	maskAddr:=net.IPNet{net.ParseIP(tunAddr),net.IPv4Mask(masks[3], masks[2], masks[1], masks[0] )}
 	ip=comm.GetCidrRandIp(maskAddr.String())
 	for i := 0; i <= 2; i++ {
 		ip=comm.GetCidrRandIp(maskAddr.String())
@@ -213,7 +215,7 @@ func (tunDns *TunDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 			ip="";
 		}
 	}
-
+	fmt.Printf("domain3:%s ip:%s\r\n",domain,ip)
 	m.Answer = append(r.Answer, &dns.A{
 		Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
 		A:   net.ParseIP(ip),

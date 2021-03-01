@@ -43,7 +43,6 @@ func StartTunDevice(tunDevice string,tunAddr string,tunMask string,tunGW string,
 
 	strings.Split(param.ServerAddr,":");
 	dnsServers := strings.Split(tunDNS, ",")
-	fmt.Printf("dnsServers:%v\r\n",dnsServers)
 	var dev io.ReadWriteCloser;
 	var remoteAddr string;
 	if len(param.UnixSockTun)>0 {
