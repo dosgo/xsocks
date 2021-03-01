@@ -29,7 +29,6 @@ func main() {
 	flag.BoolVar(&param.TunSmartProxy,"tunSmartProxy",false,"tun Smart Proxy ")
 
 	flag.Parse()
-
 	//随机端口
 	if param.DnsPort=="" {
 		param.DnsPort,_= comm.GetFreePort();
@@ -49,6 +48,9 @@ func main() {
 	//2==tun2remote tun
 	if param.TunType==2 {
 		go client.StartTun("","","","","");
+	}
+	if param.TunType==3 {
+		go client.StartTunDns("","","","","");
 	}
 	go client.StartDns();
 	client.StartLocalSocks5(param.Sock5Addr);

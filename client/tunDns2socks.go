@@ -16,7 +16,6 @@ import (
 	"fmt"
 	"time"
 	"xSocks/client/tun2socks"
-    "github.com/StackExchange/wmi"
 	"xSocks/comm"
 	"xSocks/param"
 )
@@ -37,7 +36,7 @@ func StartTunDns(tunDevice string,_tunAddr string,_tunMask string,tunGW string,t
 	dnsPort,_:= comm.GetFreePort();
 	_startSmartDns(dnsPort)
 	_startTun(tunDevice,_tunAddr,_tunMask,tunGW,tunDNS);
-
+	comm.SetDNSServer(comm.GetGateway(),"127.0.0.1:"+dnsPort);
 }
 
 

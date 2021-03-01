@@ -19,3 +19,6 @@ func GetLocalAddresses() ([]lAddr ,error) {
 	return lAddrs,nil;
 }
 
+func SetDNSServer(gwIp string,ip string){
+
+}

@@ -3,6 +3,7 @@
 package comm
 
 import (
+	"github.com/StackExchange/wmi"
 	"github.com/yijunjun/route-table"
 	"fmt"
 	"golang.org/x/sys/windows"
@@ -142,7 +143,7 @@ loop:
 	return dns
 }
 
-func setDNSServer(gwIp string,ip string){
+func SetDNSServer(gwIp string,ip string){
 	lAdds,err:=GetLocalAddresses();
 	if err==nil {
 		for _, v := range lAdds {
@@ -156,8 +157,18 @@ func setDNSServer(gwIp string,ip string){
 
 
 
-func getDnsServer(){
+func getDnsServer(gwIp string)string{
 	//DNSServerSearchOrder
+	adapters,err:=getNetworkAdapter()
+	if(err!=nil){
+		return "";
+	}
+	for _,v:=range adapters{
+		if(v.DefaultIPGateway[0]==gwIp){
+			return v.DNSServerSearchOrder[0];
+		}
+	}
+	return "";
 }
 
 type Network struct {
@@ -172,7 +183,7 @@ type intfInfo struct {
 	Ipv4       []string
 }
 
-func getNetworkInfo() error {
+func GetNetworkInfo() error {
 	intf, err := net.Interfaces()
 	if err != nil {
 		log.Fatal("get network info failed: %v", err)
@@ -208,3 +219,35 @@ func getNetworkInfo() error {
 
 	return nil
 }
+//BIOS信息
+func GetBiosInfo() string {
+	var s = []struct {
+		Name string
+	}{}
+	err := wmi.Query("SELECT Name FROM Win32_BIOS WHERE (Name IS NOT NULL)", &s) // WHERE (BIOSVersion IS NOT NULL)
+	if err != nil {
+		return ""
+	}
+	return s[0].Name
+}
+type NetworkAdapter struct {
+	DNSServerSearchOrder   []string
+	DefaultIPGateway []string
+	IPAddress []string
+	Caption    string
+	ServiceName  string
+	IPSubnet   []string
+	SettingID string
+}
+
+
+func getNetworkAdapter() ([]NetworkAdapter,error){
+	var s = []NetworkAdapter{}
+	err := wmi.Query("SELECT Caption,SettingID,DNSServerSearchOrder,DefaultIPGateway,ServiceName,IPAddress,IPSubnet    FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled=True", &s) // WHERE (BIOSVersion IS NOT NULL)
+	if err != nil {
+		log.Printf("err:%v\r\n",err)
+		return nil,err
+	}
+	return s,nil;
+}
+

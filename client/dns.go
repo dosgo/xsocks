@@ -92,7 +92,7 @@ func (localdns *LocalDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 			}
 		}
 	}
-	ip, err = remoteDns.Resolve(domain[0 : len(domain)-1])
+	ip, err = localdns.remoteDns.Resolve(domain[0 : len(domain)-1])
 	if(err!=nil){
 		fmt.Printf("dns domain:%s Resolve err:%v\r\n",domain,err)
 		return m, err;
