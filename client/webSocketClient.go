@@ -49,9 +49,9 @@ func (qd *WsYamux) Dial(url string) (comm.CommConn, error) {
 	if(qd.sess==nil){
 		qd.sess=make([]*yamux.Session,0)
 	}
-	if(param.MuxNum==0){
+	if param.MuxNum==0 {
 		session,err:=newYamuxSession(url);
-		if(err!=nil){
+		if err!=nil {
 			log.Printf("err:%v\r\n",err);
 			return nil,err;
 		}
@@ -65,13 +65,13 @@ func (qd *WsYamux) Dial(url string) (comm.CommConn, error) {
 				log.Printf("err:%v\r\n",err);
 			}
 		}
-		if(len(qd.sess)<1){
+		if len(qd.sess)<1 {
 			return nil,errors.New("sess null");
 		}
 		var sessIndex=0;
 		var retryNum=0;
 		for {
-			if(retryNum>3){
+			if retryNum>3 {
 				break;
 			}
 			sessIndex=rand.Intn(len(qd.sess))
@@ -80,7 +80,7 @@ func (qd *WsYamux) Dial(url string) (comm.CommConn, error) {
 				qd.sess=append(qd.sess[:sessIndex], qd.sess[sessIndex+1:]...)
 				sess.Close()
 				session,err:=newYamuxSession(url);
-				if(err==nil){
+				if err==nil {
 					qd.sess=append(qd.sess,session)
 				}else{
 					log.Printf("err:%v\r\n",err);
@@ -93,7 +93,7 @@ func (qd *WsYamux) Dial(url string) (comm.CommConn, error) {
 				qd.sess=append(qd.sess[:sessIndex], qd.sess[sessIndex+1:]...)
 				sess.Close()
 				session,err:=newYamuxSession(url);
-				if(err==nil){
+				if err==nil {
 					qd.sess=append(qd.sess,session)
 				}else{
 					log.Printf("err:%v\r\n",err);
@@ -118,11 +118,11 @@ func (qd *WsSmux) Dial(url string) (comm.CommConn, error) {
 
 	if param.MuxNum==0 {
 		wsConn,err:=dialAddr(url);
-		if(err!=nil){
+		if err!=nil {
 			return nil,err;
 		}
 		session, err := smux.Client(wsConn, conf)
-		if(err!=nil){
+		if err!=nil {
 			return nil,err;
 		}
 		return session.OpenStream()
@@ -132,11 +132,11 @@ func (qd *WsSmux) Dial(url string) (comm.CommConn, error) {
 
 	if len(qd.sess) < param.MuxNum {
 		wsConn,err:=dialAddr(url);
-		if(err!=nil){
+		if err!=nil {
 			return nil,err;
 		}
 		session, err := smux.Client(wsConn, conf)
-		if(err!=nil){
+		if err!=nil {
 			return nil,err;
 		}
 		qd.sess=append(qd.sess,session)
@@ -149,7 +149,7 @@ func (qd *WsSmux) Dial(url string) (comm.CommConn, error) {
 	if err != nil {
 		sess.Close()
 		wsConn,err:=dialAddr(url);
-		if(err!=nil){
+		if err!=nil {
 			return nil,err;
 		}
 		session, err := smux.Client(wsConn, conf)
@@ -171,7 +171,7 @@ func newYamuxSession(url string)(*yamux.Session, error){
 	conf.MaxStreamWindowSize=1024*1024;
 	conf.ConnectionWriteTimeout=20* time.Second;
 	wsConn, err := dialAddr(url);
-	if (err != nil) {
+	if err != nil {
 		return nil, err;
 	}
 	return yamux.Client(wsConn, conf)
@@ -195,7 +195,7 @@ func dialAddr(url string)(*websocket.Conn, error){
 
 func getTlsConf()*tls.Config{
 	tlsconf:=&tls.Config{InsecureSkipVerify:false,ClientSessionCache:  tls.NewLRUClientSessionCache(32)};
-	if(param.CaFile!=""){
+	if param.CaFile!="" {
 		_, err := os.Stat(param.CaFile)
 		if err == nil {
 			pool := x509.NewCertPool()
@@ -208,7 +208,7 @@ func getTlsConf()*tls.Config{
 			return tlsconf;
 		}
 	}
-	if(param.SkipVerify){
+	if param.SkipVerify {
 		tlsconf.InsecureSkipVerify=true;
 		return tlsconf;
 	}

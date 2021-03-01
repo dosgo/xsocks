@@ -32,11 +32,11 @@ func main() {
 	flag.IntVar(&param.Mtu, "mtu", 4500, "mtu")
 	flag.Parse()
 
-	if(param.Sock5UdpPort==""){
+	if param.Sock5UdpPort=="" {
 		param.Sock5UdpPort,_= comm.GetFreeUdpPort();
 	}
 	//随机端口
-	if(param.Sock5Port==""){
+	if param.Sock5Port=="" {
 		param.Sock5Port,_= comm.GetFreePort();
 	}
 	//生成临时目录
@@ -51,10 +51,10 @@ func main() {
 
 	var publicIp="0.0.0.0";
 	_ip,err:= server.GetPublicIP();
-	if(err==nil){
+	if err==nil {
 		publicIp=_ip;
 	}
-	if(publicIp!="0.0.0.0"&&comm.IsPublicIP(net.ParseIP(publicIp))&&!comm.IsChinaMainlandIP(publicIp)){
+	if publicIp!="0.0.0.0"&&comm.IsPublicIP(net.ParseIP(publicIp))&&!comm.IsChinaMainlandIP(publicIp) {
 		param.SafeDns="8.8.4.4"
 	}
 	if(runtime.GOOS=="linux"){

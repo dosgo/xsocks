@@ -149,3 +149,9 @@ func TcpPipe(src CommConn, dst CommConn,duration time.Duration) {
 }
 
 
+type lAddr struct {
+	Name  string
+	IpAddress  string
+	IpMask  string
+	GateWay  string
+}

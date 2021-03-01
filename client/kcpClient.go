@@ -37,11 +37,11 @@ func (qd *KcpInfo) Dial(url string) (comm.CommConn, error) {
 
 	if qd.sess == nil||param.MuxNum==0 {
 		wsConn,err:=connectKcp(url);
-		if(err!=nil){
+		if err!=nil {
 			return nil,err;
 		}
 		session, err := smux.Client(wsConn, conf)
-		if(err!=nil){
+		if err!=nil {
 			return nil,err;
 		}
 		qd.sess=session;
@@ -52,7 +52,7 @@ func (qd *KcpInfo) Dial(url string) (comm.CommConn, error) {
 	if err != nil {
 		qd.sess.Close()
 		wsConn,err:=connectKcp(url);
-		if(err!=nil){
+		if err!=nil {
 			return nil,err;
 		}
 		session, err := smux.Client(wsConn, conf)

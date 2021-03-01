@@ -86,12 +86,12 @@ func remoteUdpProxy(udpGate *net.UDPConn,data []byte, remoteUdpNat sync.Map,loca
 		sendBuf =append(sendBuf,0x04);//dns\
 		var err error;
 		tunnel, err= NewTunnel();
-		if(err!=nil){
+		if err!=nil {
 			log.Printf("err:%v\r\n",err);
 			return err;
 		}
 		_,err=tunnel.Write(sendBuf)
-		if(err!=nil){
+		if err!=nil {
 			log.Printf("err:%v\r\n",err);
 			return err;
 		}
@@ -106,18 +106,18 @@ func remoteUdpProxy(udpGate *net.UDPConn,data []byte, remoteUdpNat sync.Map,loca
 				tunnel.SetDeadline(time.Now().Add(60*10*time.Second))
 				_, err := io.ReadFull(tunnel, packLenByte)
 				packLen := binary.LittleEndian.Uint16(packLenByte)
-				if (err != nil||int(packLen)>len(bufByte)) {
+				if err != nil||int(packLen)>len(bufByte) {
 					log.Printf("err:%v\r\n",err);
 					break;
 				}
 				tunnel.SetDeadline(time.Now().Add(300*time.Second))
 				_, err = io.ReadFull(tunnel, bufByte[:int(packLen)])
-				if (err != nil) {
+				if err != nil {
 					log.Printf("err:%v\r\n",err);
 					break;
 				}else {
 					_, err = udpGate.WriteToUDP(bufByte[:int(packLen)],localAddr)
-					if (err != nil) {
+					if err != nil {
 						log.Printf("err:%v\r\n",err);
 					}
 				}
@@ -160,7 +160,7 @@ func natSawp(udpGate *net.UDPConn,udpNat sync.Map,data []byte,dataStart int,loca
 				//remoteConn.SetDeadline();
 				remoteConn.SetReadDeadline(time.Now().Add(60*10*time.Second))
 				n, err:= remoteConn.Read(buf);
-				if(err!=nil){
+				if err!=nil {
 					log.Printf("err:%v\r\n",err);
 					return ;
 				}
@@ -192,7 +192,7 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 		log.Printf("err:%v",err);
 		return err
 	}
-	if(auth[0]==0x05){
+	if auth[0]==0x05 {
 		//resp auth
 		clientConn.Write([]byte{0x05, 0x00})
 	}
@@ -205,9 +205,9 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 	}
 
 
-	if(connectHead[0]==0x05) {
+	if connectHead[0]==0x05 {
 		//connect tcp
-		if(connectHead[1]==0x01) {
+		if connectHead[1]==0x01 {
 			var ipAddr net.IP
 			var port string
 			var hostBuf []byte;
@@ -250,7 +250,7 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 			}
 
 			//解析失败直接关闭
-			if(ipAddr==nil||ipAddr.String()=="0.0.0.0"){
+			if ipAddr==nil||ipAddr.String()=="0.0.0.0" {
 				return nil;
 			}
 
@@ -260,7 +260,7 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 
 
 			//如果是内网IP,或者是中国IP(如果被污染的IP一定返回的是国外IP地址ChinaDNS也是这个原理)
-			if ((!comm.IsPublicIP(ipAddr) || comm.IsChinaMainlandIP(ipAddr.String()))&&(runtime.GOOS!="windows"||param.TunType!=1)) {
+			if (!comm.IsPublicIP(ipAddr) || comm.IsChinaMainlandIP(ipAddr.String()))&&runtime.GOOS!="windows" {
 				server, err := net.DialTimeout("tcp", net.JoinHostPort(ipAddr.String(), port),param.ConnectTime)
 				if err != nil {
 					log.Printf("host:%s err:%v\r\n", net.JoinHostPort(ipAddr.String(), port),err);

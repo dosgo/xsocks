@@ -47,7 +47,7 @@ func StartWebSocket(addr string) error {
 
 
 func webHandler(w http.ResponseWriter, req *http.Request){
-	if(req.Header.Get("token")!=param.Password){
+	if req.Header.Get("token")!=param.Password {
 		msg:="Current server time:"+time.Now().Format("2006-01-02 15:04:05");
 		w.Header().Add("Connection","Close")
 		w.Header().Add("Content-Type","text/html")

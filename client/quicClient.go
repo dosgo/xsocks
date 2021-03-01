@@ -34,7 +34,7 @@ func NewQuicDialer() *QuicDialer {
 
 func ClearQuicDialer(){
 	sess:=quicDialer.GetSess();
-	if(sess!=nil) {
+	if sess!=nil {
 		sess.CloseWithError(2021, "deadlocks error close")
 	}
 }
@@ -43,12 +43,12 @@ func ClearQuicDialer(){
 func (qd *QuicDialer) Connect(quicAddr string) error{
 	qd.Lock();
 	defer qd.Unlock();
-	if(qd.sess!=nil){
+	if qd.sess!=nil {
 		qd.sess.CloseWithError(2021, "OpenStreamSync error")
 	}
 	var maxIdleTimeout=time.Second*30;
 
-	if(param.TunType==2){
+	if param.TunType==2 {
 		//tun mode
 		maxIdleTimeout=time.Minute*5;
 	}
@@ -67,10 +67,12 @@ func (qd *QuicDialer) Connect(quicAddr string) error{
 	}
 	udpAddr, err := net.ResolveUDPAddr("udp", quicAddr)
 	if err != nil {
+		log.Printf("err:%v\r\n",err)
 		return  err
 	}
 	_udpConn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4zero, Port: 0})
 	if err != nil {
+		log.Printf("err:%v\r\n",err)
 		return  err
 	}
 	//udp fob

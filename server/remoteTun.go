@@ -25,7 +25,7 @@ func InjectInbound(channelLinkID *channel.Endpoint,buf []byte) error{
 	tmpView:=buffer.NewVectorisedView(len(buf),[]buffer.View{
 		buffer.NewViewFromBytes(buf),
 	})
-	if(channelLinkID==nil){
+	if channelLinkID==nil {
 		log.Println("channelLinkID nil")
 		return errors.New("channelLinkID nil");
 	}
@@ -47,7 +47,7 @@ func udpForward(conn *gonet.UDPConn,ep tcpip.Endpoint) error{
 	var remoteAddr="";
 	var duration time.Duration=time.Second*100;
 	//dns 8.8.8.8
-	if(strings.HasSuffix(conn.LocalAddr().String(),":53")){
+	if strings.HasSuffix(conn.LocalAddr().String(),":53") {
 		fmt.Printf("udpForward dnsAddr:%s",conn.LocalAddr().String()+"localAddr:"+conn.RemoteAddr().String()+"SafeDns:"+param.SafeDns+"\r\n")
 		remoteAddr=param.SafeDns+":53"
 		duration=time.Second*15;

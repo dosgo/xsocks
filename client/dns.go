@@ -9,14 +9,19 @@ import (
 	"xSocks/param"
 )
 
-var remoteDns RemoteDns
-var dnsClient *dns.Client
+type LocalDns struct {
+	remoteDns RemoteDns
+	dnsClient *dns.Client
+}
+var localdns=LocalDns{}
+
+
 /*remote to loacal*/
 func StartDns() error {
 	udpServer := &dns.Server{
 		Net:          "udp",
 		Addr:         ":"+param.DnsPort,
-		Handler:      dns.HandlerFunc(ServeDNS),
+		Handler:      dns.HandlerFunc(localdns.ServeDNS),
 		UDPSize:      4096,
 		ReadTimeout:  time.Duration(10) * time.Second,
 		WriteTimeout: time.Duration(10) * time.Second,
@@ -24,13 +29,14 @@ func StartDns() error {
 	tcpServer:= &dns.Server{
 		Net:          "tcp",
 		Addr:         ":"+param.DnsPort,
-		Handler:      dns.HandlerFunc(ServeDNS),
+		Handler:      dns.HandlerFunc(localdns.ServeDNS),
 		UDPSize:      4096,
 		ReadTimeout:  time.Duration(10) * time.Second,
 		WriteTimeout: time.Duration(10) * time.Second,
 	}
-	remoteDns = RemoteDns{}
-	dnsClient = &dns.Client{
+
+	localdns.remoteDns = RemoteDns{}
+	localdns.dnsClient = &dns.Client{
 		Net:          "udp",
 		UDPSize:      4096,
 		ReadTimeout:  time.Duration(1) * time.Second,
@@ -49,12 +55,12 @@ func isIPv4Query(q dns.Question) bool {
 	return false
 }
 
-func  ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
+func  (localdns *LocalDns)ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	isIPv4 := isIPv4Query(r.Question[0])
 	var msg *dns.Msg
 	var err error
 	if isIPv4 {
-		msg, err = doIPv4Query(r)
+		msg, err = localdns.doIPv4Query(r)
 	} else {
 		msg, err = resolve(r)
 	}
@@ -65,15 +71,15 @@ func  ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	}
 }
 
-func  doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
+func (localdns *LocalDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	m := &dns.Msg{}
 	m.SetReply(r)
 	m.Authoritative = false
 	domain := r.Question[0].Name
 	var ip string;
 	var err error;
-	if(param.LocalDns==1){
-		m1,_,err := dnsClient.Exchange(r,"114.114.114.114:53")
+	if param.LocalDns==1 {
+		m1,_,err := localdns.dnsClient.Exchange(r,"114.114.114.114:53")
 		if err == nil {
 			for _, v := range m1.Answer {
 				record, isType := v.(*dns.A)

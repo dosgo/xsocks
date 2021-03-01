@@ -32,25 +32,25 @@ import (
 
 
 func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS string) error {
-	if(len(tunDevice)==0){
+	if len(tunDevice)==0 {
 		tunDevice="tun0";
 	}
-	if(len(tunAddr)==0){
+	if len(tunAddr)==0 {
 		tunAddr="10.0.0.2";
 	}
-	if(len(tunMask)==0){
+	if len(tunMask)==0 {
 		tunMask="255.255.255.0";
 	}
-	if(len(tunGW)==0){
+	if len(tunGW)==0 {
 		tunGW="10.0.0.1";
 	}
-	if(len(tunDNS)==0){
+	if len(tunDNS)==0 {
 		tunDNS="114.114.114.114";
 	}
 	//
 	var oldGw=comm.GetGateway();
 
-	if(len(param.UnixSockTun)>0) {
+	if len(param.UnixSockTun)>0 {
 		os.Remove(param.UnixSockTun)
 		addr, err := net.ResolveUnixAddr("unixpacket", param.UnixSockTun)
 		if err != nil {
@@ -71,7 +71,7 @@ func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS
 		tunRecv(conn, param.Mtu)
 	}else{
 		var remoteAddr string;
-		if(runtime.GOOS=="windows") {
+		if runtime.GOOS=="windows" {
 			urlInfo, _ := url.Parse(param.ServerAddr)
 			addr, err := net.ResolveIPAddr("ip",urlInfo.Hostname())
 			if err == nil {
@@ -88,7 +88,11 @@ func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS
 			return err;
 		}
 		//windows
-		if(runtime.GOOS=="windows"){
+		if runtime.GOOS=="windows" {
+			oldDns:=comm.GetDnsServer();
+			if oldDns!=nil&&len(oldDns)>0 {
+				dnsServers = append(dnsServers, oldDns...)
+			}
 			routeEdit(tunGW,remoteAddr,dnsServers,oldGw);
 		}
 		tunRecv(f, param.Mtu)
@@ -97,9 +101,9 @@ func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS
 }
 
 func tunRecv(dev io.ReadWriteCloser ,mtu int) error{
-	if(param.TunSmartProxy) {
+	if param.TunSmartProxy {
 		_,channelLinkID, err := comm.NewDefaultStack(mtu, tcpForward, udpForward);
-		if (err != nil) {
+		if err != nil {
 			return err;
 		}
 		// write tun
@@ -107,7 +111,7 @@ func tunRecv(dev io.ReadWriteCloser ,mtu int) error{
 			var buffer = new(bytes.Buffer)
 			for {
 				pkt,res:=channelLinkID.Read()
-				if(!res){
+				if !res {
 					continue;
 				}
 				buffer.Reset()
@@ -116,7 +120,7 @@ func tunRecv(dev io.ReadWriteCloser ,mtu int) error{
 				buffer.Write(pkt.Pkt.TransportHeader().View())
 				buffer.Write(pkt.Pkt.Data.ToView())
 				//tmpBuf:=append(pkt.Pkt.Header.View(),pkt.Pkt.Data.ToView()...)
-				if (buffer.Len() > 0) {
+				if buffer.Len() > 0 {
 					dev.Write(buffer.Bytes())
 				}
 			}
@@ -131,7 +135,7 @@ func tunRecv(dev io.ReadWriteCloser ,mtu int) error{
 				break;
 			}
 			//判断是否是本地数据,如果是直接转发给远程
-			if (true) {
+			if true {
 				fmt.Printf("dsfsd");
 			} else {
 				tmpView:=buffer.NewVectorisedView(n,[]buffer.View{
@@ -143,7 +147,7 @@ func tunRecv(dev io.ReadWriteCloser ,mtu int) error{
 			}
 		}
 	}else{
-		if (strings.HasPrefix(param.ServerAddr,"sudp")) {
+		if strings.HasPrefix(param.ServerAddr,"sudp") {
 			packetSwapTun(dev, mtu);
 		}else {
 			StreamSwapTun(dev, mtu)
@@ -225,7 +229,7 @@ func connectUdp()(*udpHeader.UdpConn,error){
 func  packetSwapTun(dev  io.ReadWriteCloser,mtu int){
 	tunPacket:=&TunConn{}
 	var aesGcm=comm.NewAesGcm();
-	if(aesGcm==nil){
+	if aesGcm==nil {
 		fmt.Println("aesGcm init error")
 	}
 	go func(_tunPacket *TunConn) {
@@ -248,9 +252,9 @@ func  packetSwapTun(dev  io.ReadWriteCloser,mtu int){
 			buffer2.Write(bufByte[:n]);
 			ciphertext,err:=aesGcm.AesGcm(buffer2.Bytes(),true);
 			udpConn:=_tunPacket.GetPacket();
-			if(udpConn!=nil&&err==nil) {
+			if udpConn!=nil&&err==nil {
 				_,err=udpConn.Write(ciphertext)
-				if(err!=nil){
+				if err!=nil {
 					log.Printf("err:%v\r\n",err)
 					udpConn.Close();
 					_tunPacket.PutPacket(nil)
@@ -264,9 +268,9 @@ func  packetSwapTun(dev  io.ReadWriteCloser,mtu int){
 	var buffer []byte = make([]byte,65535)
 	for {
 		tunnel:=tunPacket.GetPacket();
-		if(tunnel==nil){
+		if tunnel==nil {
 			_tunnel,err:=connectUdp();
-			if(err==nil){
+			if err==nil {
 				tunPacket.PutPacket(_tunnel)
 			}else {
 				time.Sleep(10 * time.Second);
@@ -282,9 +286,9 @@ func  packetSwapTun(dev  io.ReadWriteCloser,mtu int){
 			continue;
 		}
 		ciphertext,err:=aesGcm.AesGcm(buffer[:n],false);
-		if (err==nil){
+		if err==nil {
 			_, err = dev.Write(ciphertext)
-			if (err != nil) {
+			if err != nil {
 				fmt.Printf("e:%v\r\n", err)
 			}
 		}else{
@@ -320,9 +324,9 @@ func  StreamSwapTun(dev io.ReadWriteCloser,mtu int){
 			buffer.Write(packLenByte)
 			buffer.Write(bufByte[:n])
 			tunnel=_tunStream.GetTunnel();
-			if(tunnel!=nil){
+			if tunnel!=nil {
 				_,err=tunnel.Write(buffer.Bytes())
-				if (err != nil) {
+				if err != nil {
 					fmt.Printf("tunnel wrtie err:%v\r\n", err)
 				}
 			}
@@ -334,9 +338,9 @@ func  StreamSwapTun(dev io.ReadWriteCloser,mtu int){
 	var tunnel comm.CommConn
 	for {
 		tunnel=tunStream.GetTunnel();
-		if(tunnel==nil){
+		if tunnel==nil {
 			_tunnel,err:=ConnectTun(tunStream.UniqueId,tunStream.Mtu);
-			if(err==nil){
+			if err==nil {
 				tunStream.PutTunnel(_tunnel)
 			}else {
 				time.Sleep(10 * time.Second);
@@ -346,12 +350,12 @@ func  StreamSwapTun(dev io.ReadWriteCloser,mtu int){
 		}
 		_, err := io.ReadFull(tunnel, packLenByte)
 		packLen := binary.LittleEndian.Uint16(packLenByte)
-		if (err != nil||int(packLen)>len(bufByte)) {
+		if err != nil||int(packLen)>len(bufByte) {
 			tunStream.PutTunnel(nil)
 			continue;
 		}
 		_, err = io.ReadFull(tunnel, bufByte[:int(packLen)])
-		if (err != nil) {
+		if err != nil {
 			fmt.Printf("recv pack err :%v\r\n", err)
 			tunStream.PutTunnel(nil)
 			continue;
