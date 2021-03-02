@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46
+	github.com/emicklei/go-restful v0.0.0-20170410110728-ff4f55a20633
 	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/hashicorp/yamux v0.0.0-20200609203250-aecfd211c9ce
 	github.com/lucas-clemente/quic-go v0.19.3

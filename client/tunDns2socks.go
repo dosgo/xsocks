@@ -108,10 +108,7 @@ func _startTun(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tu
 
 
 func dnsTcpForwarder(conn *gonet.TCPConn)error{
-	log.Printf("TcpForwarder:%s\r\n",conn.LocalAddr().String())
-	if(strings.Index(conn.LocalAddr().String(),tunGW)!=-1) {
-		fmt.Printf("conn.LocalAddr().String():%s\r\n", conn.LocalAddr().String())
-	}
+
 
 	//local dns
 	if conn.LocalAddr().String()==(tunGW+":53"){
@@ -147,16 +144,18 @@ func dnsUdpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)error{
 	//log.Printf("udpAddr:%s\r\n",conn.LocalAddr().String())
 	defer ep.Close();
 	defer conn.Close();
-	if(strings.Index(conn.LocalAddr().String(),tunGW)!=-1) {
-		fmt.Printf("conn.LocalAddr().String():%s\r\n", conn.LocalAddr().String())
-	}
+
 	//local dns
 	if conn.LocalAddr().String()==(tunGW+":53"){
 		log.Printf("local dns\r\n")
 		conn2, err := net.DialTimeout("udp","127.0.0.1:53",time.Second*15);
 		if err != nil {
+			log.Printf("local dns2\r\n")
 			return err;
 		}
+		//var xx=make([]byte,1024)
+		//_len,_:=conn.Read(xx)
+	//fmt.Printf("xx:%s\r\n",string(xx[:_len]))
 		comm.UdpPipe(conn,conn2,time.Second*30)
 		return nil;
 	}

@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"github.com/emicklei/go-restful/log"
 	"github.com/miekg/dns"
 	"net"
 	"time"
@@ -93,7 +94,7 @@ func (localdns *LocalDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 		}
 	}
 	ip, err = localdns.remoteDns.Resolve(domain[0 : len(domain)-1])
-	if(err!=nil){
+	if err!=nil {
 		fmt.Printf("dns domain:%s Resolve err:%v\r\n",domain,err)
 		return m, err;
 	}
@@ -109,14 +110,26 @@ func (localdns *LocalDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 
 
 func  resolve(r *dns.Msg) (*dns.Msg, error) {
-	fmt.Printf("dns ipv6\r\n")
 	m :=  &dns.Msg{}
 	m.SetReply(r)
 	m.Authoritative = false
 	domain := r.Question[0].Name
+	fmt.Printf("dns ipv6 :%s\r\n",domain)
+
+	m1,_,err := localdns.dnsClient.Exchange(r,"114.114.114.114:53")
+	if err == nil {
+		for _, v := range m1.Answer {
+			_, isType := v.(*dns.AAAA)
+			if isType {
+				log.Printf("ipv6dns ok\r\n");
+				return m1,nil;
+			}
+		}
+	}
+	/*
 	m.Answer = append(r.Answer, &dns.AAAA{
 		Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeAAAA, Class: dns.ClassINET, Ttl: 60},
 		AAAA:   net.ParseIP("fd3e:4f5a:5b81::1"),
-	})
+	})*/
 	return m, nil
 }
