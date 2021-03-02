@@ -40,16 +40,16 @@ var tunMask="255.0.0.0"
 func StartTunDns(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tunDNS string) {
 	gwIp:=comm.GetGateway()
 	oldDns:=comm.GetDnsServerByGateWay(gwIp);
-	if oldDns=="127.0.0.1" {
+	if oldDns=="127.0.0.1"||oldDns==tunGW {
 		oldDns="114.114.114.114"
 	}
 	urlInfo, _ := url.Parse(param.ServerAddr)
 	tunDns.serverHost=urlInfo.Hostname()
 	_startSmartDns("53",oldDns)
-	comm.SetDNSServer(gwIp,"127.0.0.1");
 	go func() {
 		time.Sleep(time.Second*5)
 		comm.AddRoute(tunNet,tunGW, tunMask)
+		comm.SetDNSServer(gwIp,tunGW);
 	}()
 	_startTun(tunDevice,_tunAddr,_tunMask,_tunGW,tunDNS);
 }
@@ -108,7 +108,22 @@ func _startTun(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tu
 
 
 func dnsTcpForwarder(conn *gonet.TCPConn)error{
-	//log.Printf("TcpForwarder:%s\r\n",conn.LocalAddr().String())
+	log.Printf("TcpForwarder:%s\r\n",conn.LocalAddr().String())
+	if(strings.Index(conn.LocalAddr().String(),tunGW)!=-1) {
+		fmt.Printf("conn.LocalAddr().String():%s\r\n", conn.LocalAddr().String())
+	}
+
+	//local dns
+	if conn.LocalAddr().String()==(tunGW+":53"){
+		log.Printf("local dns\r\n")
+		conn2, err := net.DialTimeout("tcp","127.0.0.1:53",time.Second*15);
+		if err != nil {
+			return err;
+		}
+		comm.TcpPipe(conn,conn2,time.Second*30)
+		return nil;
+	}
+
 	remoteAddr:=dnsToAddr(conn.LocalAddr().String())
 	log.Printf("remoteAddr:%s\r\n",remoteAddr)
 	if remoteAddr==""{
@@ -132,6 +147,21 @@ func dnsUdpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)error{
 	//log.Printf("udpAddr:%s\r\n",conn.LocalAddr().String())
 	defer ep.Close();
 	defer conn.Close();
+	if(strings.Index(conn.LocalAddr().String(),tunGW)!=-1) {
+		fmt.Printf("conn.LocalAddr().String():%s\r\n", conn.LocalAddr().String())
+	}
+	//local dns
+	if conn.LocalAddr().String()==(tunGW+":53"){
+		log.Printf("local dns\r\n")
+		conn2, err := net.DialTimeout("udp","127.0.0.1:53",time.Second*15);
+		if err != nil {
+			return err;
+		}
+		comm.UdpPipe(conn,conn2,time.Second*30)
+		return nil;
+	}
+
+
 	remoteAddr:=dnsToAddr(conn.LocalAddr().String())
 	if remoteAddr==""{
 		conn.Close();
@@ -206,6 +236,7 @@ func (tunDns *TunDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 			for _, v := range m1.Answer {
 				record, isType := v.(*dns.A)
 				if isType {
+					fmt.Printf("v.Header().Name:%s\r\n",v.Header().Name)
 					//中国Ip直接回复
 					if comm.IsChinaMainlandIP(record.A.String())|| !comm.IsPublicIP(record.A) || strings.Index(domain,tunDns.serverHost)!=-1 {
 						return m1,nil;
