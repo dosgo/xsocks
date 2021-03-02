@@ -76,7 +76,6 @@ func startUdpProxy(addr string) ( *net.UDPAddr ,error){
 
 
 func remoteUdpProxy(udpGate *net.UDPConn,data []byte, remoteUdpNat sync.Map,localAddr *net.UDPAddr) error{
-	fmt.Printf("remoteUdpProxy local addr :%v\r\n",localAddr);
 	natKey:=localAddr.String()
 	var tunnel comm.CommConn
 	_conn,ok:=remoteUdpNat.Load(natKey)

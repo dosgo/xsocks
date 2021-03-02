@@ -23,25 +23,23 @@ import (
 
 /*tunType==1*/
 func StartTunDevice(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS string) {
-	if(len(tunDevice)==0){
+	if len(tunDevice)==0 {
 		tunDevice="tun0";
 	}
-	if(len(tunAddr)==0){
+	if len(tunAddr)==0 {
 		tunAddr="10.0.0.2";
 	}
-	if(len(tunMask)==0){
+	if len(tunMask)==0 {
 		tunMask="255.255.255.0";
 	}
-	if(len(tunGW)==0){
+	if len(tunGW)==0 {
 		tunGW="10.0.0.1";
 	}
-	if(len(tunDNS)==0){
+	if len(tunDNS)==0 {
 		tunDNS="114.114.114.114";
 	}
 	//
 	var oldGw=comm.GetGateway();
-
-	strings.Split(param.ServerAddr,":");
 	dnsServers := strings.Split(tunDNS, ",")
 	var dev io.ReadWriteCloser;
 	var remoteAddr string;

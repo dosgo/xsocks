@@ -35,7 +35,7 @@ func ForwardTransportFromIo(dev io.ReadWriteCloser,mtu int,tcpCallback comm.Forw
 		var sendBuffer =new(bytes.Buffer)
 		for {
 			info,res:=channelLinkID.ReadContext(_ctx)
-			if(!res){
+			if !res {
 				break;
 			}
 			sendBuffer.Reset()
@@ -43,7 +43,7 @@ func ForwardTransportFromIo(dev io.ReadWriteCloser,mtu int,tcpCallback comm.Forw
 			sendBuffer.Write(info.Pkt.NetworkHeader().View())
 			sendBuffer.Write(info.Pkt.TransportHeader().View())
 			sendBuffer.Write(info.Pkt.Data.ToView())
-			if(sendBuffer.Len()>0) {
+			if sendBuffer.Len()>0 {
 				dev.Write(sendBuffer.Bytes())
 			}
 		}

@@ -130,8 +130,7 @@ func readDnsCache(remoteHost string)string{
 		cache:=strings.Split(v,"_")
 		cacheTime, _ := strconv.ParseInt(cache[1], 10, 64)
 		//60ms
-		if(time.Now().Unix()-cacheTime<3*60){
-			fmt.Printf("dns cache %s\r\n",remoteHost)
+		if time.Now().Unix()-cacheTime<3*60 {
 			return cache[0];
 		}
 	}
@@ -155,7 +154,7 @@ func RemoteDnsV1(remoteHost string)(string,error){
 		time.Sleep(time.Millisecond*5)
 		fornum++;
 		//15ms
-		if(fornum>3000){
+		if fornum>3000 {
 			break;
 		}
 	}
@@ -163,7 +162,7 @@ func RemoteDnsV1(remoteHost string)(string,error){
 	defer dnsIng.Delete(remoteHost)
 
 	cache:= readDnsCache(remoteHost)
-	if(cache!=""){
+	if cache!="" {
 		return  cache,nil;
 	}
 
@@ -185,11 +184,11 @@ func RemoteDnsV1(remoteHost string)(string,error){
 	if err != nil {
 		return "",err
 	}
-	if(backHead[0]!=0x00){
+	if backHead[0]!=0x00 {
 		return "",err;
 	}
 	//ipv4
-	if(backHead[1]==0x04){
+	if backHead[1]==0x04 {
 		ipBuf := make([]byte,4)
 		_, err = io.ReadFull(stream, ipBuf)
 		if err != nil {

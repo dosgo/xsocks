@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
 var (
@@ -18,7 +19,7 @@ var (
 func Init(){
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	name := "iptable.txt"
-	if(err==nil){
+	if err==nil&&runtime.GOOS!="windows" {
 		name=dir+"/"+name
 	}
 	if !exists(name) {

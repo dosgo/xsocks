@@ -14,6 +14,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
 	"gvisor.dev/gvisor/pkg/waiter"
+	"log"
 
 	//"github.com/google/netstack/tcpip/adapters/gonet"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
@@ -237,14 +238,14 @@ func NewDefaultStack(mtu int,tcpCallback ForwarderCall,udpCallback UdpForwarderC
 		var wq waiter.Queue
 		ep, err := r.CreateEndpoint(&wq)
 		if err != nil {
-			fmt.Printf("CreateEndpoint"+err.String()+"\r\n");
+			log.Printf("CreateEndpoint"+err.String()+"\r\n");
 			r.Complete(true)
 			return
 		}
 		defer ep.Close();
 		r.Complete(false)
 		if err := setKeepalive(ep); err != nil {
-			fmt.Printf("setKeepalive"+err.Error()+"\r\n");
+			log.Printf("setKeepalive"+err.Error()+"\r\n");
 		}
 		conn:=gonet.NewTCPConn(&wq, ep)
 		defer conn.Close();
@@ -256,7 +257,7 @@ func NewDefaultStack(mtu int,tcpCallback ForwarderCall,udpCallback UdpForwarderC
 		var wq waiter.Queue
 		ep, err := r.CreateEndpoint(&wq)
 		if err != nil {
-			fmt.Printf("r.CreateEndpoint() = %v", err)
+			log.Printf("r.CreateEndpoint() = %v", err)
 			return
 		}
 		go udpCallback(gonet.NewUDPConn(_netStack,&wq, ep),ep);

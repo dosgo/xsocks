@@ -22,3 +22,10 @@ func GetLocalAddresses() ([]lAddr ,error) {
 func SetDNSServer(gwIp string,ip string){
 
 }
+
+func AddRoute(tunNet string,tunGw string, tunMask string){
+
+}
+func GetDnsServerByGateWay(gwIp string)string{
+	return "";
+}

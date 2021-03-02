@@ -145,7 +145,7 @@ loop:
 }
 
 func SetDNSServer(gwIp string,ip string){
-	oldDns:=getDnsServer(gwIp);
+	oldDns:=GetDnsServerByGateWay(gwIp);
 	lAdds,err:=GetLocalAddresses();
 	var iName="";
 	if err==nil {
@@ -156,9 +156,6 @@ func SetDNSServer(gwIp string,ip string){
 			}
 		}
 	}
-
-	fmt.Printf("oldDns:%s ip:%s\r\n",oldDns,ip)
-
 
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch,
@@ -171,24 +168,21 @@ func SetDNSServer(gwIp string,ip string){
 		switch s {
 		default:
 			if oldDns!="" {
-				out,_:=exec.Command("netsh", "interface","ip","set","dnsservers",iName,"static",oldDns).Output()
-				log.Printf("out:%s\r\n",string(out))
+				exec.Command("netsh", "interface","ip","set","dnsservers",iName,"static",oldDns).Output()
 			}
 			os.Exit(0);
 		}
 	}()
 
-	out,_:=exec.Command("netsh", "interface","ip","set","dnsservers",iName,"static",ip).Output()
-
-	log.Printf("out:%s\r\n",string(out))
+	exec.Command("netsh", "interface","ip","set","dnsservers",iName,"static",ip).Output()
 }
 
 
 
-func getDnsServer(gwIp string)string{
+func GetDnsServerByGateWay(gwIp string)string{
 	//DNSServerSearchOrder
 	adapters,err:=getNetworkAdapter()
-	if(err!=nil){
+	if err!=nil {
 		return "";
 	}
 	for _,v:=range adapters{
@@ -279,3 +273,12 @@ func getNetworkAdapter() ([]NetworkAdapter,error){
 	return s,nil;
 }
 
+
+func AddRoute(tunNet string,tunGw string, tunMask string) error {
+	cmd:=exec.Command("route", "add",tunNet,"mask",tunMask,tunGw,"metric","6")
+	cmd.Run();
+	fmt.Printf("cmd:%s\r\n",strings.Join(cmd.Args," "))
+	exec.Command("ipconfig", "/flushdns").Run()
+
+	return nil;
+}
