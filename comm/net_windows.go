@@ -201,7 +201,7 @@ func SetDNSServer(gwIp string,ip string,ipv6 string){
 		Ipv6Switch(false);
 		defer Ipv6Switch(true);
 	}
-
+	exec.Command("ipconfig", "/flushdns").Run()
 	if len(oldDns)>0 {
 		defer resetDns(iName,"ip",dHCPEnabled,oldDns);
 		if isIPv6 {
