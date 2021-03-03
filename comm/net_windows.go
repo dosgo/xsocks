@@ -3,16 +3,17 @@
 package comm
 
 import (
+	"fmt"
 	"github.com/StackExchange/wmi"
 	"github.com/yijunjun/route-table"
-	"fmt"
 	"golang.org/x/sys/windows"
+	"golang.org/x/sys/windows/registry"
+	"log"
 	"net"
 	"os"
 	"os/exec"
 	"os/signal"
 	"strings"
-	"log"
 	"syscall"
 	"unsafe"
 )
@@ -28,12 +29,22 @@ func GetGateway()string {
 	if err != nil {
 		panic(err.Error())
 	}
+	var minMetric uint32=0;
+	var gwIp="";
 	for _, row := range rows {
 		if routetable.Inet_ntoa(row.ForwardDest, false)=="0.0.0.0" {
-			return routetable.Inet_ntoa(row.ForwardNextHop, false);
+			if minMetric==0 {
+				minMetric=row.ForwardMetric1;
+				gwIp=routetable.Inet_ntoa(row.ForwardNextHop, false)
+			}else{
+				if row.ForwardMetric1<minMetric {
+					minMetric=row.ForwardMetric1;
+					gwIp=routetable.Inet_ntoa(row.ForwardNextHop, false)
+				}
+			}
 		}
 	}
-	return "";
+	return gwIp;
 }
 
 func getAdapterList() (*syscall.IpAdapterInfo, error) {
@@ -144,8 +155,9 @@ loop:
 	return dns
 }
 
-func SetDNSServer(gwIp string,ip string){
-	oldDns:=GetDnsServerByGateWay(gwIp);
+func SetDNSServer(gwIp string,ip string,ipv6 string){
+	log.Printf("SetDNSServer-gwIp:%s\r\n",gwIp)
+	oldDns,dHCPEnabled,isIPv6:=GetDnsServerByGateWay(gwIp);
 	lAdds,err:=GetLocalAddresses();
 	var iName="";
 	if err==nil {
@@ -162,35 +174,89 @@ func SetDNSServer(gwIp string,ip string){
 		syscall.SIGHUP,
 		syscall.SIGINT,
 		syscall.SIGTERM,
+		syscall.SIGKILL,
+		syscall.SIGABRT,
+		syscall.SIGSEGV,
 		syscall.SIGQUIT)
 	go func() {
-		s := <-ch
-		switch s {
-		default:
-			if oldDns!="" {
-				exec.Command("netsh", "interface","ip","set","dnsservers",iName,"static",oldDns).Output()
+		_= <-ch
+		if len(oldDns)>0 {
+			resetDns(iName,"ip",dHCPEnabled,oldDns);
+			if isIPv6 {
+				resetDns(iName, "ipv6", dHCPEnabled, []string{ipv6});
+				Ipv6Switch(true);
 			}
-			os.Exit(0);
 		}
+		os.Exit(0);
 	}()
+	//ipv4
+	changeDns(iName,"ip",ip,oldDns)
+	//ipv6
+	if isIPv6 {
+		changeDns(iName, "ipv6", ipv6, []string{ipv6})
+	}
 
-	exec.Command("netsh", "interface","ip","set","dnsservers",iName,"static",ip).Output()
+	//ipv4优先
+	if isIPv6 {
+		Ipv6Switch(false);
+		defer Ipv6Switch(true);
+	}
+
+	if len(oldDns)>0 {
+		defer resetDns(iName,"ip",dHCPEnabled,oldDns);
+		if isIPv6 {
+			defer resetDns(iName, "ipv6", dHCPEnabled, []string{ipv6});
+		}
+	}
+	c := make(chan int)
+	<-c
+}
+
+func changeDns(iName string,netType string,ip string,oldDns []string){
+//	netsh interface ipv6 add dns
+	//netsh interface ip set dnsservers xx static 127.0.0.1 192.168.9.102
+	exec.Command("netsh", "interface",netType,"set","dnsservers",iName,"static",ip).Output()
+	for _,v:=range oldDns{
+		exec.Command("netsh", "interface",netType,"add","dnsservers",iName,v).Output()
+	}
+}
+
+func resetDns(iName string,netType string,dHCPEnabled bool,oldDns []string){
+	//dhcp
+	if dHCPEnabled {
+		exec.Command("netsh", "interface",netType,"set","dnsservers",iName,"dhcp").Output()
+	}else {
+		for i,v:=range oldDns{
+			if i==0 {
+				exec.Command("netsh", "interface", netType, "set", "dnsservers", iName, "static", oldDns[0]).Output()
+			}else {
+				exec.Command("netsh", "interface", netType, "add", "dnsservers", iName, v).Output()
+			}
+		}
+	}
 }
 
 
-
-func GetDnsServerByGateWay(gwIp string)string{
+func GetDnsServerByGateWay(gwIp string)([]string,bool,bool){
 	//DNSServerSearchOrder
-	adapters,err:=getNetworkAdapter()
+	adapters,err:=GetNetworkAdapter()
+	var isIpv6=false;
 	if err!=nil {
-		return "";
+		return nil,false,isIpv6;
 	}
 	for _,v:=range adapters{
 		if len(v.DefaultIPGateway)>0&&v.DefaultIPGateway[0]==gwIp {
-			return v.DNSServerSearchOrder[0];
+			for _,v2:=range v.IPAddress{
+				if len(v2)>16{
+					isIpv6=true;
+					break;
+				}
+			}
+
+			return v.DNSServerSearchOrder,v.DHCPEnabled,isIpv6;
 		}
 	}
-	return "";
+	return nil,false,isIpv6;
 }
 
 type Network struct {
@@ -257,15 +323,16 @@ type NetworkAdapter struct {
 	DefaultIPGateway []string
 	IPAddress []string
 	Caption    string
+	DHCPEnabled  bool
 	ServiceName  string
 	IPSubnet   []string
 	SettingID string
 }
 
 
-func getNetworkAdapter() ([]NetworkAdapter,error){
+func GetNetworkAdapter() ([]NetworkAdapter,error){
 	var s = []NetworkAdapter{}
-	err := wmi.Query("SELECT Caption,SettingID,DNSServerSearchOrder,DefaultIPGateway,ServiceName,IPAddress,IPSubnet    FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled=True", &s) // WHERE (BIOSVersion IS NOT NULL)
+	err := wmi.Query("SELECT Caption,SettingID,DNSServerSearchOrder,DefaultIPGateway,ServiceName,IPAddress,IPSubnet,DHCPEnabled       FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled=True", &s) // WHERE (BIOSVersion IS NOT NULL)
 	if err != nil {
 		log.Printf("err:%v\r\n",err)
 		return nil,err
@@ -279,6 +346,19 @@ func AddRoute(tunNet string,tunGw string, tunMask string) error {
 	cmd.Run();
 	fmt.Printf("cmd:%s\r\n",strings.Join(cmd.Args," "))
 	exec.Command("ipconfig", "/flushdns").Run()
+	return nil;
+}
 
+func Ipv6Switch(open bool)error{
+	key, _, err := registry.CreateKey(registry.LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\Services\\TCPIP6\\Parameters", registry.ALL_ACCESS)
+	if err != nil {
+		return err
+	}
+	defer key.Close()
+	if open {
+		key.SetDWordValue("DisabledComponents", 0x00)
+	}else{
+		key.SetDWordValue("DisabledComponents", 0x00000020)
+	}
 	return nil;
 }

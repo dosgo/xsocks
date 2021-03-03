@@ -30,6 +30,7 @@ func main() {
 	flag.BoolVar(&param.TunSmartProxy,"tunSmartProxy",false,"tun Smart Proxy ")
 
 	flag.Parse()
+
 	//随机端口
 	if param.DnsPort=="" {
 		param.DnsPort,_= comm.GetFreePort();

@@ -9,6 +9,7 @@ require (
 	github.com/hashicorp/yamux v0.0.0-20200609203250-aecfd211c9ce
 	github.com/lucas-clemente/quic-go v0.19.3
 	github.com/miekg/dns v1.1.35
+	github.com/vishalkuo/bimap v0.0.0-20180703190407-09cff2814645
 	github.com/xtaci/kcp-go/v5 v5.6.1
 	github.com/xtaci/smux v1.5.15
 	github.com/yijunjun/route-table v0.0.0-20160321072918-9608fc1e2e44

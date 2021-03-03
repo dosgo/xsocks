@@ -134,16 +134,16 @@ func routeEdit(tunGW string,remoteAddr string, dnsServers []string,oldGw string)
 		syscall.SIGHUP,
 		syscall.SIGINT,
 		syscall.SIGTERM,
+		syscall.SIGKILL,
+		syscall.SIGABRT,
+		syscall.SIGSEGV,
 		syscall.SIGQUIT)
 	go func() {
-		s := <-ch
-		switch s {
-		default:
-			if runtime.GOOS=="windows" {
-				unRegRoute(tunGW,remoteAddr,dnsServers,oldGw,localNetwork);
-			}
-			os.Exit(0);
+		_ = <-ch
+		if runtime.GOOS=="windows" {
+			unRegRoute(tunGW,remoteAddr,dnsServers,oldGw,localNetwork);
 		}
+		os.Exit(0);
 	}()
 
 

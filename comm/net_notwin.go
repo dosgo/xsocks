@@ -19,13 +19,13 @@ func GetLocalAddresses() ([]lAddr ,error) {
 	return lAddrs,nil;
 }
 
-func SetDNSServer(gwIp string,ip string){
+func SetDNSServer(gwIp string,ip string,ipv6 string){
 
 }
 
 func AddRoute(tunNet string,tunGw string, tunMask string){
 
 }
-func GetDnsServerByGateWay(gwIp string)string{
-	return "";
+func GetDnsServerByGateWay(gwIp string)([]string,bool,bool){
+	return []string{""},false,false;
 }

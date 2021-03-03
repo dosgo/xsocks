@@ -49,21 +49,22 @@ func StartDns() error {
 }
 
 
-func isIPv4Query(q dns.Question) bool {
-	if q.Qclass == dns.ClassINET && q.Qtype == dns.TypeA {
-		return true
-	}
-	return false
-}
+
 
 func  (localdns *LocalDns)ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
-	isIPv4 := isIPv4Query(r.Question[0])
 	var msg *dns.Msg
 	var err error
-	if isIPv4 {
-		msg, err = localdns.doIPv4Query(r)
-	} else {
-		msg, err = resolve(r)
+	switch r.Question[0].Qtype {
+		case  dns.TypeA:
+			msg, err = localdns.doIPv4Query(r)
+		break;
+		case  dns.TypeAAAA:
+			//ipv6
+			msg, err = localdns.resolve(r)
+		break;
+	default:
+		msg,_,err = localdns.dnsClient.Exchange(r,"114.114.114.114:53")
+		break;
 	}
 	if err != nil {
 		dns.HandleFailed(w, r)
@@ -109,12 +110,12 @@ func (localdns *LocalDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 
 
 
-func  resolve(r *dns.Msg) (*dns.Msg, error) {
+func  (localdns *LocalDns) resolve(r *dns.Msg) (*dns.Msg, error) {
 	m :=  &dns.Msg{}
 	m.SetReply(r)
 	m.Authoritative = false
 	domain := r.Question[0].Name
-	fmt.Printf("dns ipv6 :%s\r\n",domain)
+	fmt.Printf("dns ipv6 :%s Qtype:%d\r\n",domain,r.Question[0].Qtype)
 
 	m1,_,err := localdns.dnsClient.Exchange(r,"114.114.114.114:53")
 	if err == nil {

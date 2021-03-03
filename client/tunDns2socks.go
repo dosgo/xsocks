@@ -6,13 +6,13 @@ import (
 	"github.com/yinghuocho/gotun2socks/tun"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
+	"github.com/vishalkuo/bimap"
 	"io"
 	"log"
 	"net"
 	"net/url"
 	"os"
 	"strings"
-	"sync"
 	"time"
 	"xSocks/client/tun2socks"
 	"xSocks/comm"
@@ -28,7 +28,7 @@ type TunDns struct {
 	serverHost string
 }
 var tunDns TunDns;
-var ip2Domain sync.Map
+var ip2Domain = bimap.NewBiMap()
 
 var tunAddr="10.0.0.2"
 var tunGW="10.0.0.1";
@@ -39,17 +39,19 @@ var tunMask="255.0.0.0"
 
 func StartTunDns(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tunDNS string) {
 	gwIp:=comm.GetGateway()
-	oldDns:=comm.GetDnsServerByGateWay(gwIp);
-	if oldDns=="127.0.0.1"||oldDns==tunGW {
-		oldDns="114.114.114.114"
+	oldDns,_,_:=comm.GetDnsServerByGateWay(gwIp);
+	if oldDns[0]=="127.0.0.1"||oldDns[0]==tunGW {
+		oldDns[0]="114.114.114.114"
 	}
+	fmt.Printf("oldDns:%v\r\n",oldDns)
 	urlInfo, _ := url.Parse(param.ServerAddr)
 	tunDns.serverHost=urlInfo.Hostname()
-	_startSmartDns("53",oldDns)
+	_startSmartDns("53",oldDns[0])
 	go func() {
-		time.Sleep(time.Second*5)
+		time.Sleep(time.Second*3)
 		comm.AddRoute(tunNet,tunGW, tunMask)
-		comm.SetDNSServer(gwIp,tunGW);
+		//comm.SetDNSServer(gwIp,tunGW);
+		comm.SetDNSServer(gwIp,"127.0.0.1","0:0:0:0:0:0:0:1");
 	}()
 	_startTun(tunDevice,_tunAddr,_tunMask,_tunGW,tunDNS);
 }
@@ -153,9 +155,6 @@ func dnsUdpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)error{
 			log.Printf("local dns2\r\n")
 			return err;
 		}
-		//var xx=make([]byte,1024)
-		//_len,_:=conn.Read(xx)
-	//fmt.Printf("xx:%s\r\n",string(xx[:_len]))
 		comm.UdpPipe(conn,conn2,time.Second*30)
 		return nil;
 	}
@@ -173,7 +172,7 @@ func dnsUdpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)error{
 /*dns addr swap*/
 func dnsToAddr(remoteAddr string) string{
 	remoteAddrs:=strings.Split(remoteAddr,":")
-	_domain,ok:= ip2Domain.Load(remoteAddrs[0])
+	_domain,ok:= ip2Domain.Get(remoteAddrs[0])
 	if !ok{
 		return "";
 	}
@@ -228,14 +227,24 @@ func (tunDns *TunDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	m.Authoritative = false
 	domain := r.Question[0].Name
 	var ip string;
-	log.Printf("domain:%s\r\n",domain)
+	fmt.Printf("domain:%s\r\n",domain)
+
+	_ip,ok :=ip2Domain.GetInverse(domain)
+	if ok{
+		m.Answer = append(r.Answer, &dns.A{
+			Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
+			A:   net.ParseIP(_ip.(string)),
+		})
+		return m,nil
+	}
+
+
 	if param.SmartDns==1  {
 		m1,_,err := localdns.dnsClient.Exchange(r,tunDns.oldDns+":53")
 		if err == nil {
 			for _, v := range m1.Answer {
 				record, isType := v.(*dns.A)
 				if isType {
-					fmt.Printf("v.Header().Name:%s\r\n",v.Header().Name)
 					//中国Ip直接回复
 					if comm.IsChinaMainlandIP(record.A.String())|| !comm.IsPublicIP(record.A) || strings.Index(domain,tunDns.serverHost)!=-1 {
 						return m1,nil;
@@ -245,19 +254,18 @@ func (tunDns *TunDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 		}
 	}
 	masks:=net.ParseIP(tunMask)
-	maskAddr:=net.IPNet{net.ParseIP(tunAddr),net.IPv4Mask(masks[3], masks[2], masks[1], masks[0] )}
+	maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[3], masks[2], masks[1], masks[0] )}
 	ip=comm.GetCidrRandIp(maskAddr.String())
 	for i := 0; i <= 2; i++ {
 		ip=comm.GetCidrRandIp(maskAddr.String())
-		_,ok := ip2Domain.Load(ip)
+		_,ok = ip2Domain.Get(ip)
 		if !ok {
-			ip2Domain.Store(ip,domain)
+			ip2Domain.Insert(ip,domain)
 			break;
 		}else{
 			ip="";
 		}
 	}
-	log.Printf("domain:%s ip:%s\r\n",domain,ip)
 	m.Answer = append(r.Answer, &dns.A{
 		Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
 		A:   net.ParseIP(ip),
@@ -266,13 +274,19 @@ func (tunDns *TunDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	return m, nil
 }
 func  (tunDns *TunDns)ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
-	isIPv4 := isIPv4Query(r.Question[0])
 	var msg *dns.Msg
 	var err error
-	if isIPv4 {
+	switch r.Question[0].Qtype {
+	case  dns.TypeA:
 		msg, err = tunDns.doIPv4Query(r)
-	} else {
-		msg, err = resolve(r)
+		break;
+	case  dns.TypeAAAA:
+		//ipv6
+		msg, err = tunDns.resolve(r)
+		break;
+	default:
+		msg,_,err = tunDns.dnsClient.Exchange(r,tunDns.oldDns+":53")
+		break;
 	}
 	if err != nil {
 		dns.HandleFailed(w, r)
@@ -281,3 +295,25 @@ func  (tunDns *TunDns)ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	}
 }
 
+func  (tunDns *TunDns)resolve(r *dns.Msg) (*dns.Msg, error) {
+	m :=  &dns.Msg{}
+	m.SetReply(r)
+	m.Authoritative = false
+	domain := r.Question[0].Name
+	m1,_,err := localdns.dnsClient.Exchange(r,"114.114.114.114:53")
+	if err == nil {
+		for _, v := range m1.Answer {
+			_, isType := v.(*dns.AAAA)
+			if isType {
+				fmt.Printf("dns ipv6 :%s ipv6dns ok\r\n",domain)
+				return m1,nil;
+			}
+		}
+	}
+	/*
+		m.Answer = append(r.Answer, &dns.AAAA{
+			Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeAAAA, Class: dns.ClassINET, Ttl: 60},
+			AAAA:   net.ParseIP("fd3e:4f5a:5b81::1"),
+		})*/
+	return m, nil
+}
