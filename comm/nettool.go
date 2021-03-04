@@ -2,13 +2,20 @@ package comm
 
 import (
 	"k8s.io/apimachinery/pkg/util/rand"
+	"net"
 	"strconv"
 	"strings"
 	"fmt"
 )
 
 
-func GetCidrRandIp(cidr string) (string) {
+func GetCidrRandIpByNet(tunAddr string,tunMask string)string{
+	masks:=net.ParseIP(tunMask)
+	maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[3], masks[2], masks[1], masks[0] )}
+	return GetCidrRandIp(maskAddr.String())
+}
+
+func GetCidrRandIp(cidr string) string {
 	ip := strings.Split(cidr, "/")[0]
 	ipSegs := strings.Split(ip, ".")
 	maskLen, _ := strconv.Atoi(strings.Split(cidr, "/")[1])

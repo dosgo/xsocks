@@ -29,3 +29,7 @@ func AddRoute(tunNet string,tunGw string, tunMask string){
 func GetDnsServerByGateWay(gwIp string)([]string,bool,bool){
 	return []string{""},false,false;
 }
+
+func WatchNotifyIpChange(){
+	
+}

@@ -56,7 +56,7 @@ func startUdpProxy(address string) ( *net.UDPAddr ,error){
 			}
 			data := buf[0:n]
 			dstAddr,dataStart,err:=comm.UdpHeadDecode(data);
-			if(err!=nil||dstAddr==nil){
+			if err!=nil||dstAddr==nil {
 				continue;
 			}
 			natSawp(udpListener,udpNat,data,dataStart,localAddr,dstAddr);
@@ -80,13 +80,13 @@ func natSawp(udpGate *net.UDPConn,udpNat sync.Map,data []byte,dataStart int,loca
 		buf:= make([]byte, 65535)
 		var buffer bytes.Buffer
 		udpNat.Store(natKey,remoteConn)
-		defer udpNat.Delete(natKey);
 		go func(_remoteConn net.Conn) {
+			defer udpNat.Delete(natKey);
 			defer _remoteConn.Close()
 			for {
-				_remoteConn.SetReadDeadline(time.Now().Add(60*10*time.Second))
+				_remoteConn.SetReadDeadline(time.Now().Add(60*2*time.Second))
 				n, err:= _remoteConn.Read(buf);
-				if(err!=nil){
+				if err!=nil {
 					log.Printf("err:%v\r\n",err);
 					return ;
 				}
@@ -118,7 +118,7 @@ func handleRemoteRequest(clientConn net.Conn,udpAddr *net.UDPAddr) {
 		log.Printf("err:%v\r\n",err);
 		return
 	}
-	if(auth[0]==0x05){
+	if auth[0]==0x05 {
 		//resp auth
 		clientConn.Write([]byte{0x05, 0x00})
 	}else{
@@ -132,9 +132,9 @@ func handleRemoteRequest(clientConn net.Conn,udpAddr *net.UDPAddr) {
 		return
 	}
 
-	if(connectHead[0]==0x05) {
+	if connectHead[0]==0x05 {
 
-		if(connectHead[1]==0x01) {
+		if connectHead[1]==0x01 {
 			var host, port string
 			switch connectHead[3] {
 			case 0x01: //IP V4
@@ -157,7 +157,7 @@ func handleRemoteRequest(clientConn net.Conn,udpAddr *net.UDPAddr) {
 				host = net.IP{ipv6[0], ipv6[1], ipv6[2], ipv6[3], ipv6[4], ipv6[5], ipv6[6], ipv6[7], ipv6[8], ipv6[9], ipv6[10], ipv6[11], ipv6[12], ipv6[13], ipv6[14], ipv6[15]}.String()
 				break;
 			}
-			if(len(host)==0){
+			if len(host)==0 {
 				log.Println("host null\r\n");
 				return
 			}
@@ -177,7 +177,7 @@ func handleRemoteRequest(clientConn net.Conn,udpAddr *net.UDPAddr) {
 			comm.TcpPipe(server,clientConn,time.Minute*10)
 		}
 		//udp
-		if(connectHead[1]==0x03) {
+		if connectHead[1]==0x03 {
 			comm.UdpProxyRes(clientConn,udpAddr);
 		}
 	}
@@ -208,7 +208,7 @@ func startUdpGate() ( *net.UDPAddr ,error){
 		for {
 			gateNatTime.Range(func(_k, _v interface{}) bool {
 				lastTime := _v.(int64)
-				if (lastTime+600 < time.Now().Unix()) {
+				if lastTime+600 < time.Now().Unix() {
 					gateNat.Delete(_k)
 					gateNatTime.Delete(_k)
 				}
@@ -231,7 +231,7 @@ func startUdpGate() ( *net.UDPAddr ,error){
 			if err != nil {
 				continue;
 			}
-			if(lastTime+60*10<time.Now().Unix()){
+			if lastTime+60*10<time.Now().Unix() {
 				break;
 			}
 
@@ -243,7 +243,7 @@ func startUdpGate() ( *net.UDPAddr ,error){
 			if !ok{
 				var dstAddr *net.UDPAddr
 				dstAddr,dataStart,err:=comm.UdpHeadDecode(data);
-				if(err!=nil||dstAddr==nil){
+				if err!=nil||dstAddr==nil {
 					continue;
 				}
 				gateNat.Store(dstAddr.String(),recvAddr)

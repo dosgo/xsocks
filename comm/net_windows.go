@@ -3,9 +3,10 @@
 package comm
 
 import (
+	"errors"
 	"fmt"
 	"github.com/StackExchange/wmi"
-	"github.com/yijunjun/route-table"
+	routetable "github.com/yijunjun/route-table"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 	"log"
@@ -15,6 +16,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
@@ -63,8 +65,21 @@ func getAdapterList() (*syscall.IpAdapterInfo, error) {
 	return a, nil
 }
 
-
-
+func NotifyIpChange(notifyCh chan int) error{
+	var  notifyAddrChange        *syscall.Proc
+	if iphlpapi, err := syscall.LoadDLL("Iphlpapi.dll"); err == nil {
+		if p, err := iphlpapi.FindProc("NotifyAddrChange"); err == nil {
+			notifyAddrChange = p
+		}
+	}
+	if notifyAddrChange==nil {
+		return errors.New("NotifyAddrChange\r\n");
+	}
+	for {
+		notifyAddrChange.Call(0, 0)
+		notifyCh <- 0
+	}
+}
 func GetLocalAddresses() ([]lAddr ,error) {
 	lAddrs := []lAddr{}
 	ifaces, err := net.Interfaces()
@@ -202,6 +217,7 @@ func SetDNSServer(gwIp string,ip string,ipv6 string){
 		defer Ipv6Switch(true);
 	}
 	exec.Command("ipconfig", "/flushdns").Run()
+	/*
 	if len(oldDns)>0 {
 		defer resetDns(iName,"ip",dHCPEnabled,oldDns);
 		if isIPv6 {
@@ -209,8 +225,23 @@ func SetDNSServer(gwIp string,ip string,ipv6 string){
 		}
 	}
 	c := make(chan int)
-	<-c
+	<-c*/
 }
+
+
+func WatchNotifyIpChange(){
+	notifyCh := make(chan int)
+	go NotifyIpChange(notifyCh)
+	go func() {
+		for _ = range notifyCh {
+			time.Sleep(time.Second*5)
+			gwIp:=GetGateway()
+			fmt.Printf("SetDNSServer gwip:%s\r\n",gwIp)
+			SetDNSServer(gwIp,"127.0.0.1","0:0:0:0:0:0:0:1");
+		}
+	}()
+}
+
 
 func changeDns(iName string,netType string,ip string,oldDns []string){
 //	netsh interface ipv6 add dns

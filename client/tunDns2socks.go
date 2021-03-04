@@ -3,10 +3,10 @@ package client
 import (
 	"fmt"
 	"github.com/miekg/dns"
+	"github.com/vishalkuo/bimap"
 	"github.com/yinghuocho/gotun2socks/tun"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
-	"github.com/vishalkuo/bimap"
 	"io"
 	"log"
 	"net"
@@ -50,9 +50,8 @@ func StartTunDns(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,
 	go func() {
 		time.Sleep(time.Second*3)
 		comm.AddRoute(tunNet,tunGW, tunMask)
-		//comm.SetDNSServer(gwIp,tunGW);
-		comm.SetDNSServer(gwIp,"127.0.0.1","0:0:0:0:0:0:0:1");
 	}()
+	go comm.WatchNotifyIpChange();
 	_startTun(tunDevice,_tunAddr,_tunMask,_tunGW,tunDNS);
 }
 
@@ -226,50 +225,8 @@ func (tunDns *TunDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	m.SetReply(r)
 	m.Authoritative = false
 	domain := r.Question[0].Name
-	var ip string;
 	fmt.Printf("domain:%s\r\n",domain)
-
-	_ip,ok :=ip2Domain.GetInverse(domain)
-	if ok{
-		m.Answer = append(r.Answer, &dns.A{
-			Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
-			A:   net.ParseIP(_ip.(string)),
-		})
-		return m,nil
-	}
-
-
-	if param.SmartDns==1  {
-		m1,_,err := localdns.dnsClient.Exchange(r,tunDns.oldDns+":53")
-		if err == nil {
-			for _, v := range m1.Answer {
-				record, isType := v.(*dns.A)
-				if isType {
-					//中国Ip直接回复
-					if comm.IsChinaMainlandIP(record.A.String())|| !comm.IsPublicIP(record.A) || strings.Index(domain,tunDns.serverHost)!=-1 {
-						return m1,nil;
-					}
-				}
-			}
-		}
-	}
-	masks:=net.ParseIP(tunMask)
-	maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[3], masks[2], masks[1], masks[0] )}
-	ip=comm.GetCidrRandIp(maskAddr.String())
-	for i := 0; i <= 2; i++ {
-		ip=comm.GetCidrRandIp(maskAddr.String())
-		_,ok = ip2Domain.Get(ip)
-		if !ok {
-			ip2Domain.Insert(ip,domain)
-			break;
-		}else{
-			ip="";
-		}
-	}
-	m.Answer = append(r.Answer, &dns.A{
-		Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
-		A:   net.ParseIP(ip),
-	})
+	m.Answer =ipv4Res(domain,nil,r);
 	// final
 	return m, nil
 }
@@ -294,22 +251,87 @@ func  (tunDns *TunDns)ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 		w.WriteMsg(msg)
 	}
 }
+/*ipv4智能响应*/
+func ipv4Res(domain string,_ip  net.IP,r *dns.Msg) []dns.RR {
+	var ip ="";
+	ipLog,ok :=ip2Domain.GetInverse(domain)
+	if ok && strings.Index(domain, tunDns.serverHost) != -1{
+		ip=ipLog.(string);
+	}else {
+		if _ip==nil && r!=nil  {
+			//为空的话智能dns的话先解析一遍
+			if param.SmartDns==1  {
+				m1,_,err := localdns.dnsClient.Exchange(r,tunDns.oldDns+":53")
+				if err == nil {
+					for _, v := range m1.Answer {
+						record, isType := v.(*dns.A)
+						if isType {
+							_ip=record.A;
+							break;
+						}
+					}
+				}
+			}
+		}
+
+		//不为空判断是不是中国ip
+		if   strings.Index(domain, tunDns.serverHost) != -1|| (_ip!=nil && (comm.IsChinaMainlandIP(_ip.String()) || !comm.IsPublicIP(_ip))) {
+			//中国Ip直接回复
+			if _ip!=nil {
+				ip = _ip.String();
+			}
+		} else {
+			//外国随机分配一个代理ip
+			for i := 0; i <= 2; i++ {
+				ip = comm.GetCidrRandIpByNet(tunAddr, tunMask)
+				_, ok := ip2Domain.Get(ip)
+				if !ok {
+					ip2Domain.Insert(ip, domain)
+					break;
+				} else {
+					ip = "";
+				}
+			}
+		}
+	}
+	return []dns.RR{&dns.A{
+		Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
+		A:   net.ParseIP(ip),
+	}}
+}
 
 func  (tunDns *TunDns)resolve(r *dns.Msg) (*dns.Msg, error) {
 	m :=  &dns.Msg{}
 	m.SetReply(r)
 	m.Authoritative = false
 	domain := r.Question[0].Name
-	m1,_,err := localdns.dnsClient.Exchange(r,"114.114.114.114:53")
+
+
+	//先ipv4
+	/*
+	var ipv4Addr net.IP;
+	m2 :=  &dns.Msg{}
+	m2.SetQuestion(domain, dns.TypeA)
+	m2.Authoritative = false
+	r1, _, err := localdns.dnsClient.Exchange(m2,"114.114.114.114:53")
 	if err == nil {
-		for _, v := range m1.Answer {
-			_, isType := v.(*dns.AAAA)
-			if isType {
-				fmt.Printf("dns ipv6 :%s ipv6dns ok\r\n",domain)
-				return m1,nil;
+		for _, v := range r1.Answer {
+			record, _isType := v.(*dns.A)
+			if _isType {
+				ipv4Addr=record.A;
+				break;
 			}
 		}
 	}
+*/
+	fmt.Printf("ipv6:%s\r\n",domain)
+	//ipv6
+	m1,_,err := localdns.dnsClient.Exchange(r,"114.114.114.114:53")
+	if err == nil {
+		return m1,nil;
+	}
+
+
 	/*
 		m.Answer = append(r.Answer, &dns.AAAA{
 			Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeAAAA, Class: dns.ClassINET, Ttl: 60},

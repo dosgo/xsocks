@@ -80,7 +80,7 @@ func (qd *QuicDialer) Connect(quicAddr string) error{
 
 	sess, err := quic.Dial(udpConn,udpAddr,quicAddr,tlsConf, quicConfig)
 	if err != nil {
-		log.Printf("err:%v\r\n",err)
+		log.Printf("err:%v udpAddr:%v _udpConn:%v\r\n",err,udpAddr,_udpConn)
 		return err
 	}
 	qd.sess = sess
