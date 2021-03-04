@@ -78,7 +78,7 @@ func startUdpProxy(addr string) ( *net.UDPAddr ,error){
 			}
 			//本地转发
 			if (!comm.IsPublicIP(dstAddr.IP) || comm.IsChinaMainlandIP(dstAddr.IP.String()))&&(runtime.GOOS!="windows"||param.TunType!=1) {
-				natSawp(udpListener,data,dataStart,localAddr,dstAddr);
+				socksNatSawp(udpListener,data,dataStart,localAddr,dstAddr);
 			} else{
 				udpTunnel.sendRemote(data,localAddr)
 			}
@@ -224,8 +224,8 @@ func (ut *UdpTunnel) recv(){
 
 
 
-/*udp nat sawp*/
-func natSawp(udpGate *net.UDPConn,data []byte,dataStart int,localAddr *net.UDPAddr, dstAddr *net.UDPAddr){
+/*udp socks5 nat sawp*/
+func socksNatSawp(udpGate *net.UDPConn,data []byte,dataStart int,localAddr *net.UDPAddr, dstAddr *net.UDPAddr){
 	natKey:=localAddr.String()+"_"+dstAddr.String()
 	var remoteConn net.Conn
 	var err error

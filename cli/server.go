@@ -32,8 +32,8 @@ func main() {
 	flag.IntVar(&param.Mtu, "mtu", 4500, "mtu")
 	flag.Parse()
 
-	if param.Sock5UdpPort=="" {
-		param.Sock5UdpPort,_= comm.GetFreeUdpPort();
+	if param.UdpGatePort=="" {
+		param.UdpGatePort,_= comm.GetFreeUdpPort();
 	}
 	//随机端口
 	if param.Sock5Port=="" {

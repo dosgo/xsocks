@@ -22,12 +22,12 @@ func StartRemoteSocks51(address string) {
 	if err != nil {
 		log.Panic(err)
 	}
-	//start udpProxy
-	udpAddr,err:=startUdpProxy("127.0.0.1:"+param.Sock5UdpPort);
+	//start udp Gate
+	udpAddr,err:=startUdpGate("127.0.0.1:"+param.UdpGatePort);
 	if err != nil {
 		log.Panic(err)
 	}
-	param.Sock5UdpPort=fmt.Sprintf("%d",udpAddr.Port);
+	param.UdpGatePort=fmt.Sprintf("%d",udpAddr.Port);
 	for {
 		client, err := l.Accept()
 		if err != nil {
@@ -37,7 +37,8 @@ func StartRemoteSocks51(address string) {
 	}
 }
 var udpNat sync.Map
-func startUdpProxy(address string) ( *net.UDPAddr ,error){
+/*这不是socks5协议的*/
+func startUdpGate(address string) ( *net.UDPAddr ,error){
 	udpAddr, err := net.ResolveUDPAddr("udp", address)
 	if err != nil {
 		return nil,err
