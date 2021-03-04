@@ -175,7 +175,6 @@ func (ut *UdpTunnel) recv(){
 	var buffer bytes.Buffer
 	for {
 		tunnel=ut.GetTunnel();
-		tunnel=ut.GetTunnel();
 		if tunnel==nil {
 			_tunnel,err:=ut.Connect();
 			if err==nil {
@@ -192,12 +191,14 @@ func (ut *UdpTunnel) recv(){
 		packLen := binary.LittleEndian.Uint16(packLenByte)
 		if err != nil||int(packLen)>len(bufByte) {
 			log.Printf("err:%v\r\n",err);
+			ut.PutTunnel(nil)
 			continue;
 		}
 		tunnel.SetDeadline(time.Now().Add(3*time.Minute))
 		_, err = io.ReadFull(tunnel, bufByte[:int(packLen)])
 		if err != nil {
 			log.Printf("err:%v\r\n",err);
+			ut.PutTunnel(nil)
 			continue;
 		}else {
 			localAddr,dstAddr,err:=comm.UdpNatDecode(bufByte[:int(packLen)]);
