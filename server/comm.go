@@ -95,7 +95,7 @@ func tcpToUdpProxy(conn comm.CommConn){
 			log.Printf("err:%v\r\n",err);
 			break;
 		}else {
-			src,dst,err:=comm.UdpNatHeadDecode(bufByte[:packLen])
+			src,dst,err:=comm.UdpNatDecode(bufByte[:packLen])
 			_remoteConn,ok:=natTable.Load(src.String()+"_"+dst.String())
 			if ok{
 				remoteConn:=_remoteConn.(net.Conn)
