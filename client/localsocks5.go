@@ -175,6 +175,17 @@ func (ut *UdpTunnel) recv(){
 	var buffer bytes.Buffer
 	for {
 		tunnel=ut.GetTunnel();
+		tunnel=ut.GetTunnel();
+		if tunnel==nil {
+			_tunnel,err:=ut.Connect();
+			if err==nil {
+				ut.PutTunnel(_tunnel)
+			}else {
+				time.Sleep(10 * time.Second);
+				fmt.Printf("re TunStream 3 e:%v\r\n", err)
+			}
+			continue;
+		}
 		//remoteConn.SetDeadline();
 		tunnel.SetDeadline(time.Now().Add(3*time.Minute))
 		_, err := io.ReadFull(tunnel, packLenByte)
