@@ -75,65 +75,60 @@ func proxy(conn comm.CommConn){
 			break;
 	}
 }
+
 /*转发到本地的udp网关*/
 func tcpToUdpProxy(conn comm.CommConn){
 	var packLenByte []byte = make([]byte, 2)
 	var bufByte []byte = make([]byte,65535)
-	var natTable sync.Map;
+	remoteConn, err := net.DialTimeout("udp", "127.0.0.1:"+param.Sock5UdpPort,time.Second*15);
+	if err!=nil {
+		log.Printf("err:%v\r\n",err);
+		return
+	}
+	defer remoteConn.Close()
+
+	go func() {
+		var bufByte1 []byte = make([]byte,65535)
+		var buffer bytes.Buffer
+		var packLenByte []byte = make([]byte, 2)
+		for {
+			remoteConn.SetDeadline(time.Now().Add(60*10*time.Second))
+			n, err := remoteConn.Read(bufByte1)
+			if err != nil {
+				log.Printf("err:%v\r\n",err);
+				break;
+			}
+			buffer.Reset()
+			binary.LittleEndian.PutUint16(packLenByte, uint16(n))
+			buffer.Write(packLenByte)
+			buffer.Write(bufByte1[:n])
+			//remote to client
+			conn.Write(buffer.Bytes())
+		}
+	}();
+
 	for {
 		//remoteConn.SetDeadline();
-		conn.SetDeadline(time.Now().Add(3*time.Minute))
+		conn.SetDeadline(time.Now().Add(60*10*time.Second))
 		_, err := io.ReadFull(conn, packLenByte)
 		packLen := binary.LittleEndian.Uint16(packLenByte)
 		if err != nil||int(packLen)>len(bufByte) {
 			log.Printf("err:%v\r\n",err);
 			break;
 		}
-		conn.SetDeadline(time.Now().Add(3*time.Minute))
+		conn.SetDeadline(time.Now().Add(60*10*time.Second))
 		_, err = io.ReadFull(conn, bufByte[:int(packLen)])
-		if err != nil {
+		if (err != nil) {
 			log.Printf("err:%v\r\n",err);
 			break;
 		}else {
-			src,dst,err:=comm.UdpNatDecode(bufByte[:packLen])
-			_remoteConn,ok:=natTable.Load(src.String()+"_"+dst.String())
-			if ok{
-				remoteConn:=_remoteConn.(net.Conn)
-				_, err = remoteConn.Write(bufByte[:int(packLen)])
-				if err != nil {
-					log.Printf("err:%v\r\n",err);
-				}
-			}else{
-				remoteConn, err := net.DialTimeout("udp", "127.0.0.1:"+param.Sock5UdpPort,time.Second*15);
-				if err!=nil {
-					log.Printf("err:%v\r\n",err);
-					return
-				}
-				natTable.Store(src.String()+"_"+dst.String(),remoteConn)
-				go func() {
-					var bufByte1 []byte = make([]byte,65535)
-					var buffer bytes.Buffer
-					var packLenByte []byte = make([]byte, 2)
-					for {
-						remoteConn.SetDeadline(time.Now().Add(3*time.Minute))
-						n, err := remoteConn.Read(bufByte1)
-						if err != nil {
-							log.Printf("err:%v\r\n",err);
-							break;
-						}
-						buffer.Reset()
-						binary.LittleEndian.PutUint16(packLenByte, uint16(n))
-						buffer.Write(packLenByte)
-						buffer.Write(bufByte1[:n])
-						//remote to client
-						conn.Write(buffer.Bytes())
-					}
-				}();
+			_, err = remoteConn.Write(bufByte[:int(packLen)])
+			if (err != nil) {
+				log.Printf("err:%v\r\n",err);
 			}
 		}
 	}
 }
-
 
 /*to tun 处理*/
 func tcpToTun(conn comm.CommConn){
