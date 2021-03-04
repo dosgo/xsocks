@@ -1,4 +1,4 @@
-package comm
+package socks
 
 import (
 	"bytes"
@@ -8,6 +8,10 @@ import (
 )
 import "fmt"
 import "errors"
+
+
+
+
 
 /*socks 5 udp header*/
 func UdpHeadDecode(data []byte) ( *net.UDPAddr,int, error){
@@ -72,7 +76,7 @@ func UdpProxyRes(clientConn net.Conn,udpAddr *net.UDPAddr)  error{
 	*/
 	temp := make([]byte, 6)
 	_, err := io.ReadFull(clientConn, temp)
-	if(err!=nil){
+	if err!=nil {
 		return err;
 	}
 	bindPort := udpAddr.Port

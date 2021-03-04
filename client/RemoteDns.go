@@ -38,11 +38,11 @@ func (rd *RemoteDns)Connect() (comm.CommConn,error){
 	sendBuf =append(sendBuf,0x01);//dns
 	var err error;
 	tunnel, err:= NewTunnel();
-	if(err!=nil){
+	if err!=nil {
 		return nil,err;
 	}
 	_,err=tunnel.Write(sendBuf)
-	if(err!=nil){
+	if err!=nil {
 		return nil,err;
 	}
 	return tunnel,nil;
@@ -53,10 +53,10 @@ func (rd *RemoteDns)Resolve(remoteHost string) (string,error){
 	defer  rd.Unlock()
 	var err error
 	cache:= readDnsCache(remoteHost)
-	if(cache!=""){
+	if cache!="" {
 		return  cache,nil;
 	}
-	if(rd.Tunnel==nil) {
+	if rd.Tunnel==nil {
 		fmt.Printf("Resolve Tunnel null connect\r\n")
 		tunnel,err := rd.Connect();
 		if (err != nil) {
@@ -99,12 +99,12 @@ func (rd *RemoteDns)Resolve(remoteHost string) (string,error){
 		fmt.Printf("Resolve4 err:%v\r\n",err)
 		return "",err
 	}
-	if(backHead[0]!=0x00){
+	if backHead[0]!=0x00 {
 		fmt.Printf("Resolve5 backHead:%v\r\n",backHead)
 		return "",errors.New("remote dns err");
 	}
 	//ipv4
-	if(backHead[1]==0x04){
+	if backHead[1]==0x04 {
 		ipBuf := make([]byte,4)
 		_, err = io.ReadFull(rd.Tunnel, ipBuf)
 		if err != nil {
@@ -148,7 +148,7 @@ func RemoteDnsV1(remoteHost string)(string,error){
 	var fornum=0;
 	for{
 		_,ok := dnsIng.Load(remoteHost)
-		if(!ok){
+		if !ok {
 			break;
 		}
 		time.Sleep(time.Millisecond*5)

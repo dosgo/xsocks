@@ -2,21 +2,22 @@ package tun2socks
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
+	"errors"
+	"fmt"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"io"
-	"context"
-	"fmt"
-	"errors"
 	"log"
 	"net"
 	"strconv"
 	"strings"
 	"time"
 	"xSocks/comm"
+	"xSocks/comm/socks"
 	"xSocks/param"
 )
 
@@ -106,7 +107,7 @@ func SocksCmd(socksConn net.Conn,cmd uint8,host string) error{
 	return nil;
 }
 
-/*to socks5 udp gate */
+/*socks5  udp gate 这里必须保持socks5兼容 */
 func SocksUdpGate(conn *gonet.UDPConn,dstAddr *net.UDPAddr) error{
 	gateConn, err := net.DialTimeout("udp", "127.0.0.1:"+param.Sock5UdpPort,time.Second*15);
 	if err != nil {
@@ -115,7 +116,6 @@ func SocksUdpGate(conn *gonet.UDPConn,dstAddr *net.UDPAddr) error{
 	}
 	defer conn.Close()
 	defer gateConn.Close()
-
 
 	go func() {
 		var buffer bytes.Buffer
@@ -127,7 +127,7 @@ func SocksUdpGate(conn *gonet.UDPConn,dstAddr *net.UDPAddr) error{
 				return ;
 			}
 			buffer.Reset()
-			buffer.Write(comm.UdpHeadEncode(dstAddr))
+			buffer.Write(socks.UdpHeadEncode(dstAddr))
 			buffer.Write(b1[:n])
 			_, _ = gateConn.Write(buffer.Bytes())
 		}
@@ -139,11 +139,11 @@ func SocksUdpGate(conn *gonet.UDPConn,dstAddr *net.UDPAddr) error{
 		if err != nil {
 			return err;
 		}
-		_,dataStart,err:=comm.UdpHeadDecode(b2[:n])
+		_,dataStart,err:= socks.UdpHeadDecode(b2[:n])
 		if err != nil {
 			return nil;
 		}
-		_, _ = conn.Write(b2[dataStart:])
+		_, _ = conn.Write(b2[dataStart:n])
 	}
 }
 

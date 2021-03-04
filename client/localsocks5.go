@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/vishalkuo/bimap"
 	"io"
 	"log"
 	"net"
@@ -13,6 +14,7 @@ import (
 	"sync"
 	"time"
 	"xSocks/comm"
+	"xSocks/comm/socks"
 	"xSocks/param"
 )
 
@@ -39,7 +41,9 @@ func StartLocalSocks5(address string) {
 	}
 }
 
-
+var udpNat sync.Map
+var remoteUdpNat sync.Map
+/*这里得保持socks5协议兼容*/
 func startUdpProxy(addr string) ( *net.UDPAddr ,error){
 	udpAddr, err := net.ResolveUDPAddr("udp", addr)
 	if err != nil {
@@ -50,8 +54,12 @@ func startUdpProxy(addr string) ( *net.UDPAddr ,error){
 		return nil,err
 	}
 	buf := make([]byte, 65535)
-	var udpNat sync.Map
-	var remoteUdpNat sync.Map
+	//隧道
+	udpTunnel:=UdpTunnel{}
+	udpTunnel.natTable=bimap.NewBiMap();
+	udpTunnel.udpGate=udpListener;
+	go udpTunnel.recv()
+
 	go func() {
 		for {
 			n, localAddr, err := udpListener.ReadFromUDP(buf[0:])
@@ -59,15 +67,15 @@ func startUdpProxy(addr string) ( *net.UDPAddr ,error){
 				break;
 			}
 			data := buf[0:n]
-			dstAddr,dataStart,err:=comm.UdpHeadDecode(data);
-			if(err!=nil||dstAddr==nil){
+			dstAddr,dataStart,err:= socks.UdpHeadDecode(data);
+			if err!=nil||dstAddr==nil {
 				continue;
 			}
 			//本地转发
-			if ((!comm.IsPublicIP(dstAddr.IP) || comm.IsChinaMainlandIP(dstAddr.IP.String()))&&(runtime.GOOS!="windows"||param.TunType!=1)) {
-				natSawp(udpListener,udpNat,data,dataStart,localAddr,dstAddr);
+			if (!comm.IsPublicIP(dstAddr.IP) || comm.IsChinaMainlandIP(dstAddr.IP.String()))&&(runtime.GOOS!="windows"||param.TunType!=1) {
+				natSawp(udpListener,data,dataStart,localAddr,dstAddr);
 			} else{
-				remoteUdpProxy(udpListener,data,remoteUdpNat,localAddr);
+				udpTunnel.sendRemote(data,localAddr)
 			}
 		}
 	}()
@@ -75,71 +83,132 @@ func startUdpProxy(addr string) ( *net.UDPAddr ,error){
 }
 
 
-func remoteUdpProxy(udpGate *net.UDPConn,data []byte, remoteUdpNat sync.Map,localAddr *net.UDPAddr) error{
-	natKey:=localAddr.String()
-	var tunnel comm.CommConn
-	_conn,ok:=remoteUdpNat.Load(natKey)
-	if !ok{
-		sendBuf:=[]byte{};
-		//cmd
-		sendBuf =append(sendBuf,0x04);//dns\
-		var err error;
-		tunnel, err= NewTunnel();
-		if err!=nil {
-			log.Printf("err:%v\r\n",err);
-			return err;
-		}
-		_,err=tunnel.Write(sendBuf)
-		if err!=nil {
-			log.Printf("err:%v\r\n",err);
-			return err;
-		}
-		go func() {
-			remoteUdpNat.Store(natKey,tunnel)
-			defer remoteUdpNat.Delete(natKey);
-			defer tunnel.Close()
-			var packLenByte []byte = make([]byte, 2)
-			var bufByte []byte = make([]byte,65535)
-			for {
-				//remoteConn.SetDeadline();
-				tunnel.SetDeadline(time.Now().Add(60*10*time.Second))
-				_, err := io.ReadFull(tunnel, packLenByte)
-				packLen := binary.LittleEndian.Uint16(packLenByte)
-				if err != nil||int(packLen)>len(bufByte) {
-					log.Printf("err:%v\r\n",err);
-					break;
-				}
-				tunnel.SetDeadline(time.Now().Add(300*time.Second))
-				_, err = io.ReadFull(tunnel, bufByte[:int(packLen)])
-				if err != nil {
-					log.Printf("err:%v\r\n",err);
-					break;
-				}else {
-					_, err = udpGate.WriteToUDP(bufByte[:int(packLen)],localAddr)
-					if err != nil {
-						log.Printf("err:%v\r\n",err);
-					}
-				}
-			}
-		}()
-	}else{
-		tunnel=_conn.(net.Conn)
+
+type UdpTunnel struct {
+	Tunnel comm.CommConn
+	natTable  *bimap.BiMap
+	udpGate *net.UDPConn
+	sync.Mutex
+}
+func (rd *UdpTunnel) GetTunnel()(comm.CommConn){
+	rd.Lock();
+	defer rd.Unlock();
+	return rd.Tunnel;
+}
+func (rd *UdpTunnel) PutTunnel(tunnel comm.CommConn){
+	rd.Lock();
+	defer rd.Unlock();
+	rd.Tunnel=tunnel;
+}
+
+func (ut *UdpTunnel)Connect() (comm.CommConn,error){
+	sendBuf:=[]byte{};
+	//cmd
+	sendBuf =append(sendBuf,0x04);//dns
+	var err error;
+	tunnel, err:= NewTunnel();
+	if err!=nil {
+		return nil,err;
 	}
+	_,err=tunnel.Write(sendBuf)
+	if err!=nil {
+		return nil,err;
+	}
+	return tunnel,nil;
+}
+/*收到的还是socks5 udp协议,转发到远程是自定义的nat协议*/
+func (ut *UdpTunnel)sendRemote(data []byte,localAddr *net.UDPAddr) (error){
+	var err error
+	dstAddr,dataStart,err:= socks.UdpHeadDecode(data);
+	if err!=nil||dstAddr==nil {
+		return err;
+	}
+
+	tunnel:=ut.GetTunnel();
+	if tunnel==nil {
+		fmt.Printf("sendRemote Tunnel null connect\r\n")
+		tunnel,err := ut.Connect();
+		if err != nil {
+			fmt.Printf("sendRemote1\r\n")
+			return err
+		}
+		ut.PutTunnel(tunnel);
+	}
+
 	var packLenByte []byte = make([]byte, 2)
 	var buffer bytes.Buffer
-	//fmt.Printf("dev read len:%d\r\n",n);
 	binary.LittleEndian.PutUint16(packLenByte, uint16(len(data)))
 	buffer.Reset()
 	buffer.Write(packLenByte)
-	buffer.Write(data)
-	tunnel.Write(buffer.Bytes())
+	buffer.Write(comm.UdpNatEncode(localAddr,dstAddr))
+	buffer.Write(data[dataStart:])
+	sendBuf:=buffer.Bytes()
+	tunnel=ut.GetTunnel();
+	if tunnel!=nil {
+		_,err=tunnel.Write(buffer.Bytes())
+		if err != nil {
+			log.Printf("tunnel wrtie err:%v\r\n", err)
+		}
+	}
+	//失败重新连接
+	if err != nil {
+		fmt.Printf("sendRemote-2\r\n")
+		tunnel,err1 := ut.Connect();
+		if err1!=nil {
+			fmt.Printf("sendRemote2\r\n")
+			return err1
+		}
+		ut.PutTunnel(tunnel);
+		_, err = tunnel.Write(sendBuf)
+		if err!=nil {
+			fmt.Printf("sendRemote3\r\n")
+			return err
+		}
+	}
 	return nil;
+}
+
+func (ut *UdpTunnel) recv(){
+	var packLenByte []byte = make([]byte, 2)
+	var bufByte []byte = make([]byte,65535)
+	var tunnel comm.CommConn
+	var buffer bytes.Buffer
+	for {
+		tunnel=ut.GetTunnel();
+		//remoteConn.SetDeadline();
+		tunnel.SetDeadline(time.Now().Add(3*time.Minute))
+		_, err := io.ReadFull(tunnel, packLenByte)
+		packLen := binary.LittleEndian.Uint16(packLenByte)
+		if err != nil||int(packLen)>len(bufByte) {
+			log.Printf("err:%v\r\n",err);
+			continue;
+		}
+		tunnel.SetDeadline(time.Now().Add(3*time.Minute))
+		_, err = io.ReadFull(tunnel, bufByte[:int(packLen)])
+		if err != nil {
+			log.Printf("err:%v\r\n",err);
+			continue;
+		}else {
+			localAddr,dstAddr,err:=comm.UdpNatDecode(bufByte[:int(packLen)]);
+			if err!=nil||localAddr==nil {
+				continue;
+			}
+
+			buffer.Reset();
+			buffer.Write(socks.UdpHeadEncode(dstAddr))
+			buffer.Write(bufByte[11:int(packLen)])
+			_, err = ut.udpGate.WriteToUDP(buffer.Bytes(), localAddr)
+			if err != nil {
+				log.Printf("err:%v\r\n", err);
+			}
+		}
+	}
 }
 
 
 
 /*udp nat sawp*/
-func natSawp(udpGate *net.UDPConn,udpNat sync.Map,data []byte,dataStart int,localAddr *net.UDPAddr, dstAddr *net.UDPAddr){
+func natSawp(udpGate *net.UDPConn,data []byte,dataStart int,localAddr *net.UDPAddr, dstAddr *net.UDPAddr){
 	natKey:=localAddr.String()+"_"+dstAddr.String()
 	var remoteConn net.Conn
 	var err error
@@ -152,19 +221,19 @@ func natSawp(udpGate *net.UDPConn,udpNat sync.Map,data []byte,dataStart int,loca
 		buf:= make([]byte, 65535)
 		var buffer bytes.Buffer
 		udpNat.Store(natKey,remoteConn)
-		defer udpNat.Delete(natKey);
 		go func() {
+			defer udpNat.Delete(natKey);
 			defer remoteConn.Close()
 			for {
 				//remoteConn.SetDeadline();
-				remoteConn.SetReadDeadline(time.Now().Add(60*10*time.Second))
+				remoteConn.SetReadDeadline(time.Now().Add(5*time.Minute))
 				n, err:= remoteConn.Read(buf);
 				if err!=nil {
 					log.Printf("err:%v\r\n",err);
 					return ;
 				}
 				buffer.Reset();
-				buffer.Write(comm.UdpHeadEncode(dstAddr))
+				buffer.Write(socks.UdpHeadEncode(dstAddr))
 				buffer.Write(buf[:n])
 				udpGate.WriteToUDP(buffer.Bytes(), localAddr)
 			}
@@ -227,7 +296,7 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 				ip := "8.8.8.8"; //随便一个国外的IP地址
 				//如果在列表無需解析，直接用遠程
 				_, ok := PolluteDomainName.Load(string(hostBuf))
-				if (!ok) {
+				if !ok {
 					addr, err := net.ResolveIPAddr("ip", string(hostBuf))
 					if err == nil {
 						ip = addr.String();
@@ -287,12 +356,12 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 
 
 				//使用host
-				if (connectHead[3] == 0x03) {
+				if connectHead[3] == 0x03 {
 					buffer.Write(hostBufLen)
 					buffer.Write(hostBuf)
-				}else if (connectHead[3] == 0x01) {
+				}else if connectHead[3] == 0x01 {
 					buffer.Write(ipv4)
-				} else if (connectHead[3] == 0x04) {
+				} else if connectHead[3] == 0x04 {
 					buffer.Write(ipv6)
 				}
 				//写入端口
@@ -323,7 +392,7 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 		//UDP  代理
 		if connectHead[1]==0x03 {
 			//toLocalUdp(clientConn);
-			comm.UdpProxyRes(clientConn,udpAddr);
+			socks.UdpProxyRes(clientConn,udpAddr);
 		}
 	}
 	return nil;
