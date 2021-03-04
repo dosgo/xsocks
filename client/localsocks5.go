@@ -71,6 +71,11 @@ func startUdpProxy(addr string) ( *net.UDPAddr ,error){
 			if err!=nil||dstAddr==nil {
 				continue;
 			}
+			//判断地址是否合法
+			_address := net.ParseIP(dstAddr.IP.String())
+			if _address==nil {
+				continue;
+			}
 			//本地转发
 			if (!comm.IsPublicIP(dstAddr.IP) || comm.IsChinaMainlandIP(dstAddr.IP.String()))&&(runtime.GOOS!="windows"||param.TunType!=1) {
 				natSawp(udpListener,data,dataStart,localAddr,dstAddr);

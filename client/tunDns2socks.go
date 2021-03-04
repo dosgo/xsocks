@@ -109,7 +109,7 @@ func _startTun(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tu
 
 
 func dnsTcpForwarder(conn *gonet.TCPConn)error{
-	
+
 	//local dns
 	if conn.LocalAddr().String()==(tunGW+":53"){
 		log.Printf("local dns\r\n")
@@ -163,7 +163,7 @@ func dnsUdpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)error{
 		return nil;
 	}
 	dstAddr,_:=net.ResolveUDPAddr("udp",remoteAddr)
-	fmt.Printf("udp-remoteAddr:%s\r\n",dstAddr)
+	fmt.Printf("udp-remoteAddr:%s\r\n",remoteAddr)
 	tun2socks.SocksUdpGate(conn,dstAddr);
 	return nil;
 }
