@@ -18,7 +18,7 @@ var MuxNum int;
 var LocalDns int;  //use local dns
 var SmartDns int;  //use Smart dns
 var TunSmartProxy bool;
-
+var Sock5UdpPort string
 
 //comm
 var Mtu int;
