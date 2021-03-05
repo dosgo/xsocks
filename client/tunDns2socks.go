@@ -33,7 +33,7 @@ var ip2Domain = bimap.NewBiMap()
 var tunAddr="10.0.0.2"
 var tunGW="10.0.0.1";
 var tunNet="10.0.0.0"
-var tunMask="255.0.0.0"
+var tunMask="255.255.0.0"
 
 //var tunMask="255.255.255.0"
 
