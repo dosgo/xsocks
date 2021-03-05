@@ -224,7 +224,6 @@ func (tunDns *TunDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	m.SetReply(r)
 	m.Authoritative = false
 	domain := r.Question[0].Name
-	fmt.Printf("domain:%s\r\n",domain)
 	m.Answer =ipv4Res(domain,nil,r);
 	// final
 	return m, nil
@@ -254,7 +253,7 @@ func  (tunDns *TunDns)ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 func ipv4Res(domain string,_ip  net.IP,r *dns.Msg) []dns.RR {
 	var ip ="";
 	ipLog,ok :=ip2Domain.GetInverse(domain)
-	if ok && strings.Index(domain, tunDns.serverHost) != -1{
+	if ok && strings.Index(domain, tunDns.serverHost) == -1{
 		ip=ipLog.(string);
 	}else {
 		if _ip==nil && r!=nil  {
@@ -284,15 +283,17 @@ func ipv4Res(domain string,_ip  net.IP,r *dns.Msg) []dns.RR {
 			for i := 0; i <= 2; i++ {
 				ip = comm.GetCidrRandIpByNet(tunAddr, tunMask)
 				_, ok := ip2Domain.Get(ip)
-				if !ok {
+				if !ok && ip!=tunAddr {
 					ip2Domain.Insert(ip, domain)
 					break;
 				} else {
+					fmt.Println("ip used up")
 					ip = "";
 				}
 			}
 		}
 	}
+	fmt.Printf("domain:%s ip:%s\r\n",domain,ip)
 	return []dns.RR{&dns.A{
 		Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
 		A:   net.ParseIP(ip),
