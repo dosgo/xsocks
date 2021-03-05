@@ -4,12 +4,16 @@ import (
 	"bytes"
 	"encoding/binary"
 	"net"
+	"errors"
 )
 
 /*
 nat src dst
 */
 func UdpNatDecode(data []byte) (  *net.UDPAddr, *net.UDPAddr, error){
+	if(len(data)<12){
+		return nil,nil,	errors.New("data len <12")
+	}
 	var src *net.UDPAddr
 	var dst *net.UDPAddr
 	src = &net.UDPAddr{
@@ -18,7 +22,7 @@ func UdpNatDecode(data []byte) (  *net.UDPAddr, *net.UDPAddr, error){
 	}
 	dst = &net.UDPAddr{
 		IP:   net.IPv4(data[6], data[7], data[8], data[9]),
-		Port: int(data[10])*256 + int(data[10]),
+		Port: int(data[10])*256 + int(data[11]),
 	}
 	return src,dst,nil;
 }
