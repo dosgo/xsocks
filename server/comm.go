@@ -80,7 +80,7 @@ func proxy(conn comm.CommConn){
 func tcpToUdpProxy(conn comm.CommConn){
 	var packLenByte []byte = make([]byte, 2)
 	var bufByte []byte = make([]byte,65535)
-	remoteConn, err := net.DialTimeout("udp", "127.0.0.1:"+param.Sock5UdpPort,time.Second*15);
+	remoteConn, err := net.DialTimeout("udp", "127.0.0.1:"+param.UdpGatePort,time.Second*15);
 	if err!=nil {
 		log.Printf("err:%v\r\n",err);
 		return
@@ -118,7 +118,7 @@ func tcpToUdpProxy(conn comm.CommConn){
 		}
 		conn.SetDeadline(time.Now().Add(60*10*time.Second))
 		_, err = io.ReadFull(conn, bufByte[:int(packLen)])
-		if (err != nil) {
+		if err != nil {
 			log.Printf("err:%v\r\n",err);
 			break;
 		}else {

@@ -67,7 +67,6 @@ func natSawp(udpGate *net.UDPConn,data []byte,localAddr *net.UDPAddr){
 	if err!=nil||dstAddr==nil {
 		return;
 	}
-	fmt.Printf("natSawp localAddr:%v dstAddr:%v\r\n",srcAddr,dstAddr)
 	natKey:=srcAddr.String()+"_"+dstAddr.String()
 	var remoteConn net.Conn
 	_conn,ok:=udpNat.Load(natKey)
@@ -98,7 +97,7 @@ func natSawp(udpGate *net.UDPConn,data []byte,localAddr *net.UDPAddr){
 	}else{
 		remoteConn=_conn.(net.Conn)
 	}
-	remoteConn.Write(data[11:])
+	remoteConn.Write(data[12:])
 }
 
 

@@ -3,8 +3,8 @@ package client
 import (
 	"crypto/tls"
 	"errors"
-	"github.com/lucas-clemente/quic-go"
 	"fmt"
+	"github.com/lucas-clemente/quic-go"
 	"log"
 	"net"
 	"sync"
@@ -12,7 +12,6 @@ import (
 	"time"
 	"xSocks/comm"
 	"xSocks/comm/udpHeader"
-	"xSocks/param"
 )
 var quicDialer *QuicDialer
 
@@ -46,12 +45,8 @@ func (qd *QuicDialer) Connect(quicAddr string) error{
 	if qd.sess!=nil {
 		qd.sess.CloseWithError(2021, "OpenStreamSync error")
 	}
-	var maxIdleTimeout=time.Second*30;
+	var maxIdleTimeout=time.Minute*5;
 
-	if param.TunType==2 {
-		//tun mode
-		maxIdleTimeout=time.Minute*5;
-	}
 
 	var quicConfig = &quic.Config{
 	//	MaxIncomingStreams:                    32,

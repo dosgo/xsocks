@@ -142,7 +142,7 @@ func (ut *UdpTunnel)sendRemote(data []byte,localAddr *net.UDPAddr) (error){
 
 	var packLenByte []byte = make([]byte, 2)
 	var buffer bytes.Buffer
-	binary.LittleEndian.PutUint16(packLenByte, uint16(len(data)+12))
+	binary.LittleEndian.PutUint16(packLenByte, uint16(len(data)-dataStart+12))
 	buffer.Reset()
 	buffer.Write(packLenByte)
 	buffer.Write(comm.UdpNatEncode(localAddr,dstAddr))
@@ -213,7 +213,7 @@ func (ut *UdpTunnel) recv(){
 
 			buffer.Reset();
 			buffer.Write(socks.UdpHeadEncode(dstAddr))
-			buffer.Write(bufByte[11:int(packLen)])
+			buffer.Write(bufByte[12:int(packLen)])
 			_, err = ut.udpGate.WriteToUDP(buffer.Bytes(), localAddr)
 			if err != nil {
 				log.Printf("err:%v\r\n", err);
@@ -233,6 +233,7 @@ func socksNatSawp(udpGate *net.UDPConn,data []byte,dataStart int,localAddr *net.
 	if !ok{
 		remoteConn, err = net.DialTimeout("udp", dstAddr.String(),time.Second*15);
 		if err != nil {
+			log.Printf("err:%v\r\n",err)
 			return
 		}
 		buf:= make([]byte, 65535)
