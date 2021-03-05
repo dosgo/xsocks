@@ -142,7 +142,7 @@ func (ut *UdpTunnel)sendRemote(data []byte,localAddr *net.UDPAddr) (error){
 
 	var packLenByte []byte = make([]byte, 2)
 	var buffer bytes.Buffer
-	binary.LittleEndian.PutUint16(packLenByte, uint16(len(data)))
+	binary.LittleEndian.PutUint16(packLenByte, uint16(len(data)+12))
 	buffer.Reset()
 	buffer.Write(packLenByte)
 	buffer.Write(comm.UdpNatEncode(localAddr,dstAddr))
