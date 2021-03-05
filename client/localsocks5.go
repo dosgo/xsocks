@@ -191,18 +191,20 @@ func (ut *UdpTunnel) recv(){
 			continue;
 		}
 		//remoteConn.SetDeadline();
-		tunnel.SetDeadline(time.Now().Add(3*time.Minute))
+		tunnel.SetDeadline(time.Now().Add(5*time.Minute))
 		_, err := io.ReadFull(tunnel, packLenByte)
 		packLen := binary.LittleEndian.Uint16(packLenByte)
 		if err != nil||int(packLen)>len(bufByte) {
 			log.Printf("err:%v\r\n",err);
+			tunnel.Close();
 			ut.PutTunnel(nil)
 			continue;
 		}
-		tunnel.SetDeadline(time.Now().Add(3*time.Minute))
+		tunnel.SetDeadline(time.Now().Add(5*time.Minute))
 		_, err = io.ReadFull(tunnel, bufByte[:int(packLen)])
 		if err != nil {
 			log.Printf("err:%v\r\n",err);
+			tunnel.Close();
 			ut.PutTunnel(nil)
 			continue;
 		}else {
@@ -210,7 +212,6 @@ func (ut *UdpTunnel) recv(){
 			if err!=nil||localAddr==nil {
 				continue;
 			}
-
 			buffer.Reset();
 			buffer.Write(socks.UdpHeadEncode(dstAddr))
 			buffer.Write(bufByte[12:int(packLen)])

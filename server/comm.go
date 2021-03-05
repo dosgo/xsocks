@@ -92,7 +92,7 @@ func tcpToUdpProxy(conn comm.CommConn){
 		var buffer bytes.Buffer
 		var packLenByte []byte = make([]byte, 2)
 		for {
-			remoteConn.SetDeadline(time.Now().Add(60*10*time.Second))
+			remoteConn.SetDeadline(time.Now().Add(5*time.Minute))
 			n, err := remoteConn.Read(bufByte1)
 			if err != nil {
 				log.Printf("err:%v\r\n",err);
@@ -109,21 +109,21 @@ func tcpToUdpProxy(conn comm.CommConn){
 
 	for {
 		//remoteConn.SetDeadline();
-		conn.SetDeadline(time.Now().Add(60*10*time.Second))
+		conn.SetDeadline(time.Now().Add(5*time.Minute))
 		_, err := io.ReadFull(conn, packLenByte)
 		packLen := binary.LittleEndian.Uint16(packLenByte)
 		if err != nil||int(packLen)>len(bufByte) {
 			log.Printf("err:%v\r\n",err);
 			break;
 		}
-		conn.SetDeadline(time.Now().Add(60*10*time.Second))
+		conn.SetDeadline(time.Now().Add(5*time.Minute))
 		_, err = io.ReadFull(conn, bufByte[:int(packLen)])
 		if err != nil {
 			log.Printf("err:%v\r\n",err);
 			break;
 		}else {
 			_, err = remoteConn.Write(bufByte[:int(packLen)])
-			if (err != nil) {
+			if err != nil {
 				log.Printf("err:%v\r\n",err);
 			}
 		}
@@ -165,7 +165,7 @@ func tcpToTun(conn comm.CommConn){
 		var packLenByte []byte = make([]byte, 2)
 		for {
 			pkt,res :=channelLinkID.ReadContext(ctx)
-			if(!res){
+			if !res {
 				break;
 			}
 			buffer.Reset()
@@ -178,7 +178,7 @@ func tcpToTun(conn comm.CommConn){
 				sendBuffer.Write(packLenByte)
 				sendBuffer.Write(buffer.Bytes())
 				_,err=conn.Write(sendBuffer.Bytes())
-				if(err!=nil){
+				if err!=nil {
 					return ;
 				}
 			}
@@ -189,20 +189,20 @@ func tcpToTun(conn comm.CommConn){
 	var buf=make([]byte,buflen)
 	var packLenByte []byte = make([]byte, 2)
 	for {
-		conn.SetDeadline(time.Now().Add(time.Minute*3))
+		conn.SetDeadline(time.Now().Add(time.Minute*5))
 		_, err := io.ReadFull(conn, packLenByte)
-		if (err != nil) {
+		if err != nil {
 			log.Printf("err:%v\r\n", err)
 			return;
 		}
 		packLen := binary.LittleEndian.Uint16(packLenByte)
 		//null
-		if (packLen < 1 || packLen > buflen) {
+		if packLen < 1 || packLen > buflen {
 			continue;
 		}
-		conn.SetDeadline(time.Now().Add(time.Minute*3))
+		conn.SetDeadline(time.Now().Add(time.Minute*5))
 		n, err := io.ReadFull(conn, buf[:int(packLen)])
-		if (err != nil) {
+		if err != nil {
 			log.Printf("err:%v\r\n", err)
 			return;
 		}
