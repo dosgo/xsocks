@@ -12,6 +12,7 @@ import (
 	"time"
 	"xSocks/comm"
 	"xSocks/comm/udpHeader"
+	"xSocks/param"
 )
 var quicDialer *QuicDialer
 
@@ -58,7 +59,7 @@ func (qd *QuicDialer) Connect(quicAddr string) error{
 
 	tlsConf := &tls.Config{
 		InsecureSkipVerify: true,
-		NextProtos:         []string{"quic-echo-example"},
+		NextProtos:   []string{param.Password,"quic-echo-example"},
 	}
 	udpAddr, err := net.ResolveUDPAddr("udp", quicAddr)
 	if err != nil {
@@ -73,7 +74,7 @@ func (qd *QuicDialer) Connect(quicAddr string) error{
 	//udp fob
 	udpConn := udpHeader.NewUdpConn(_udpConn);
 
-	sess, err := quic.Dial(udpConn,udpAddr,quicAddr,tlsConf, quicConfig)
+	sess, err := quic.DialEarly(udpConn,udpAddr,quicAddr,tlsConf, quicConfig)
 	if err != nil {
 		log.Printf("err:%v udpAddr:%v _udpConn:%v\r\n",err,udpAddr,_udpConn)
 		return err

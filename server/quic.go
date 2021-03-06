@@ -13,6 +13,7 @@ import (
 	"net"
 	"time"
 	"xSocks/comm/udpHeader"
+	"xSocks/param"
 )
 
 func StartQuic(_addr string) error {
@@ -36,7 +37,7 @@ func StartQuic(_addr string) error {
 	//udp fob
 	conn:=udpHeader.NewUdpConn(_conn);
 	defer conn.Close()
-	listener, err := quic.Listen(conn,  generateTLSConfig(), quicConfig)
+	listener, err := quic.ListenEarly(conn,  generateTLSConfig(), quicConfig)
 	if err != nil {
 		log.Printf("err:%v\r\n",err)
 		return err
@@ -87,6 +88,6 @@ func generateTLSConfig() *tls.Config {
 	}
 	return &tls.Config{
 		Certificates: []tls.Certificate{tlsCert},
-		NextProtos:   []string{"quic-echo-example"},
+		NextProtos:   []string{param.Password,"quic-echo-example"},
 	}
 }
