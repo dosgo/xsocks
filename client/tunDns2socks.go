@@ -122,10 +122,11 @@ func dnsTcpForwarder(conn *gonet.TCPConn)error{
 
 	remoteAddr:=dnsToAddr(conn.LocalAddr().String())
 	if remoteAddr==""{
+		log.Printf("remoteAddr:%v\r\n",remoteAddr)
 		conn.Close();
 		return nil;
 	}
-
+	log.Printf("remoteAddr:%v\r\n",remoteAddr)
 	socksConn,err1:= net.DialTimeout("tcp",param.Sock5Addr,time.Second*15)
 	if err1 != nil {
 		log.Printf("err:%v",err1)

@@ -358,7 +358,7 @@ func AddRoute(tunAddr string, tunGw string, tunMask string) error {
 
 	//clear old
 	exec.Command("route", "delete",strings.Join(netNat,".")).Output()
-	cmd:=exec.Command("netsh", "interface","ipv4","add","route",strings.Join(netNat,".")+"/"+maskAddrs[1],iName,tunGw)
+	cmd:=exec.Command("netsh", "interface","ipv4","add","route",strings.Join(netNat,".")+"/"+maskAddrs[1],iName,tunGw,"metric=6")
 	cmd.Run();
 
 
