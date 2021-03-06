@@ -9,6 +9,7 @@ import (
 )
 
 
+/*根据子网掩码返回一个IP段*/
 func GetCidrRandIpByNet(tunAddr string,tunMask string)string{
 	masks:=net.ParseIP(tunMask).To4();
 	maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}

@@ -234,7 +234,7 @@ func WatchNotifyIpChange(){
 	go NotifyIpChange(notifyCh)
 	go func() {
 		for _ = range notifyCh {
-			time.Sleep(time.Second*5)
+			time.Sleep(time.Second*2)
 			gwIp:=GetGateway()
 			fmt.Printf("SetDNSServer gwip:%s\r\n",gwIp)
 			SetDNSServer(gwIp,"127.0.0.1","0:0:0:0:0:0:0:1");
@@ -290,54 +290,6 @@ func GetDnsServerByGateWay(gwIp string)([]string,bool,bool){
 	return nil,false,isIpv6;
 }
 
-type Network struct {
-	Name       string
-	IP         string
-	MACAddress string
-}
-
-type intfInfo struct {
-	Name       string
-	MacAddress string
-	Ipv4       []string
-}
-
-func GetNetworkInfo() error {
-	intf, err := net.Interfaces()
-	if err != nil {
-		log.Fatal("get network info failed: %v", err)
-		return err
-	}
-	var is = make([]intfInfo, len(intf))
-	for i, v := range intf {
-		ips, err := v.Addrs()
-		if err != nil {
-			log.Fatal("get network addr failed: %v", err)
-			return err
-		}
-		//此处过滤loopback（本地回环）和isatap（isatap隧道）
-		if !strings.Contains(v.Name, "Loopback") && !strings.Contains(v.Name, "isatap") {
-			var network Network
-			is[i].Name = v.Name
-			is[i].MacAddress = v.HardwareAddr.String()
-			for _, ip := range ips {
-				if strings.Contains(ip.String(), ".") {
-					is[i].Ipv4 = append(is[i].Ipv4, ip.String())
-				}
-			}
-			network.Name = is[i].Name
-			network.MACAddress = is[i].MacAddress
-			if len(is[i].Ipv4) > 0 {
-				network.IP = is[i].Ipv4[0]
-			}
-
-			fmt.Printf("network:=", network)
-		}
-
-	}
-
-	return nil
-}
 //BIOS信息
 func GetBiosInfo() string {
 	var s = []struct {
@@ -372,9 +324,44 @@ func GetNetworkAdapter() ([]NetworkAdapter,error){
 }
 
 
-func AddRoute(tunNet string,tunGw string, tunMask string) error {
-	cmd:=exec.Command("route", "add",tunNet,"mask",tunMask,tunGw,"metric","6")
+func AddRoute(tunAddr string, tunGw string, tunMask string) error {
+	var netNat =make([]string,4);
+	//masks:=strings.Split(tunMask,".")
+	masks:=net.ParseIP(tunMask).To4();
+	Addrs:=strings.Split(tunAddr,".")
+	for i := 0; i <= 3; i++ {
+		if masks[i]==255 {
+			netNat[i]=Addrs[i];
+		}else{
+			netNat[i]="0";
+		}
+	}
+
+
+	maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}
+
+
+	maskAddrs:=strings.Split(maskAddr.String(),"/")
+
+
+	lAdds,err:=GetLocalAddresses();
+	var iName="";
+	if err==nil {
+		for _, v := range lAdds {
+			if strings.Index(v.IpAddress,tunAddr)!=-1 {
+				iName=v.Name;
+				break;
+			}
+		}
+	}
+
+
+	//clear old
+	exec.Command("route", "delete",strings.Join(netNat,".")).Output()
+	cmd:=exec.Command("netsh", "interface","ipv4","add","route",strings.Join(netNat,".")+"/"+maskAddrs[1],iName,tunGw)
 	cmd.Run();
+
+
 	fmt.Printf("cmd:%s\r\n",strings.Join(cmd.Args," "))
 	exec.Command("ipconfig", "/flushdns").Run()
 	return nil;

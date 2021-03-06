@@ -32,7 +32,6 @@ var ip2Domain = bimap.NewBiMap()
 
 var tunAddr="10.0.0.2"
 var tunGW="10.0.0.1";
-var tunNet="10.0.0.0"
 var tunMask="255.255.0.0"
 
 //var tunMask="255.255.255.0"
@@ -40,17 +39,13 @@ var tunMask="255.255.0.0"
 func StartTunDns(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tunDNS string) {
 	gwIp:=comm.GetGateway()
 	oldDns,_,_:=comm.GetDnsServerByGateWay(gwIp);
-	if oldDns[0]=="127.0.0.1"||oldDns[0]==tunGW {
+	if oldDns[0]=="127.0.0.1"||oldDns[0]==tunGW || oldDns[0]==_tunGW  {
 		oldDns[0]="114.114.114.114"
 	}
 	fmt.Printf("oldDns:%v\r\n",oldDns)
 	urlInfo, _ := url.Parse(param.ServerAddr)
 	tunDns.serverHost=urlInfo.Hostname()
 	_startSmartDns("53",oldDns[0])
-	go func() {
-		time.Sleep(time.Second*3)
-		comm.AddRoute(tunNet,tunGW, tunMask)
-	}()
 	go comm.WatchNotifyIpChange();
 	_startTun(tunDevice,_tunAddr,_tunMask,_tunGW,tunDNS);
 }
@@ -96,7 +91,7 @@ func _startTun(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tu
 		dev=conn;
 		defer conn.Close()
 	}else{
-
+		fmt.Printf("tunGW:%s tunMask:%s\r\n",tunGW,tunMask)
 		f, err:= tun.OpenTunDevice(tunDevice, tunAddr, tunGW, tunMask, dnsServers)
 		if err != nil {
 			fmt.Println("Error listening:", err)
@@ -104,6 +99,10 @@ func _startTun(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tu
 		}
 		dev=f;
 	}
+	go func() {
+		time.Sleep(time.Second*1)
+		comm.AddRoute(tunAddr, tunGW,tunMask)
+	}()
 	tun2socks.ForwardTransportFromIo(dev,param.Mtu,dnsTcpForwarder,dnsUdpForwarder);
 }
 

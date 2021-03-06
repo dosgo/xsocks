@@ -1,12 +1,12 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"net"
 	"os"
 	"xSocks/client"
-	"context"
 	"xSocks/comm"
 	"xSocks/param"
 )
@@ -35,7 +35,6 @@ func main() {
 	if param.DnsPort=="" {
 		param.DnsPort,_= comm.GetFreePort();
 	}
-
 	if param.Sock5UdpPort=="" {
 		param.Sock5UdpPort,_= comm.GetFreeUdpPort();
 	}
@@ -43,16 +42,23 @@ func main() {
 	fmt.Printf("server addr:%s\r\n",param.ServerAddr)
 	fmt.Printf("socks5 addr :%s\r\n",param.Sock5Addr)
 	fmt.Printf("Sock5UdpPort:%s\r\n",param.Sock5UdpPort)
+
+	var tunAddr=""
+	var tunGw=""
+	//no android
+	if os.Getenv("ANDROID_DATA")=="" {
+		tunAddr, tunGw = comm.GetUnusedTunAddr();
+	}
 	//1==tun2sock
 	if param.TunType==1 {
-		go client.StartTunDevice("","","","","");
+		go client.StartTunDevice("",tunAddr,"",tunGw,"");
 	}
 	//2==tun2remote tun
 	if param.TunType==2 {
 		go client.StartTun("","","","","");
 	}
 	if param.TunType==3 {
-		go client.StartTunDns("","","","","");
+		go client.StartTunDns("",tunAddr,"",tunGw,"");
 	}
 	go client.StartDns();
 	client.StartLocalSocks5(param.Sock5Addr);
@@ -65,7 +71,6 @@ func init(){
 		fmt.Printf("setDefaultDNS\r\n ")
 		setDefaultDNS("114.114.114.114:53");
 	}
-	setDefaultDNS("114.114.114.114:53");
 	comm.Init()
 }
 func setDefaultDNS(addrs string) {

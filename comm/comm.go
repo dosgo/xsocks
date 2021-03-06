@@ -4,8 +4,11 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"strconv"
+	"strings"
 	"io"
 	"math/rand"
+	"log"
 	crand "crypto/rand"
 	"net"
 	"time"
@@ -154,4 +157,62 @@ type lAddr struct {
 	IpAddress  string
 	IpMask  string
 	GateWay  string
+	MACAddress string
+}
+
+
+
+
+func GetNetworkInfo() ([]lAddr,error) {
+	intf, err := net.Interfaces()
+	lAddrs := []lAddr{}
+	if err != nil {
+		log.Fatal("get network info failed: %v", err)
+		return nil,err
+	}
+	for _, v := range intf {
+		ips, err := v.Addrs()
+		if err != nil {
+			log.Fatal("get network addr failed: %v", err)
+			return nil,err
+		}
+		//此处过滤loopback（本地回环）和isatap（isatap隧道）
+		if !strings.Contains(v.Name, "Loopback") && !strings.Contains(v.Name, "isatap") {
+			itemAddr := lAddr{}
+			itemAddr.Name=v.Name;
+			itemAddr.MACAddress=v.HardwareAddr.String()
+			for _, ip := range ips {
+				if strings.Contains(ip.String(), ".") {
+					_,ipNet,err1:=net.ParseCIDR(ip.String())
+					if(err1==nil){
+						itemAddr.IpAddress=ipNet.IP.String()
+						itemAddr.IpMask=net.IP(ipNet.Mask).String()
+					}
+				}
+			}
+			lAddrs=append(lAddrs,itemAddr)
+		}
+	}
+	return lAddrs,nil
+}
+/*
+get Unused B
+return tunaddr tungw
+*/
+func GetUnusedTunAddr()(string,string){
+	laddrs,err:=GetNetworkInfo();
+	if(err!=nil){
+		return "","";
+	}
+	var laddrInfo="";
+	for _, _laddr := range laddrs {
+		laddrInfo=laddrInfo+"net:"+_laddr.IpAddress;
+	}
+	//tunAddr string,tunMask string,tunGW
+	for i:=19;i<254;i++{
+		if strings.Index(laddrInfo,"net:172."+strconv.Itoa(i))==-1 {
+			return "172."+strconv.Itoa(i)+".0.2","172."+strconv.Itoa(i)+".0.1"
+		}
+	}
+	return "","";
 }
