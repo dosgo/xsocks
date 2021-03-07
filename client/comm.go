@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"log"
 	"os"
 	"os/exec"
@@ -35,8 +36,11 @@ func  NewTunnel () (comm.CommConn,error){
 	}
 
 
-	if err != nil || stream == nil {
+	if err != nil  {
 		return nil,err
+	}
+	if  stream == nil {
+		return nil,errors.New("stream null")
 	}
 	//write password
 	passwordBuf := comm.GenPasswordHead(param.Password);

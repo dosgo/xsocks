@@ -28,7 +28,10 @@ func StartLocalSocks5(address string) {
 	}
 
 	//start udpProxy
-	udpAddr,err:=startUdpProxy("127.0.0.1:"+param.Sock5UdpPort);
+	var  udpAddr *net.UDPAddr
+	if !strings.HasPrefix(param.ServerAddr,"sudp") {
+		udpAddr, err = startUdpProxy("127.0.0.1:" + param.Sock5UdpPort);
+	}
 	if err != nil {
 		log.Panic(err)
 	}

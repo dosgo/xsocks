@@ -69,6 +69,9 @@ func UdpHeadEncode(addr *net.UDPAddr) (  []byte) {
 
 /* udp req res*/
 func UdpProxyRes(clientConn net.Conn,udpAddr *net.UDPAddr)  error{
+	if udpAddr==nil {
+		return nil;
+	}
 	fmt.Printf("req Udp addr:%v \r\n",udpAddr.String())
 	/*
 		|VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |
