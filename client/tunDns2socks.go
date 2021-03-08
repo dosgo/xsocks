@@ -3,8 +3,8 @@ package client
 import (
 	"fmt"
 	"github.com/miekg/dns"
+	"github.com/songgao/water"
 	"github.com/vishalkuo/bimap"
-	"github.com/yinghuocho/gotun2socks/tun"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"io"
@@ -12,6 +12,8 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 	"xSocks/client/tun2socks"
@@ -47,6 +49,7 @@ func StartTunDns(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,
 	tunDns.serverHost=urlInfo.Hostname()
 	_startSmartDns("53",oldDns[0])
 	go comm.WatchNotifyIpChange();
+	//fmt.Printf("_tunAddr:%s _tunGW:%s\r\n",_tunAddr,_tunGW)
 	_startTun(tunDevice,_tunAddr,_tunMask,_tunGW,tunDNS);
 }
 
@@ -69,7 +72,7 @@ func _startTun(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tu
 		tunDNS="114.114.114.114";
 	}
 
-	dnsServers := strings.Split(tunDNS, ",")
+	//dnsServers := strings.Split(tunDNS, ",")
 	var dev io.ReadWriteCloser;
 	if len(param.UnixSockTun)>0 {
 		os.Remove(param.UnixSockTun)
@@ -92,12 +95,38 @@ func _startTun(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tu
 		defer conn.Close()
 	}else{
 		fmt.Printf("tunGW:%s tunMask:%s\r\n",tunGW,tunMask)
+		/*
 		f, err:= tun.OpenTunDevice(tunDevice, tunAddr, tunGW, tunMask, dnsServers)
 		if err != nil {
 			fmt.Println("Error listening:", err)
 			return ;
 		}
-		dev=f;
+		*/
+
+		config := comm.GetWaterConf(tunAddr,tunMask);
+		ifce, err := water.New(config)
+		if err != nil {
+			fmt.Println("start tun err:", err)
+			return ;
+		}
+		if runtime.GOOS=="windows" {
+			//time.Sleep(time.Second*1)
+			//netsh interface ip set address name="Ehternet 2" source=static addr=10.1.0.10 mask=255.255.255.0 gateway=none
+			exec.Command("netsh", "interface","ip","set","address","name="+ifce.Name(),"source=static","addr="+tunAddr,"mask="+tunMask,"gateway=none").Run();
+		}else if runtime.GOOS=="linux"{
+			//sudo ip addr add 10.1.0.10/24 dev O_O
+			masks:=net.ParseIP(tunMask).To4();
+			maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}
+			exec.Command("ip", "addr","add",maskAddr.String(),"dev",ifce.Name()).Run();
+			exec.Command("ip", "link","set","dev",ifce.Name(),"up").Run();
+		}else if runtime.GOOS=="darwin"{
+			//ifconfig utun2 10.1.0.10 10.1.0.20 up
+			masks:=net.ParseIP(tunMask).To4();
+			maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}
+			ipMin,ipMax:=comm.GetCidrIpRange(maskAddr.String());
+			exec.Command("ifconfig", "utun2",ipMin,ipMax,"up").Run();
+		}
+		dev=ifce;
 	}
 	go func() {
 		time.Sleep(time.Second*1)

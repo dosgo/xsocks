@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/songgao/water"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"xSocks/comm/udpHeader"
 
@@ -15,7 +16,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	//"github.com/google/netstack/tcpip/header"
-	"github.com/yinghuocho/gotun2socks/tun"
+	"os/exec"
 	"io"
 	"log"
 	"net"
@@ -82,11 +83,31 @@ func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS
 
 		//old gw
 		dnsServers := strings.Split(tunDNS, ",")
-		f, err:= tun.OpenTunDevice(tunDevice, tunAddr, tunGW, tunMask, dnsServers)
+
+		config := comm.GetWaterConf(tunAddr,tunMask);
+		ifce, err := water.New(config)
 		if err != nil {
-			fmt.Println("Error listening:", err)
+			fmt.Println("start tun err:", err)
 			return err;
 		}
+		if runtime.GOOS=="windows" {
+			//time.Sleep(time.Second*1)
+			//netsh interface ip set address name="Ehternet 2" source=static addr=10.1.0.10 mask=255.255.255.0 gateway=none
+			exec.Command("netsh", "interface","ip","set","address","name="+ifce.Name(),"source=static","addr="+tunAddr,"mask="+tunMask,"gateway=none").Run();
+		}else if runtime.GOOS=="linux"{
+			//sudo ip addr add 10.1.0.10/24 dev O_O
+			masks:=net.ParseIP(tunMask).To4();
+			maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}
+			exec.Command("ip", "addr","add",maskAddr.String(),"dev",ifce.Name()).Run();
+			exec.Command("ip", "link","set","dev",ifce.Name(),"up").Run();
+		}else if runtime.GOOS=="darwin"{
+			//ifconfig utun2 10.1.0.10 10.1.0.20 up
+			masks:=net.ParseIP(tunMask).To4();
+			maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}
+			ipMin,ipMax:=comm.GetCidrIpRange(maskAddr.String());
+			exec.Command("ifconfig", "utun2",ipMin,ipMax,"up").Run();
+		}
+
 		//windows
 		if runtime.GOOS=="windows" {
 			oldDns:=comm.GetDnsServer();
@@ -95,7 +116,7 @@ func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS
 			}
 			routeEdit(tunGW,remoteAddr,dnsServers,oldGw);
 		}
-		tunRecv(f, param.Mtu)
+		tunRecv(ifce, param.Mtu)
 	}
 	return nil;
 }

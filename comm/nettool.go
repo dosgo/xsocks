@@ -26,7 +26,7 @@ func GetCidrRandIp(cidr string) string {
 	return ipPrefix+strconv.Itoa(rand.IntnRange(seg3MinIp,seg3MaxIp))+"."+strconv.Itoa(rand.IntnRange(seg4MinIp,seg4MaxIp));
 }
 
-func getCidrIpRange(cidr string) (string, string) {
+func GetCidrIpRange(cidr string) (string, string) {
 	ip := strings.Split(cidr, "/")[0]
 	ipSegs := strings.Split(ip, ".")
 	maskLen, _ := strconv.Atoi(strings.Split(cidr, "/")[1])

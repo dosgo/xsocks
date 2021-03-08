@@ -2,7 +2,7 @@ package client
 
 import (
 	"fmt"
-	"github.com/yinghuocho/gotun2socks/tun"
+	"github.com/songgao/water"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"net/url"
 	"os"
@@ -11,10 +11,11 @@ import (
 	"xSocks/comm"
 	//"github.com/google/netstack/tcpip/adapters/gonet"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
-	"runtime"
 	"io"
 	"log"
+	"os/exec"
 	"net"
+	"runtime"
 	"strings"
 	"xSocks/param"
 )
@@ -72,12 +73,31 @@ func StartTunDevice(tunDevice string,tunAddr string,tunMask string,tunGW string,
 			fmt.Printf("remoteAddr:%s\r\n", remoteAddr)
 		}
 
-		f, err:= tun.OpenTunDevice(tunDevice, tunAddr, tunGW, tunMask, dnsServers)
+		config := comm.GetWaterConf(tunAddr,tunMask);
+		ifce, err := water.New(config)
 		if err != nil {
-			fmt.Println("Error listening:", err)
+			fmt.Println("start tun err:", err)
 			return ;
 		}
-		dev=f;
+
+		if runtime.GOOS=="windows" {
+			//time.Sleep(time.Second*1)
+			//netsh interface ip set address name="Ehternet 2" source=static addr=10.1.0.10 mask=255.255.255.0 gateway=none
+			exec.Command("netsh", "interface","ip","set","address","name="+ifce.Name(),"source=static","addr="+tunAddr,"mask="+tunMask,"gateway=none").Run();
+		}else if runtime.GOOS=="linux"{
+			//sudo ip addr add 10.1.0.10/24 dev O_O
+			masks:=net.ParseIP(tunMask).To4();
+			maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}
+			exec.Command("ip", "addr","add",maskAddr.String(),"dev",ifce.Name()).Run();
+			exec.Command("ip", "link","set","dev",ifce.Name(),"up").Run();
+		}else if runtime.GOOS=="darwin"{
+			//ifconfig utun2 10.1.0.10 10.1.0.20 up
+			masks:=net.ParseIP(tunMask).To4();
+			maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}
+			ipMin,ipMax:=comm.GetCidrIpRange(maskAddr.String());
+			exec.Command("ifconfig", "utun2",ipMin,ipMax,"up").Run();
+		}
+		dev=ifce;
 	}
 
 	//windows

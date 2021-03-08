@@ -184,7 +184,7 @@ func GetNetworkInfo() ([]lAddr,error) {
 			for _, ip := range ips {
 				if strings.Contains(ip.String(), ".") {
 					_,ipNet,err1:=net.ParseCIDR(ip.String())
-					if(err1==nil){
+					if err1==nil {
 						itemAddr.IpAddress=ipNet.IP.String()
 						itemAddr.IpMask=net.IP(ipNet.Mask).String()
 					}
@@ -201,7 +201,7 @@ return tunaddr tungw
 */
 func GetUnusedTunAddr()(string,string){
 	laddrs,err:=GetNetworkInfo();
-	if(err!=nil){
+	if err!=nil {
 		return "","";
 	}
 	var laddrInfo="";

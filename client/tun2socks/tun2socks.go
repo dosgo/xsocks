@@ -37,6 +37,7 @@ func ForwardTransportFromIo(dev io.ReadWriteCloser,mtu int,tcpCallback comm.Forw
 		for {
 			info,res:=channelLinkID.ReadContext(_ctx)
 			if !res {
+				log.Printf("channelLinkID exit \r\n")
 				break;
 			}
 			sendBuffer.Reset()

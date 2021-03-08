@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/StackExchange/wmi"
+	"github.com/songgao/water"
 	routetable "github.com/yijunjun/route-table"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
@@ -170,7 +171,7 @@ loop:
 	return dns
 }
 
-func SetDNSServer(gwIp string,ip string,ipv6 string){
+func setDNSServer(gwIp string,ip string,ipv6 string){
 	log.Printf("SetDNSServer-gwIp:%s\r\n",gwIp)
 	oldDns,dHCPEnabled,isIPv6:=GetDnsServerByGateWay(gwIp);
 	lAdds,err:=GetLocalAddresses();
@@ -237,7 +238,7 @@ func WatchNotifyIpChange(){
 			time.Sleep(time.Second*2)
 			gwIp:=GetGateway()
 			fmt.Printf("SetDNSServer gwip:%s\r\n",gwIp)
-			SetDNSServer(gwIp,"127.0.0.1","0:0:0:0:0:0:0:1");
+			setDNSServer(gwIp,"127.0.0.1","0:0:0:0:0:0:0:1");
 		}
 	}()
 }
@@ -257,12 +258,17 @@ func resetDns(iName string,netType string,dHCPEnabled bool,oldDns []string){
 	if dHCPEnabled {
 		exec.Command("netsh", "interface",netType,"set","dnsservers",iName,"dhcp").Output()
 	}else {
-		for i,v:=range oldDns{
+		i:=0;
+		for _,v:=range oldDns{
+			if v=="127.0.0.1"{
+				continue;
+			}
 			if i==0 {
-				exec.Command("netsh", "interface", netType, "set", "dnsservers", iName, "static", oldDns[0]).Output()
+				exec.Command("netsh", "interface", netType, "set", "dnsservers", iName, "static", v).Output()
 			}else {
 				exec.Command("netsh", "interface", netType, "add", "dnsservers", iName, v).Output()
 			}
+			i++;
 		}
 	}
 }
@@ -312,6 +318,18 @@ type NetworkAdapter struct {
 	SettingID string
 }
 
+func GetWaterConf(tunAddr string,tunMask string)water.Config{
+	masks:=net.ParseIP(tunMask).To4();
+	maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}
+	return  water.Config{
+		DeviceType: water.TUN,
+		PlatformSpecificParams: water.PlatformSpecificParams{
+			ComponentID:   "tap0901",
+			//	InterfaceName: "Ethernet 3",
+			Network:       maskAddr.String(),
+		},
+	}
+}
 
 func GetNetworkAdapter() ([]NetworkAdapter,error){
 	var s = []NetworkAdapter{}
@@ -358,7 +376,8 @@ func AddRoute(tunAddr string, tunGw string, tunMask string) error {
 
 	//clear old
 	exec.Command("route", "delete",strings.Join(netNat,".")).Output()
-	cmd:=exec.Command("netsh", "interface","ipv4","add","route",strings.Join(netNat,".")+"/"+maskAddrs[1],iName,tunGw,"metric=6")
+	cmd:=exec.Command("netsh", "interface","ipv4","add","route",strings.Join(netNat,".")+"/"+maskAddrs[1],iName,tunGw,"metric=6","store=active")
+	fmt.Printf("cmd:%s\r\n",cmd.Args)
 	cmd.Run();
 
 
