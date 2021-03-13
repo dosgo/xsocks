@@ -29,6 +29,7 @@ var UdpGatePort string
 var Sock5Port string
 var QuicPort string
 var WebPort string
+var Http2Port string
 var SudpPort string;
 var KcpPort string;
 var Password string

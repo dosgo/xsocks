@@ -3,12 +3,21 @@ package server
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/binary"
+	"encoding/pem"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/yamux"
+	"github.com/xtaci/smux"
 	"io"
 	"log"
+	"math/big"
 	"net"
+	"os"
 	"sync"
 	"time"
 	"xSocks/comm"
@@ -270,6 +279,128 @@ func GetPublicIP() (ip string, err error) {
 	err = errors.New("no public ip")
 	return
 }
+
+/* to socks5 server*/
+func streamToSocks5Yamux(conn io.ReadWriteCloser) {
+	conf:=yamux.DefaultConfig();
+	conf.AcceptBacklog=1024;
+	conf.KeepAliveInterval=52* time.Second;
+	conf.MaxStreamWindowSize=1024*1024;
+	conf.ConnectionWriteTimeout=20* time.Second;
+	// Setup server side of yamux
+	session, err := yamux.Server(conn, conf)
+	if err != nil {
+		log.Printf("err:%v\r\n",err);
+		return;
+	}
+	defer  session.Close();
+	for {
+		// Accept a stream
+		stream, err := session.Accept()
+		if err != nil {
+			log.Printf("err:%v\r\n",err);
+			return ;
+		}
+		go proxy(stream)
+	}
+}
+
+/* to socks5 server*/
+func streamToSocks5Smux(conn io.ReadWriteCloser) {
+	conf:=smux.DefaultConfig();
+	conf.KeepAliveInterval=59* time.Second;
+	conf.KeepAliveTimeout=60 * time.Second;
+	// Setup server side of yamux
+	session, err := smux.Server(conn, conf)
+	if err != nil {
+		log.Printf("err:%v\r\n",err);
+		return;
+	}
+	defer  session.Close();
+	for {
+		// Accept a stream
+		stream, err := session.AcceptStream()
+		if err != nil {
+			log.Printf("err:%v\r\n",err);
+			return ;
+		}
+		go proxy(stream)
+	}
+}
+
+
+
+
+/*生成证书,
+ */
+func genCERT(organization string,host string,ip string) {
+	ca := &x509.Certificate{
+		SerialNumber: big.NewInt(1653),
+		Subject: pkix.Name{
+			Organization: []string{organization},
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().AddDate(10, 0, 0),
+		SubjectKeyId:          []byte{1, 2, 3, 4, 5},
+		BasicConstraintsValid: true,
+		IsCA:        true,
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+	}
+	privCa, _ := rsa.GenerateKey(rand.Reader, 1024)
+	CreateCertificateFile(host+"_ca", ca, privCa, ca, nil)
+	server := &x509.Certificate{
+		SerialNumber: big.NewInt(1658),
+		Subject: pkix.Name{
+			Organization: []string{organization},
+		},
+		NotBefore:    time.Now(),
+		NotAfter:     time.Now().AddDate(10, 0, 0),
+		SubjectKeyId: []byte{1, 2, 3, 4, 6},
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+	}
+	hosts := []string{host, ip}
+	for _, h := range hosts {
+		if ip := net.ParseIP(h); ip != nil {
+			server.IPAddresses = append(server.IPAddresses, ip)
+		} else {
+			server.DNSNames = append(server.DNSNames, h)
+		}
+	}
+	privSer, _ := rsa.GenerateKey(rand.Reader, 1024)
+	CreateCertificateFile(host+"_server", server, privSer, ca, privCa)
+}
+
+func CreateCertificateFile(name string, cert *x509.Certificate, key *rsa.PrivateKey, caCert *x509.Certificate, caKey *rsa.PrivateKey) {
+	priv := key
+	pub := &priv.PublicKey
+	privPm := priv
+	if caKey != nil {
+		privPm = caKey
+	}
+	ca_b, err := x509.CreateCertificate(rand.Reader, cert, caCert, pub, privPm)
+	if err != nil {
+		log.Println("create failed", err)
+		return
+	}
+	ca_f := name + ".pem"
+	var certificate = &pem.Block{Type: "CERTIFICATE",
+		Headers: map[string]string{},
+		Bytes:   ca_b}
+	ca_b64 := pem.EncodeToMemory(certificate)
+	os.WriteFile(ca_f, ca_b64, 0777)
+
+	priv_f := name + ".key"
+	priv_b := x509.MarshalPKCS1PrivateKey(priv)
+	os.WriteFile(priv_f, priv_b, 0777)
+	var privateKey = &pem.Block{Type: "PRIVATE KEY",
+		Headers: map[string]string{},
+		Bytes:   priv_b}
+	priv_b64 := pem.EncodeToMemory(privateKey)
+	os.WriteFile(priv_f, priv_b64, 0777)
+}
+
 
 
 

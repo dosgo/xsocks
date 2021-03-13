@@ -23,9 +23,10 @@ func main() {
 
 	flag.StringVar(&param.Sock5Port, "sock5Port", "", "local socks5 port")
 	flag.StringVar(&param.QuicPort, "quicPort", "5002", "quic port")
-	flag.StringVar(&param.WebPort, "webPort", "5003", "quic port")
+	flag.StringVar(&param.WebPort, "webPort", "5003", "websocket port")
 	flag.StringVar(&param.KcpPort, "kcpPort", "5005", "kcp port")
 	flag.StringVar(&param.SudpPort, "sudpPort", "5006", "sudp port")
+	flag.StringVar(&param.Http2Port, "http2Port", "5007", "http2 port")
 	flag.StringVar(&param.Password, "password", "password", "password")
 	flag.StringVar(&param.KeyFile, "keyFile", "", "keyFile")
 	flag.StringVar(&param.CertFile, "certFile", "", "certFile")
@@ -57,9 +58,9 @@ func main() {
 	if publicIp!="0.0.0.0"&&comm.IsPublicIP(net.ParseIP(publicIp))&&!comm.IsChinaMainlandIP(publicIp) {
 		param.SafeDns="8.8.4.4"
 	}
-	if(runtime.GOOS=="linux"){
+	if runtime.GOOS=="linux" {
 		config, err := dns.ClientConfigFromFile("/etc/resolv.conf")
-		if(err==nil&&len(config.Servers)>0&&config.Servers[0]!="") {
+		if err==nil&&len(config.Servers)>0&&config.Servers[0]!="" {
 			param.SafeDns = config.Servers[0]
 		}
 	}
@@ -75,6 +76,7 @@ func main() {
 	go server.StartWebSocket(publicIp+":"+param.WebPort);
 	go server.StartKcp(publicIp+":"+param.KcpPort);
 	go server.StartSudp(publicIp+":"+param.SudpPort)
+	go server.StartHttp2(publicIp+":"+param.Http2Port)
 	server.StartQuic(publicIp+":"+param.QuicPort);
 }
 

@@ -28,6 +28,9 @@ func  NewTunnel () (comm.CommConn,error){
 	if strings.HasPrefix(param.ServerAddr,"wss") {
 		stream, err = NewWsYamuxDialer().Dial(param.ServerAddr)
 	}
+	if strings.HasPrefix(param.ServerAddr,"http2") {
+		stream, err = NewHttp2YamuxDialer().Dial("https"+param.ServerAddr[5:])
+	}
 	if strings.HasPrefix(param.ServerAddr,"quic") {
 		stream, err = NewQuicDialer().Dial(param.ServerAddr[7:])
 	}
