@@ -37,6 +37,7 @@ func StartHttp2(addr string) error {
 
 
 func http2Handler(w http.ResponseWriter, r *http.Request) {
+	//http2.0 check
 	if r.ProtoMajor != 2 {
 		log.Println("Not a HTTP/2 request, rejected!")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -54,7 +55,6 @@ func http2Handler(w http.ResponseWriter, r *http.Request) {
 	// First flash response headers
 	if f, ok := w.(http.Flusher); ok {
 		f.Flush()
-		streamToSocks5Yamux(comm.HttpConn{w,f,r.Body});
-		f.Flush()
+		proxy(comm.HttpConn{w, f, r.Body})
 	}
 }
