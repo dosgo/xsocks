@@ -26,7 +26,6 @@ func main() {
 	flag.StringVar(&param.WebPort, "webPort", "5003", "websocket port")
 	flag.StringVar(&param.KcpPort, "kcpPort", "5005", "kcp port")
 	flag.StringVar(&param.SudpPort, "sudpPort", "5006", "sudp port")
-	flag.StringVar(&param.Http2Port, "http2Port", "5007", "http2 port")
 	flag.StringVar(&param.Password, "password", "password", "password")
 	flag.StringVar(&param.KeyFile, "keyFile", "", "keyFile")
 	flag.StringVar(&param.CertFile, "certFile", "", "certFile")
@@ -68,16 +67,15 @@ func main() {
 
 	fmt.Println("client run: ./client   -serverAddr \"quic://"+publicIp+":"+param.QuicPort+"\"")
 	fmt.Println("client run: ./client   -serverAddr \"wss://"+publicIp+":"+param.WebPort+"\" -caFile xx_ca.pem")
-	fmt.Println("client run: ./client   -serverAddr \"http2://"+publicIp+":"+param.Http2Port+"\" -caFile xx_ca.pem")
+	fmt.Println("client run: ./client   -serverAddr \"http2://"+publicIp+":"+param.WebPort+"\" -caFile xx_ca.pem")
 	fmt.Println("client run: ./client   -serverAddr \"kcp://"+publicIp+":"+param.KcpPort+"\"")
 	fmt.Println("client run: ./client   -tunType 2   -serverAddr \"sudp://"+publicIp+":"+param.SudpPort+"\"")
 
 
 	go server.StartRemoteSocks51("127.0.0.1:"+param.Sock5Port);
-	go server.StartWebSocket(publicIp+":"+param.WebPort);
+	go server.StartWeb(publicIp+":"+param.WebPort);
 	go server.StartKcp(publicIp+":"+param.KcpPort);
 	go server.StartSudp(publicIp+":"+param.SudpPort)
-	go server.StartHttp2(publicIp+":"+param.Http2Port)
 	server.StartQuic(publicIp+":"+param.QuicPort);
 }
 
