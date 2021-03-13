@@ -68,6 +68,7 @@ func main() {
 
 	fmt.Println("client run: ./client   -serverAddr \"quic://"+publicIp+":"+param.QuicPort+"\"")
 	fmt.Println("client run: ./client   -serverAddr \"wss://"+publicIp+":"+param.WebPort+"\" -caFile xx_ca.pem")
+	fmt.Println("client run: ./client   -serverAddr \"http2://"+publicIp+":"+param.Http2Port+"\" -caFile xx_ca.pem")
 	fmt.Println("client run: ./client   -serverAddr \"kcp://"+publicIp+":"+param.KcpPort+"\"")
 	fmt.Println("client run: ./client   -tunType 2   -serverAddr \"sudp://"+publicIp+":"+param.SudpPort+"\"")
 
