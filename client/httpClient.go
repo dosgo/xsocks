@@ -1,7 +1,6 @@
 package client
 
 import (
-	"golang.org/x/net/http2"
 	"io"
 	"net/http"
 	"sync"
@@ -9,42 +8,48 @@ import (
 	"xSocks/comm"
 	"xSocks/param"
 )
-/*http2*/
 
+/*
+http1.1
+*/
 
-type http2Conn struct {
+type httpConn struct {
 	sync.Mutex
 	client *http.Client;
 }
 
-var http2Dialer *http2Conn
+var httpDialer *httpConn
 func init(){
 
-	http2Dialer=&http2Conn{}
+	httpDialer=&httpConn{}
 }
 
 
-func NewHttp2Dialer()  *http2Conn{
-	http2Dialer.client=newHttp2Client()
-	return http2Dialer;
+func NewHttpDialer()  *httpConn{
+	httpDialer.client=newHttpClient()
+	return httpDialer;
 }
 
-func newHttp2Client() *http.Client{
+func newHttpClient() *http.Client{
 	tslClientConf:=httpcomm.GetTlsConf();
-	t := &http2.Transport{TLSClientConfig: tslClientConf}
+	t := &http.Transport{TLSClientConfig: tslClientConf}
 	return  &http.Client{Transport: t}
 }
 
-func (qd *http2Conn) Dial(url string) (comm.CommConn, error) {
+func (qd *httpConn) Dial(url string) (comm.CommConn, error) {
 	qd.Lock()
 	defer qd.Unlock()
+
+
+
 	reader, writer := io.Pipe()
 	// Create a request object to send to the server
-	req, err := http.NewRequest(http.MethodPost, url, reader)
+	req, err := http.NewRequest(http.MethodConnect, url, reader)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Add("token",param.Password)
+
 
 	// Perform the request
 	resp, err := qd.client.Do(req)

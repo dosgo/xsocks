@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"golang.org/x/net/websocket"
 	"net/http"
 	"os"
@@ -47,16 +48,32 @@ func webHandler(w http.ResponseWriter, req *http.Request){
 	}
 	//http2
 	if req.ProtoMajor == 2 {
-		w.WriteHeader(200)
+		w.WriteHeader(http.StatusOK)
 		// First flash response headers
 		if f, ok := w.(http.Flusher); ok {
 			f.Flush()
 			proxy(comm.HttpConn{w, f, req.Body})
 		}
 	}else {
-		//web socket
-		websocket := websocket.Handler(wsToStream);
-		websocket.ServeHTTP(w, req);
+		//http 1.1 connect　proxy
+		if req.Method==http.MethodConnect {
+			fmt.Printf("MethodConnect\r\n")
+			w.WriteHeader(http.StatusOK)
+			hijacker, ok := w.(http.Hijacker)
+			if ok {
+				fmt.Printf("MethodConnect2\r\n")
+				//接管连接
+				client_conn, _, err := hijacker.Hijack()
+				if err==nil {
+					fmt.Printf("MethodConnect3\r\n")
+					proxy(client_conn)
+				}
+			}
+		}else {
+			//web socket
+			websocket := websocket.Handler(wsToStream);
+			websocket.ServeHTTP(w, req);
+		}
 	}
 }
 
