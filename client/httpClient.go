@@ -1,8 +1,9 @@
 package client
 
 import (
-	"io"
+	"crypto/tls"
 	"net/http"
+	"net/url"
 	"sync"
 	"xSocks/client/httpcomm"
 	"xSocks/comm"
@@ -36,26 +37,28 @@ func newHttpClient() *http.Client{
 	return  &http.Client{Transport: t}
 }
 
-func (qd *httpConn) Dial(url string) (comm.CommConn, error) {
+func (qd *httpConn) Dial(_url string) (comm.CommConn, error) {
 	qd.Lock()
 	defer qd.Unlock()
+	tslClientConf:=httpcomm.GetTlsConf();
+	urlInfo, err := url.Parse(_url)
+	conn, err := tls.Dial("tcp", urlInfo.Host, tslClientConf)
 
-
-
-	reader, writer := io.Pipe()
-	// Create a request object to send to the server
-	req, err := http.NewRequest(http.MethodConnect, url, reader)
-	if err != nil {
-		return nil, err
+	if err!=nil {
+		return nil,err;
 	}
-	req.Header.Add("token",param.Password)
 
 
-	// Perform the request
-	resp, err := qd.client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	return  comm.HttpConn{writer,nil,resp.Body},nil;
+	header  := "CONNECT /"+urlInfo.Host+" HTTP/1.1\r\n";
+	header += "Host:"+urlInfo.Host+"\r\n";
+	header += "Proxy-Connection: Keep-Alive\r\n";
+	header += "token: "+param.Password+"\r\n";
+	header += "Content-Length: 0\r\n\r\n";
+
+	conn.Write([]byte(header))
+
+	buf:=make([]byte,1024);
+	conn.Read(buf)
+	return  conn,nil;
 }
 

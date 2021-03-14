@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"golang.org/x/net/websocket"
 	"net/http"
 	"os"
@@ -57,15 +56,12 @@ func webHandler(w http.ResponseWriter, req *http.Request){
 	}else {
 		//http 1.1 connect　proxy
 		if req.Method==http.MethodConnect {
-			fmt.Printf("MethodConnect\r\n")
 			w.WriteHeader(http.StatusOK)
 			hijacker, ok := w.(http.Hijacker)
 			if ok {
-				fmt.Printf("MethodConnect2\r\n")
 				//接管连接
 				client_conn, _, err := hijacker.Hijack()
 				if err==nil {
-					fmt.Printf("MethodConnect3\r\n")
 					proxy(client_conn)
 				}
 			}
