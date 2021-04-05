@@ -29,7 +29,7 @@ func (qd *YamuxComm) Dial(url string) (comm.CommConn, error) {
 	if qd.sess==nil {
 		qd.sess=make([]*yamux.Session,0)
 	}
-	if param.MuxNum==0 {
+	if param.Args.MuxNum==0 {
 		wsConn,err:=qd.dialFc(url)
 		if err!=nil {
 			log.Printf("err:%v\r\n",err);
@@ -42,7 +42,7 @@ func (qd *YamuxComm) Dial(url string) (comm.CommConn, error) {
 		}
 		return session.Open()
 	}else{
-		if len(qd.sess) < param.MuxNum {
+		if len(qd.sess) < param.Args.MuxNum {
 			wsConn,err:=qd.dialFc(url)
 			if err!=nil {
 				log.Printf("err:%v\r\n",err);

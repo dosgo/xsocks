@@ -52,7 +52,7 @@ func (qd *httpConn) Dial(_url string) (comm.CommConn, error) {
 	header  := "CONNECT /"+urlInfo.Host+" HTTP/1.1\r\n";
 	header += "Host:"+urlInfo.Host+"\r\n";
 	header += "Proxy-Connection: Keep-Alive\r\n";
-	header += "token: "+param.Password+"\r\n";
+	header += "token: "+param.Args.Password+"\r\n";
 	header += "Content-Length: 0\r\n\r\n";
 
 	conn.Write([]byte(header))

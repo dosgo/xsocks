@@ -59,7 +59,7 @@ func (qd *QuicDialer) Connect(quicAddr string) error{
 
 	tlsConf := &tls.Config{
 		InsecureSkipVerify: true,
-		NextProtos:   []string{param.Password,"quic-echo-example"},
+		NextProtos:   []string{param.Args.Password,"quic-echo-example"},
 	}
 	udpAddr, err := net.ResolveUDPAddr("udp", quicAddr)
 	if err != nil {

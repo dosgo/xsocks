@@ -88,6 +88,6 @@ func generateTLSConfig() *tls.Config {
 	}
 	return &tls.Config{
 		Certificates: []tls.Certificate{tlsCert},
-		NextProtos:   []string{param.Password,"quic-echo-example"},
+		NextProtos:   []string{param.Args.Password,"quic-echo-example"},
 	}
 }

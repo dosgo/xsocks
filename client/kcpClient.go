@@ -27,8 +27,8 @@ func NewKcpDialer() *muxComm.SmuxComm {
 }
 
 func connectKcp(url string)(io.ReadWriteCloser, error){
-	salt:=md5.Sum([]byte(param.Password))
-	key := pbkdf2.Key([]byte(param.Password), salt[:], 1024, 32, sha1.New)
+	salt:=md5.Sum([]byte(param.Args.Password))
+	key := pbkdf2.Key([]byte(param.Args.Password), salt[:], 1024, 32, sha1.New)
 	block, _ := kcp.NewAESBlockCrypt(key)
 	// dial to the echo server
 	return kcp.DialWithOptions(url, block, 10, 3);

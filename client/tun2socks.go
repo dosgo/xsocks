@@ -44,16 +44,16 @@ func StartTunDevice(tunDevice string,tunAddr string,tunMask string,tunGW string,
 	dnsServers := strings.Split(tunDNS, ",")
 	var dev io.ReadWriteCloser;
 	var remoteAddr string;
-	if len(param.UnixSockTun)>0 {
-		os.Remove(param.UnixSockTun)
-		addr, err := net.ResolveUnixAddr("unixpacket", param.UnixSockTun)
+	if len(param.Args.UnixSockTun)>0 {
+		os.Remove(param.Args.UnixSockTun)
+		addr, err := net.ResolveUnixAddr("unixpacket", param.Args.UnixSockTun)
 		if err != nil {
 			return ;
 		}
 		lis, err := net.ListenUnix("unixpacket", addr)
 		if err != nil {                      //如果监听失败，一般是文件已存在，需要删除它
 			log.Println("UNIX Domain Socket 创 建失败，正在尝试重新创建 -> ", err)
-			os.Remove(param.UnixSockTun)
+			os.Remove(param.Args.UnixSockTun)
 			return ;
 		}
 		defer lis.Close() //虽然本次操作不会执行， 不过还是加上比较好
@@ -65,7 +65,7 @@ func StartTunDevice(tunDevice string,tunAddr string,tunMask string,tunGW string,
 		defer conn.Close()
 	}else{
 		if runtime.GOOS=="windows" {
-			urlInfo, _ := url.Parse(param.ServerAddr)
+			urlInfo, _ := url.Parse(param.Args.ServerAddr)
 			addr, err := net.ResolveIPAddr("ip",urlInfo.Hostname())
 			if err == nil {
 				remoteAddr = addr.String()
@@ -108,7 +108,7 @@ func StartTunDevice(tunDevice string,tunAddr string,tunMask string,tunGW string,
 		}
 		routeEdit(tunGW,remoteAddr,dnsServers,oldGw);
 	}
-	tun2socks.ForwardTransportFromIo(dev,param.Mtu,rawTcpForwarder,rawUdpForwarder);
+	tun2socks.ForwardTransportFromIo(dev,param.Args.Mtu,rawTcpForwarder,rawUdpForwarder);
 }
 
 
@@ -119,7 +119,7 @@ func rawTcpForwarder(conn *gonet.TCPConn)error{
 		dnsReqTcp(conn);
 		return  nil;
 	}
-	socksConn,err1:= net.DialTimeout("tcp",param.Sock5Addr,time.Second*15)
+	socksConn,err1:= net.DialTimeout("tcp",param.Args.Sock5Addr,time.Second*15)
 	if err1 != nil {
 		log.Printf("err:%v",err1)
 		return nil
@@ -144,7 +144,7 @@ func rawUdpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)error{
 	return nil;
 }
 func dnsReqUdp(conn *gonet.UDPConn) error{
-	dnsConn, err := net.DialTimeout("udp", "127.0.0.1:"+param.DnsPort,time.Second*15);
+	dnsConn, err := net.DialTimeout("udp", "127.0.0.1:"+param.Args.DnsPort,time.Second*15);
 	if err != nil {
 		fmt.Println(err.Error())
 		return err;
@@ -154,7 +154,7 @@ func dnsReqUdp(conn *gonet.UDPConn) error{
 }
 /*to dns*/
 func dnsReqTcp(conn *gonet.TCPConn) error{
-	dnsConn, err := net.DialTimeout("tcp", "127.0.0.1:"+param.DnsPort,time.Second*15);
+	dnsConn, err := net.DialTimeout("tcp", "127.0.0.1:"+param.Args.DnsPort,time.Second*15);
 	if err != nil {
 		fmt.Println(err.Error())
 		return err;

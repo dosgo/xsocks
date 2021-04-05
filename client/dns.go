@@ -21,7 +21,7 @@ var localdns=LocalDns{}
 func StartDns() error {
 	udpServer := &dns.Server{
 		Net:          "udp",
-		Addr:         ":"+param.DnsPort,
+		Addr:         ":"+param.Args.DnsPort,
 		Handler:      dns.HandlerFunc(localdns.ServeDNS),
 		UDPSize:      4096,
 		ReadTimeout:  time.Duration(10) * time.Second,
@@ -29,7 +29,7 @@ func StartDns() error {
 	}
 	tcpServer:= &dns.Server{
 		Net:          "tcp",
-		Addr:         ":"+param.DnsPort,
+		Addr:         ":"+param.Args.DnsPort,
 		Handler:      dns.HandlerFunc(localdns.ServeDNS),
 		UDPSize:      4096,
 		ReadTimeout:  time.Duration(10) * time.Second,
@@ -80,7 +80,7 @@ func (localdns *LocalDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	domain := r.Question[0].Name
 	var ip string;
 	var err error;
-	if param.LocalDns==1 {
+	if param.Args.LocalDns==1 {
 		m1,_,err := localdns.dnsClient.Exchange(r,"114.114.114.114:53")
 		if err == nil {
 			for _, v := range m1.Answer {

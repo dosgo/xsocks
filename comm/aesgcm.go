@@ -15,7 +15,7 @@ type AesGcm struct {
 
 func NewAesGcm() (*AesGcm){
 	//key
-	key:=fmt.Sprintf("%x",md5.Sum([]byte(param.Password)))
+	key:=fmt.Sprintf("%x",md5.Sum([]byte(param.Args.Password)))
 	block, err := aes.NewCipher([]byte(key))
 	if err != nil {
 		return nil;

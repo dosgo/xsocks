@@ -7,6 +7,7 @@ import (
 	"github.com/songgao/water"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"xSocks/comm/udpHeader"
+	"xSocks/param"
 
 	//"github.com/google/netstack/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -15,21 +16,19 @@ import (
 	//"github.com/google/netstack/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
-	//"github.com/google/netstack/tcpip/header"
-	"os/exec"
 	"io"
 	"log"
 	"net"
 	"net/url"
 	"os"
+	//"github.com/google/netstack/tcpip/header"
+	"os/exec"
 	"runtime"
 	"strings"
 	"sync"
 	"time"
 	"xSocks/comm"
-	"xSocks/param"
 )
-
 
 
 func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS string) error {
@@ -51,9 +50,9 @@ func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS
 	//
 	var oldGw=comm.GetGateway();
 
-	if len(param.UnixSockTun)>0 {
-		os.Remove(param.UnixSockTun)
-		addr, err := net.ResolveUnixAddr("unixpacket", param.UnixSockTun)
+	if len(param.Args.UnixSockTun)>0 {
+		os.Remove(param.Args.UnixSockTun)
+		addr, err := net.ResolveUnixAddr("unixpacket", param.Args.UnixSockTun)
 		if err != nil {
 			return err;
 		}
@@ -65,15 +64,15 @@ func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS
 		defer lis.Close() //虽然本次操作不会执行， 不过还是加上比较好
 		conn, err := lis.Accept() //开始接 受数据
 		defer conn.Close()
-		defer os.Remove(param.UnixSockTun)
+		defer os.Remove(param.Args.UnixSockTun)
 		if err != nil {                      //如果监听失败，一般是文件已存在，需要删除它
 			return err;
 		}
-		tunRecv(conn, param.Mtu)
+		tunRecv(conn, param.Args.Mtu)
 	}else{
 		var remoteAddr string;
 		if runtime.GOOS=="windows" {
-			urlInfo, _ := url.Parse(param.ServerAddr)
+			urlInfo, _ := url.Parse(param.Args.ServerAddr)
 			addr, err := net.ResolveIPAddr("ip",urlInfo.Hostname())
 			if err == nil {
 				remoteAddr = addr.String()
@@ -116,13 +115,13 @@ func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS
 			}
 			routeEdit(tunGW,remoteAddr,dnsServers,oldGw);
 		}
-		tunRecv(ifce, param.Mtu)
+		tunRecv(ifce, param.Args.Mtu)
 	}
 	return nil;
 }
 
 func tunRecv(dev io.ReadWriteCloser ,mtu int) error{
-	if param.TunSmartProxy {
+	if param.Args.TunSmartProxy {
 		_,channelLinkID, err := comm.NewDefaultStack(mtu, tcpForward, udpForward);
 		if err != nil {
 			return err;
@@ -168,7 +167,7 @@ func tunRecv(dev io.ReadWriteCloser ,mtu int) error{
 			}
 		}
 	}else{
-		if strings.HasPrefix(param.ServerAddr,"sudp") {
+		if strings.HasPrefix(param.Args.ServerAddr,"sudp") {
 			packetSwapTun(dev, mtu);
 		}else {
 			StreamSwapTun(dev, mtu)
@@ -234,7 +233,7 @@ func  ConnectTun(uniqueId string,mtu int)(comm.CommConn,error){
 }
 
 func connectUdp()(*udpHeader.UdpConn,error){
-	udpAddr, err := net.ResolveUDPAddr("udp4", 	param.ServerAddr[7:])
+	udpAddr, err := net.ResolveUDPAddr("udp4", 	param.Args.ServerAddr[7:])
 	if err!=nil {
 		return nil,err;
 	}
@@ -394,7 +393,7 @@ func  StreamSwapTun(dev io.ReadWriteCloser,mtu int){
 func udpForward(conn *gonet.UDPConn, ep tcpip.Endpoint) error{
 	defer conn.Close();
 	defer ep.Close();
-	conn2, err := net.DialTimeout("udp",conn.LocalAddr().String(),param.ConnectTime);
+	conn2, err := net.DialTimeout("udp",conn.LocalAddr().String(),param.Args.ConnectTime);
 	if err != nil {
 		fmt.Println(err.Error())
 		return err;
@@ -406,7 +405,7 @@ func udpForward(conn *gonet.UDPConn, ep tcpip.Endpoint) error{
 
 /*udp 转发*/
 func tcpForward(conn *gonet.TCPConn) error{
-	conn2, err := net.DialTimeout("tcp", conn.LocalAddr().String(),param.ConnectTime);
+	conn2, err := net.DialTimeout("tcp", conn.LocalAddr().String(),param.Args.ConnectTime);
 	if err != nil {
 		fmt.Println(err.Error())
 		return err;

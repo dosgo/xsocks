@@ -9,18 +9,18 @@ import (
 	"fmt"
 )
 
-func Start(){
+func Start( ){
 	//随机端口
-	if param.DnsPort=="" {
-		param.DnsPort,_= comm.GetFreePort();
+	if param.Args.DnsPort=="" {
+		param.Args.DnsPort,_= comm.GetFreePort();
 	}
-	if param.Sock5UdpPort=="" {
-		param.Sock5UdpPort,_= comm.GetFreeUdpPort();
+	if param.Args.Sock5UdpPort=="" {
+		param.Args.Sock5UdpPort,_= comm.GetFreeUdpPort();
 	}
-	fmt.Printf("verison:%s\r\n",param.Version)
-	fmt.Printf("server addr:%s\r\n",param.ServerAddr)
-	fmt.Printf("socks5 addr :%s\r\n",param.Sock5Addr)
-	fmt.Printf("Sock5UdpPort:%s\r\n",param.Sock5UdpPort)
+	fmt.Printf("verison:%s\r\n",param.Args.Version)
+	fmt.Printf("server addr:%s\r\n",param.Args.ServerAddr)
+	fmt.Printf("socks5 addr :%s\r\n",param.Args.Sock5Addr)
+	fmt.Printf("Sock5UdpPort:%s\r\n",param.Args.Sock5UdpPort)
 
 	var tunAddr=""
 	var tunGw=""
@@ -29,18 +29,18 @@ func Start(){
 		tunAddr, tunGw = comm.GetUnusedTunAddr();
 	}
 	//1==tun2sock
-	if param.TunType==1 {
+	if param.Args.TunType==1 {
 		go StartTunDevice("",tunAddr,"",tunGw,"");
 	}
 	//2==tun2remote tun
-	if param.TunType==2 {
+	if param.Args.TunType==2 {
 		go StartTun("","","","","");
 	}
-	if param.TunType==3 {
+	if param.Args.TunType==3 {
 		go StartTunDns("",tunAddr,"",tunGw,"");
 	}
 	go StartDns();
-	go StartLocalSocks5(param.Sock5Addr);
+	go StartLocalSocks5(param.Args.Sock5Addr);
 }
 
 func init(){

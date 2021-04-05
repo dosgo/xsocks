@@ -24,7 +24,7 @@ func dialWs(url string)(io.ReadWriteCloser, error){
 		return nil,err;
 	}
 	config.TlsConfig=httpcomm.GetTlsConf();
-	config.Header.Add("token",param.Password)
+	config.Header.Add("token",param.Args.Password)
 	ws, err := websocket.DialConfig(config)
 	if err != nil {
 		return nil,err;

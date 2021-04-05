@@ -48,8 +48,8 @@ func udpForward(conn *gonet.UDPConn,ep tcpip.Endpoint) error{
 	var duration time.Duration=time.Second*100;
 	//dns 8.8.8.8
 	if strings.HasSuffix(conn.LocalAddr().String(),":53") {
-		fmt.Printf("udpForward dnsAddr:%s",conn.LocalAddr().String()+"localAddr:"+conn.RemoteAddr().String()+"SafeDns:"+param.SafeDns+"\r\n")
-		remoteAddr=param.SafeDns+":53"
+		fmt.Printf("udpForward dnsAddr:%s",conn.LocalAddr().String()+"localAddr:"+conn.RemoteAddr().String()+"SafeDns:"+param.Args.SafeDns+"\r\n")
+		remoteAddr=param.Args.SafeDns+":53"
 		duration=time.Second*15;
 	}else{
 		remoteAddr=conn.LocalAddr().String();
@@ -67,7 +67,7 @@ func udpForward(conn *gonet.UDPConn,ep tcpip.Endpoint) error{
 
 /*tcpForward*/
 func tcpForward(conn *gonet.TCPConn) error{
-	conn2, err := net.DialTimeout("tcp", conn.LocalAddr().String(),param.ConnectTime);
+	conn2, err := net.DialTimeout("tcp", conn.LocalAddr().String(),param.Args.ConnectTime);
 	if err != nil {
 		fmt.Println("tcpForward"+conn.LocalAddr().String()+ err.Error())
 		return err;

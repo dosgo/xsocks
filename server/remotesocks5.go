@@ -23,11 +23,11 @@ func StartRemoteSocks51(address string) {
 		log.Panic(err)
 	}
 	//start udp Gate
-	udpAddr,err:=startUdpGate("127.0.0.1:"+param.UdpGatePort);
+	udpAddr,err:=startUdpGate("127.0.0.1:"+param.Args.UdpGatePort);
 	if err != nil {
 		log.Panic(err)
 	}
-	param.UdpGatePort=fmt.Sprintf("%d",udpAddr.Port);
+	param.Args.UdpGatePort=fmt.Sprintf("%d",udpAddr.Port);
 	for {
 		client, err := l.Accept()
 		if err != nil {
@@ -164,7 +164,7 @@ func handleRemoteRequest(clientConn net.Conn,udpAddr *net.UDPAddr) {
 			portBuf := make([]byte, 2)
 			_, err = io.ReadFull(clientConn, portBuf)
 			port = strconv.Itoa(int(portBuf[0])<<8 | int(portBuf[1]))
-			server, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), param.ConnectTime)
+			server, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), param.Args.ConnectTime)
 			if err != nil {
 				log.Println(err)
 				return

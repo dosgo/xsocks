@@ -110,7 +110,7 @@ func SocksCmd(socksConn net.Conn,cmd uint8,host string) error{
 
 /*socks5  udp gate 这里必须保持socks5兼容 */
 func SocksUdpGate(conn *gonet.UDPConn,dstAddr *net.UDPAddr) error{
-	gateConn, err := net.DialTimeout("udp", "127.0.0.1:"+param.Sock5UdpPort,time.Second*15);
+	gateConn, err := net.DialTimeout("udp", "127.0.0.1:"+param.Args.Sock5UdpPort,time.Second*15);
 	if err != nil {
 		fmt.Println(err.Error())
 		return err;

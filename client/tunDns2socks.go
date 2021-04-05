@@ -45,7 +45,7 @@ func StartTunDns(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,
 		oldDns[0]="114.114.114.114"
 	}
 	fmt.Printf("oldDns:%v\r\n",oldDns)
-	urlInfo, _ := url.Parse(param.ServerAddr)
+	urlInfo, _ := url.Parse(param.Args.ServerAddr)
 	tunDns.serverHost=urlInfo.Hostname()
 	_startSmartDns("53",oldDns[0])
 	go comm.WatchNotifyIpChange();
@@ -74,16 +74,16 @@ func _startTun(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tu
 
 	//dnsServers := strings.Split(tunDNS, ",")
 	var dev io.ReadWriteCloser;
-	if len(param.UnixSockTun)>0 {
-		os.Remove(param.UnixSockTun)
-		addr, err := net.ResolveUnixAddr("unixpacket", param.UnixSockTun)
+	if len(param.Args.UnixSockTun)>0 {
+		os.Remove(param.Args.UnixSockTun)
+		addr, err := net.ResolveUnixAddr("unixpacket", param.Args.UnixSockTun)
 		if err != nil {
 			return ;
 		}
 		lis, err := net.ListenUnix("unixpacket", addr)
 		if err != nil {                      //如果监听失败，一般是文件已存在，需要删除它
 			log.Println("UNIX Domain Socket 创 建失败，正在尝试重新创建 -> ", err)
-			os.Remove(param.UnixSockTun)
+			os.Remove(param.Args.UnixSockTun)
 			return ;
 		}
 		defer lis.Close() //虽然本次操作不会执行， 不过还是加上比较好
@@ -132,7 +132,7 @@ func _startTun(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tu
 		time.Sleep(time.Second*1)
 		comm.AddRoute(tunAddr, tunGW,tunMask)
 	}()
-	tun2socks.ForwardTransportFromIo(dev,param.Mtu,dnsTcpForwarder,dnsUdpForwarder);
+	tun2socks.ForwardTransportFromIo(dev,param.Args.Mtu,dnsTcpForwarder,dnsUdpForwarder);
 }
 
 
@@ -156,7 +156,7 @@ func dnsTcpForwarder(conn *gonet.TCPConn)error{
 		return nil;
 	}
 	log.Printf("remoteAddr:%v\r\n",remoteAddr)
-	socksConn,err1:= net.DialTimeout("tcp",param.Sock5Addr,time.Second*15)
+	socksConn,err1:= net.DialTimeout("tcp",param.Args.Sock5Addr,time.Second*15)
 	if err1 != nil {
 		log.Printf("err:%v",err1)
 		return nil
@@ -287,7 +287,7 @@ func ipv4Res(domain string,_ip  net.IP,r *dns.Msg) []dns.RR {
 	}else {
 		if _ip==nil && r!=nil  {
 			//为空的话智能dns的话先解析一遍
-			if param.SmartDns==1  {
+			if param.Args.SmartDns==1  {
 				m1,_,err := localdns.dnsClient.Exchange(r,tunDns.oldDns+":53")
 				if err == nil {
 					for _, v := range m1.Answer {

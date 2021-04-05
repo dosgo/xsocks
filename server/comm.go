@@ -46,7 +46,7 @@ func proxy(conn comm.CommConn){
 		return
 	}
 	//autherr;
-	if string(authHead)!= comm.GenPasswordHead(param.Password) {
+	if string(authHead)!= comm.GenPasswordHead(param.Args.Password) {
 		fmt.Printf("password err\r\n");
 		return ;
 	}
@@ -65,9 +65,9 @@ func proxy(conn comm.CommConn){
 		//to socks5
 		case 0x02:
 			//连接socks5
-			sConn, err := net.DialTimeout("tcp", "127.0.0.1:"+param.Sock5Port,param.ConnectTime)
+			sConn, err := net.DialTimeout("tcp", "127.0.0.1:"+param.Args.Sock5Port,param.Args.ConnectTime)
 			if(err!=nil){
-				log.Printf("err:%v\r\n",param.Sock5Port)
+				log.Printf("err:%v\r\n",param.Args.Sock5Port)
 				return ;
 			}
 			defer sConn.Close();
@@ -89,7 +89,7 @@ func proxy(conn comm.CommConn){
 func tcpToUdpProxy(conn comm.CommConn){
 	var packLenByte []byte = make([]byte, 2)
 	var bufByte []byte = make([]byte,65535)
-	remoteConn, err := net.DialTimeout("udp", "127.0.0.1:"+param.UdpGatePort,time.Second*15);
+	remoteConn, err := net.DialTimeout("udp", "127.0.0.1:"+param.Args.UdpGatePort,time.Second*15);
 	if err!=nil {
 		log.Printf("err:%v\r\n",err);
 		return

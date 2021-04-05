@@ -2,37 +2,55 @@ package param
 
 import "time"
 
-//common
-var Version ="1.4.7-(20210405)"
+var version ="1.4.8-(20210405)"
+
+var Args *ArgsParam;
+
+func init(){
+	Args=&ArgsParam{};
+	Args.ConnectTime=time.Second*10;
+	Args.Version=version;
+	Args.SafeDns="114.114.114.114";
+}
+
+type ArgsParam struct {
+	CommParam
+	ClientParam
+	ServerParam
+}
 
 
-//client
-var Sock5Addr string
-var ServerAddr string
-var CaFile string;
-var SkipVerify bool;
-var TunType int;
-var UnixSockTun string;
-var DnsPort string;
-var MuxNum int;
-var LocalDns int;  //use local dns
-var SmartDns int;  //use Smart dns
-var TunSmartProxy bool;
-var Sock5UdpPort string
+type CommParam struct {
+	Version string;
+	Mtu int;
+	Password string
+	ConnectTime  time.Duration//=10*time.Second;
+	UdpGatePort string
+}
 
-//comm
-var Mtu int;
-var ConnectTime =10*time.Second;
-var UdpGatePort string
+type ClientParam struct{
+	 Sock5Addr string
+	 ServerAddr string
+	 CaFile string;
+	 SkipVerify bool;
+	 TunType int;
+	 UnixSockTun string;
+	 DnsPort string;
+	 MuxNum int;
+	 LocalDns int;  //use local dns
+	 SmartDns int;  //use Smart dns
+	 TunSmartProxy bool;
+	 Sock5UdpPort string
+}
 
-//server
-var Sock5Port string
-var QuicPort string
-var WebPort string
-var SudpPort string;
-var KcpPort string;
-var Password string
-var CertFile string;
-var KeyFile string;
-var LocalTunSock string;
-var SafeDns string="114.114.114.114";
+type ServerParam struct {
+	 Sock5Port string
+	 QuicPort string
+	 WebPort string
+	 SudpPort string;
+	 KcpPort string;
+	 CertFile string;
+	 KeyFile string;
+	 LocalTunSock string;
+	 SafeDns string;
+}

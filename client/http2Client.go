@@ -44,7 +44,7 @@ func (qd *http2Conn) Dial(url string) (comm.CommConn, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add("token",param.Password)
+	req.Header.Add("token",param.Args.Password)
 
 	// Perform the request
 	resp, err := qd.client.Do(req)

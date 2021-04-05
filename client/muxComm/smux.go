@@ -32,7 +32,7 @@ func (qd *SmuxComm) Dial(url string) (comm.CommConn, error) {
 	conf.KeepAliveInterval=59* time.Second;
 	conf.KeepAliveTimeout=60*time.Second;
 
-	if param.MuxNum==0 {
+	if param.Args.MuxNum==0 {
 		wsConn,err:=qd.dialFc(url);
 		if err!=nil {
 			return nil,err;
@@ -46,7 +46,7 @@ func (qd *SmuxComm) Dial(url string) (comm.CommConn, error) {
 
 
 
-	if len(qd.sess) < param.MuxNum {
+	if len(qd.sess) < param.Args.MuxNum {
 		wsConn,err:=qd.dialFc(url);
 		if err!=nil {
 			return nil,err;

@@ -14,6 +14,7 @@ import (
 	"xSocks/param"
 )
 
+
 var poolDnsBuf = &sync.Pool{
 	New: func() interface{} {
 		log.Println("new 1")
@@ -25,16 +26,16 @@ func  NewTunnel () (comm.CommConn,error){
 	var err error;
 	//解析
 	var stream comm.CommConn;
-	if strings.HasPrefix(param.ServerAddr,"wss") {
-		stream, err = NewWsYamuxDialer().Dial(param.ServerAddr)
-	}else if strings.HasPrefix(param.ServerAddr,"http2") {
-		stream, err = NewHttp2Dialer().Dial("https"+param.ServerAddr[5:])
-	}else if strings.HasPrefix(param.ServerAddr,"http") {
-		stream, err = NewHttpDialer().Dial("https"+param.ServerAddr[4:])
-	}else if strings.HasPrefix(param.ServerAddr,"quic") {
-		stream, err = NewQuicDialer().Dial(param.ServerAddr[7:])
-	}else if strings.HasPrefix(param.ServerAddr,"kcp") {
-		stream, err = NewKcpDialer().Dial(param.ServerAddr[6:])
+	if strings.HasPrefix(param.Args.ServerAddr,"wss") {
+		stream, err = NewWsYamuxDialer().Dial(param.Args.ServerAddr)
+	}else if strings.HasPrefix(param.Args.ServerAddr,"http2") {
+		stream, err = NewHttp2Dialer().Dial("https"+param.Args.ServerAddr[5:])
+	}else if strings.HasPrefix(param.Args.ServerAddr,"http") {
+		stream, err = NewHttpDialer().Dial("https"+param.Args.ServerAddr[4:])
+	}else if strings.HasPrefix(param.Args.ServerAddr,"quic") {
+		stream, err = NewQuicDialer().Dial(param.Args.ServerAddr[7:])
+	}else if strings.HasPrefix(param.Args.ServerAddr,"kcp") {
+		stream, err = NewKcpDialer().Dial(param.Args.ServerAddr[6:])
 	}
 
 
@@ -45,7 +46,7 @@ func  NewTunnel () (comm.CommConn,error){
 		return nil,errors.New("stream null")
 	}
 	//write password
-	passwordBuf := comm.GenPasswordHead(param.Password);
+	passwordBuf := comm.GenPasswordHead(param.Args.Password);
 	_,err=stream.Write([]byte(passwordBuf))
 	if err != nil  {
 		return nil,err
@@ -55,13 +56,13 @@ func  NewTunnel () (comm.CommConn,error){
 
 
 func  ResetTunnel () {
-	if strings.HasPrefix(param.ServerAddr,"wss") {
+	if strings.HasPrefix(param.Args.ServerAddr,"wss") {
 
 	}
-	if strings.HasPrefix(param.ServerAddr,"quic") {
+	if strings.HasPrefix(param.Args.ServerAddr,"quic") {
 		ClearQuicDialer();
 	}
-	if strings.HasPrefix(param.ServerAddr,"kcp") {
+	if strings.HasPrefix(param.Args.ServerAddr,"kcp") {
 
 	}
 }

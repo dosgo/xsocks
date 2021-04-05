@@ -9,11 +9,11 @@ import (
 
 func GetTlsConf()*tls.Config{
 	tlsconf:=&tls.Config{InsecureSkipVerify:false,ClientSessionCache:  tls.NewLRUClientSessionCache(32)};
-	if param.CaFile!="" {
-		_, err := os.Stat(param.CaFile)
+	if param.Args.CaFile!="" {
+		_, err := os.Stat(param.Args.CaFile)
 		if err == nil {
 			pool := x509.NewCertPool()
-			caCrt, err := os.ReadFile(param.CaFile)
+			caCrt, err := os.ReadFile(param.Args.CaFile)
 			if err != nil {
 				return &tls.Config{};
 			}
@@ -22,7 +22,7 @@ func GetTlsConf()*tls.Config{
 			return tlsconf;
 		}
 	}
-	if param.SkipVerify {
+	if param.Args.SkipVerify {
 		tlsconf.InsecureSkipVerify=true;
 		return tlsconf;
 	}
