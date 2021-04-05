@@ -3,11 +3,11 @@ package main
 import (
 	"flag"
 	"os"
-	"xSocks/comm"
-	"xSocks/param"
-	"xSocks/server"
+	"github.com/dosgo/xSocks/comm"
+	"github.com/dosgo/xSocks/param"
+	"github.com/dosgo/xSocks/server"
 
-	//"xSocks/server"
+	//"github.com/dosgo/xSocks/server"
 )
 
 /*服务功能

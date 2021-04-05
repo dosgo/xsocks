@@ -5,8 +5,8 @@ import (
 	"math/rand"
 	"time"
 	"sync"
-	"xSocks/comm"
-	"xSocks/param"
+	"github.com/dosgo/xSocks/comm"
+	"github.com/dosgo/xSocks/param"
 )
 
 

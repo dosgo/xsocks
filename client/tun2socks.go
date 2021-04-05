@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"os"
 	"time"
-	"xSocks/client/tun2socks"
-	"xSocks/comm"
+	"github.com/dosgo/xSocks/client/tun2socks"
+	"github.com/dosgo/xSocks/comm"
 	//"github.com/google/netstack/tcpip/adapters/gonet"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"io"
@@ -17,7 +17,7 @@ import (
 	"net"
 	"runtime"
 	"strings"
-	"xSocks/param"
+	"github.com/dosgo/xSocks/param"
 )
 
 

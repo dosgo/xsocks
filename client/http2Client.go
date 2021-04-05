@@ -5,9 +5,9 @@ import (
 	"io"
 	"net/http"
 	"sync"
-	"xSocks/client/httpcomm"
-	"xSocks/comm"
-	"xSocks/param"
+	"github.com/dosgo/xSocks/client/httpcomm"
+	"github.com/dosgo/xSocks/comm"
+	"github.com/dosgo/xSocks/param"
 )
 /*http2*/
 

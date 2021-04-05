@@ -5,8 +5,8 @@ import (
 	"crypto/sha1"
 	kcp "github.com/xtaci/kcp-go/v5"
 	"golang.org/x/crypto/pbkdf2"
-	"xSocks/param"
-	_ "xSocks/param"
+	"github.com/dosgo/xSocks/param"
+	_ "github.com/dosgo/xSocks/param"
 )
 
 

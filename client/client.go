@@ -3,8 +3,8 @@ package client
 import (
 	"context"
 	"net"
-	"xSocks/comm"
-	"xSocks/param"
+	"github.com/dosgo/xSocks/comm"
+	"github.com/dosgo/xSocks/param"
 	"os"
 	"fmt"
 )

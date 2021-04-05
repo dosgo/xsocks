@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"sync"
 	"time"
-	"xSocks/comm"
-	"xSocks/comm/socks"
-	"xSocks/param"
+	"github.com/dosgo/xSocks/comm"
+	"github.com/dosgo/xSocks/comm/socks"
+	"github.com/dosgo/xSocks/param"
 )
 
 

@@ -10,9 +10,9 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"xSocks/comm"
-	"xSocks/comm/udpHeader"
-	"xSocks/param"
+	"github.com/dosgo/xSocks/comm"
+	"github.com/dosgo/xSocks/comm/udpHeader"
+	"github.com/dosgo/xSocks/param"
 )
 var quicDialer *QuicDialer
 

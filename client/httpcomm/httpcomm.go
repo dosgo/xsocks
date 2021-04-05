@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"os"
-	"xSocks/param"
+	"github.com/dosgo/xSocks/param"
 )
 
 func GetTlsConf()*tls.Config{

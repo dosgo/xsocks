@@ -6,7 +6,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"time"
-	"xSocks/param"
+	"github.com/dosgo/xSocks/param"
 )
 
 type AesGcm struct {

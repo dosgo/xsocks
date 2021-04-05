@@ -6,8 +6,8 @@ import (
 	"github.com/miekg/dns"
 	"net"
 	"time"
-	"xSocks/comm"
-	"xSocks/param"
+	"github.com/dosgo/xSocks/comm"
+	"github.com/dosgo/xSocks/param"
 )
 
 type LocalDns struct {

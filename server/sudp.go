@@ -11,8 +11,8 @@ import (
 	"net"
 	"sync"
 	"time"
-	"xSocks/comm"
-	"xSocks/comm/udpHeader"
+	"github.com/dosgo/xSocks/comm"
+	"github.com/dosgo/xSocks/comm/udpHeader"
 )
 
 

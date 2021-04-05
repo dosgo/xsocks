@@ -2,8 +2,8 @@ package main
 
 import (
 	"flag"
-	"xSocks/client"
-	"xSocks/param"
+	"github.com/dosgo/xSocks/client"
+	"github.com/dosgo/xSocks/param"
 )
 
 

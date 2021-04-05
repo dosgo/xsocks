@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"golang.org/x/net/websocket"
 	"io"
-	"xSocks/client/httpcomm"
-	"xSocks/client/muxComm"
-	"xSocks/param"
+	"github.com/dosgo/xSocks/client/httpcomm"
+	"github.com/dosgo/xSocks/client/muxComm"
+	"github.com/dosgo/xSocks/param"
 )
 var wsYamuxDialer *muxComm.YamuxComm
 func init(){

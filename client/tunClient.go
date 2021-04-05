@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"github.com/songgao/water"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
-	"xSocks/comm/udpHeader"
-	"xSocks/param"
+	"github.com/dosgo/xSocks/comm/udpHeader"
+	"github.com/dosgo/xSocks/param"
 
 	//"github.com/google/netstack/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -27,7 +27,7 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"xSocks/comm"
+	"github.com/dosgo/xSocks/comm"
 )
 
 

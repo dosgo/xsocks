@@ -1,4 +1,4 @@
-module xSocks
+module github.com/dosgo/xSocks
 
 go 1.16
 

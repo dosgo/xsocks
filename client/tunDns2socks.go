@@ -16,9 +16,9 @@ import (
 	"runtime"
 	"strings"
 	"time"
-	"xSocks/client/tun2socks"
-	"xSocks/comm"
-	"xSocks/param"
+	"github.com/dosgo/xSocks/client/tun2socks"
+	"github.com/dosgo/xSocks/comm"
+	"github.com/dosgo/xSocks/param"
 )
 
 

@@ -3,8 +3,8 @@ package server
 import (
 	"github.com/miekg/dns"
 	"net"
-	"xSocks/comm"
-	"xSocks/param"
+	"github.com/dosgo/xSocks/comm"
+	"github.com/dosgo/xSocks/param"
 	"fmt"
 	"runtime"
 )
