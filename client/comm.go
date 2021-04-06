@@ -10,8 +10,8 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"github.com/dosgo/xSocks/comm"
-	"github.com/dosgo/xSocks/param"
+	"github.com/dosgo/xsocks/comm"
+	"github.com/dosgo/xsocks/param"
 )
 
 

@@ -8,8 +8,8 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 	"io"
 	"sync"
-	"github.com/dosgo/xSocks/client/muxComm"
-	"github.com/dosgo/xSocks/param"
+	"github.com/dosgo/xsocks/client/muxComm"
+	"github.com/dosgo/xsocks/param"
 )
 var kcpDialer *muxComm.SmuxComm
 func init(){

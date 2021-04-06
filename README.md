@@ -16,7 +16,7 @@
 
 
 # 编译方法
-1.git clone https://github.com/dosgo/xSocks.git
+1.git clone https://github.com/dosgo/xsocks.git
 
 2.cd cli
 
@@ -44,7 +44,7 @@
   3.使用websocket+tls client   -sock5Addr "127.0.0.1:6000"  -serverAddr "wss://你证书签名的域名" -password 123456  //启动好后使用SwitchyOmega填写127.0.0.1:6000地址就可以了
   
 # Android
-  https://github.com/dosgo/xSocks-android
+  https://github.com/dosgo/xsocks-android
   
 
 # 感谢

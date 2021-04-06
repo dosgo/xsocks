@@ -5,11 +5,11 @@ import (
 	"io"
 	"math/rand"
 	"time"
-	"github.com/dosgo/xSocks/comm"
+	"github.com/dosgo/xsocks/comm"
 	"sync"
 	"log"
 	"errors"
-	"github.com/dosgo/xSocks/param"
+	"github.com/dosgo/xsocks/param"
 )
 type YamuxComm struct {
 	sess           []*yamux.Session

@@ -12,8 +12,8 @@ import (
 	"math/big"
 	"net"
 	"time"
-	"github.com/dosgo/xSocks/comm/udpHeader"
-	"github.com/dosgo/xSocks/param"
+	"github.com/dosgo/xsocks/comm/udpHeader"
+	"github.com/dosgo/xsocks/param"
 )
 
 func StartQuic(_addr string) error {

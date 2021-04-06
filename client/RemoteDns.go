@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"github.com/dosgo/xSocks/comm"
+	"github.com/dosgo/xsocks/comm"
 )
 var dnsCache *DnsCache
 var dnsIng sync.Map

@@ -16,9 +16,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"github.com/dosgo/xSocks/comm"
-	"github.com/dosgo/xSocks/comm/socks"
-	"github.com/dosgo/xSocks/param"
+	"github.com/dosgo/xsocks/comm"
+	"github.com/dosgo/xsocks/comm/socks"
+	"github.com/dosgo/xsocks/param"
 )
 
 func ForwardTransportFromIo(dev io.ReadWriteCloser,mtu int,tcpCallback comm.ForwarderCall,udpCallback comm.UdpForwarderCall) error {
