@@ -18,7 +18,7 @@ var localdns=LocalDns{}
 
 
 /*remote to loacal*/
-func StartDns() error {
+func StartDns() (*dns.Server,*dns.Server, error) {
 	udpServer := &dns.Server{
 		Net:          "udp",
 		Addr:         ":"+param.Args.DnsPort,
@@ -44,8 +44,8 @@ func StartDns() error {
 		WriteTimeout: time.Duration(1) * time.Second,
 	}
 	go udpServer.ListenAndServe();
-	tcpServer.ListenAndServe();
-	return nil;
+	go tcpServer.ListenAndServe();
+	return udpServer,tcpServer,nil;
 }
 
 

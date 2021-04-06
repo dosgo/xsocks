@@ -21,7 +21,11 @@ import (
 	"github.com/dosgo/xsocks/param"
 )
 
-
+type FakeDns struct {
+	dnsUdp  *dns.Server
+	dnsTcp  *dns.Server
+	tunDev io.ReadWriteCloser
+}
 
 type TunDns struct {
 	remoteDns RemoteDns
@@ -38,7 +42,7 @@ var tunMask="255.255.0.0"
 
 //var tunMask="255.255.255.0"
 
-func StartTunDns(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tunDNS string) {
+func (fakeDns *FakeDns)Start(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tunDNS string) {
 	gwIp:=comm.GetGateway()
 	oldDns,_,_:=comm.GetDnsServerByGateWay(gwIp);
 	if oldDns[0]=="127.0.0.1"||oldDns[0]==tunGW || oldDns[0]==_tunGW  {
@@ -47,15 +51,27 @@ func StartTunDns(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,
 	fmt.Printf("oldDns:%v\r\n",oldDns)
 	urlInfo, _ := url.Parse(param.Args.ServerAddr)
 	tunDns.serverHost=urlInfo.Hostname()
-	_startSmartDns("53",oldDns[0])
+	fakeDns.dnsUdp,fakeDns.dnsTcp=_startSmartDns("53",oldDns[0])
 	go comm.WatchNotifyIpChange();
 	//fmt.Printf("_tunAddr:%s _tunGW:%s\r\n",_tunAddr,_tunGW)
-	_startTun(tunDevice,_tunAddr,_tunMask,_tunGW,tunDNS);
+	fakeDns.tunDev=_startTun(tunDevice,_tunAddr,_tunMask,_tunGW,tunDNS);
+}
+
+func (fakeDns *FakeDns)Shutdown(){
+	if fakeDns.tunDev!=nil {
+		fakeDns.tunDev.Close();
+	}
+	if fakeDns.dnsTcp!=nil {
+		fakeDns.dnsTcp.Shutdown();
+	}
+	if fakeDns.dnsUdp!=nil {
+		fakeDns.dnsUdp.Shutdown();
+	}
 }
 
 
 
-func _startTun(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tunDNS string){
+func _startTun(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tunDNS string)io.ReadWriteCloser{
 	if len(tunDevice)==0 {
 		tunDevice="tun0";
 	}
@@ -78,36 +94,29 @@ func _startTun(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tu
 		os.Remove(param.Args.UnixSockTun)
 		addr, err := net.ResolveUnixAddr("unixpacket", param.Args.UnixSockTun)
 		if err != nil {
-			return ;
+			return nil;
 		}
 		lis, err := net.ListenUnix("unixpacket", addr)
 		if err != nil {                      //如果监听失败，一般是文件已存在，需要删除它
 			log.Println("UNIX Domain Socket 创 建失败，正在尝试重新创建 -> ", err)
 			os.Remove(param.Args.UnixSockTun)
-			return ;
+			return nil;
 		}
 		defer lis.Close() //虽然本次操作不会执行， 不过还是加上比较好
 		conn, err := lis.Accept() //开始接 受数据
 		if err != nil {                      //如果监听失败，一般是文件已存在，需要删除它
-			return ;
+			return nil;
 		}
 		dev=conn;
 		defer conn.Close()
 	}else{
 		fmt.Printf("tunGW:%s tunMask:%s\r\n",tunGW,tunMask)
-		/*
-		f, err:= tun.OpenTunDevice(tunDevice, tunAddr, tunGW, tunMask, dnsServers)
-		if err != nil {
-			fmt.Println("Error listening:", err)
-			return ;
-		}
-		*/
 
 		config := comm.GetWaterConf(tunAddr,tunMask);
 		ifce, err := water.New(config)
 		if err != nil {
 			fmt.Println("start tun err:", err)
-			return ;
+			return nil;
 		}
 		if runtime.GOOS=="windows" {
 			//time.Sleep(time.Second*1)
@@ -132,7 +141,8 @@ func _startTun(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tu
 		time.Sleep(time.Second*1)
 		comm.AddRoute(tunAddr, tunGW,tunMask)
 	}()
-	tun2socks.ForwardTransportFromIo(dev,param.Args.Mtu,dnsTcpForwarder,dnsUdpForwarder);
+	go tun2socks.ForwardTransportFromIo(dev,param.Args.Mtu,dnsTcpForwarder,dnsUdpForwarder);
+	return dev;
 }
 
 
@@ -214,7 +224,7 @@ func dnsToAddr(remoteAddr string) string{
 
 
 
-func _startSmartDns(dnsPort string,oldDns string) error {
+func _startSmartDns(dnsPort string,oldDns string) (*dns.Server,*dns.Server) {
 	udpServer := &dns.Server{
 		Net:          "udp",
 		Addr:         ":"+dnsPort,
@@ -241,7 +251,7 @@ func _startSmartDns(dnsPort string,oldDns string) error {
 	}
 	go udpServer.ListenAndServe();
 	go tcpServer.ListenAndServe();
-	return nil;
+	return udpServer,tcpServer;
 }
 
 
@@ -334,37 +344,11 @@ func  (tunDns *TunDns)resolve(r *dns.Msg) (*dns.Msg, error) {
 	m.SetReply(r)
 	m.Authoritative = false
 	domain := r.Question[0].Name
-
-
-	//先ipv4
-	/*
-	var ipv4Addr net.IP;
-	m2 :=  &dns.Msg{}
-	m2.SetQuestion(domain, dns.TypeA)
-	m2.Authoritative = false
-	r1, _, err := localdns.dnsClient.Exchange(m2,"114.114.114.114:53")
-	if err == nil {
-		for _, v := range r1.Answer {
-			record, _isType := v.(*dns.A)
-			if _isType {
-				ipv4Addr=record.A;
-				break;
-			}
-		}
-	}
-*/
 	fmt.Printf("ipv6:%s\r\n",domain)
 	//ipv6
 	m1,_,err := localdns.dnsClient.Exchange(r,"114.114.114.114:53")
 	if err == nil {
 		return m1,nil;
 	}
-
-
-	/*
-		m.Answer = append(r.Answer, &dns.AAAA{
-			Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeAAAA, Class: dns.ClassINET, Ttl: 60},
-			AAAA:   net.ParseIP("fd3e:4f5a:5b81::1"),
-		})*/
 	return m, nil
 }

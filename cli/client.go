@@ -25,7 +25,9 @@ func main() {
 	flag.BoolVar(&paramParam.TunSmartProxy,"tunSmartProxy",false,"tun Smart Proxy ")
 
 	flag.Parse()
-	client.Start()
+	c:=client.Client{}
+	c.Start();
+	defer c.Shutdown();
 	select {
 
 	}

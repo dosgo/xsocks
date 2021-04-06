@@ -2,6 +2,8 @@ package client
 
 import (
 	"context"
+	"github.com/miekg/dns"
+	"io"
 	"net"
 	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/param"
@@ -9,7 +11,33 @@ import (
 	"fmt"
 )
 
-func Start( ){
+
+type Client struct {
+	lSocks5  *LocalSocks5
+	dnsUdp  *dns.Server
+	dnsTcp  *dns.Server
+	tunDev io.ReadWriteCloser
+	fakeDns *FakeDns
+}
+func (c *Client) Shutdown(){
+	if c.lSocks5!=nil {
+		c.lSocks5.Shutdown();
+	}
+	if c.dnsTcp!=nil {
+		c.dnsTcp.Shutdown();
+	}
+	if c.dnsUdp!=nil {
+		c.dnsUdp.Shutdown();
+	}
+	if c.tunDev!=nil {
+		c.tunDev.Close();
+	}
+	if c.fakeDns!=nil {
+		c.fakeDns.Shutdown();
+	}
+}
+
+func (c *Client) Start( ){
 	//随机端口
 	if param.Args.DnsPort=="" {
 		param.Args.DnsPort,_= comm.GetFreePort();
@@ -30,17 +58,19 @@ func Start( ){
 	}
 	//1==tun2sock
 	if param.Args.TunType==1 {
-		go StartTunDevice("",tunAddr,"",tunGw,"");
+		 c.tunDev=StartTunDevice("",tunAddr,"",tunGw,"");
 	}
 	//2==tun2remote tun
 	if param.Args.TunType==2 {
-		go StartTun("","","","","");
+		c.tunDev,_=StartTun("","","","","");
 	}
 	if param.Args.TunType==3 {
-		go StartTunDns("",tunAddr,"",tunGw,"");
+		c.fakeDns=&FakeDns{}
+		c.fakeDns.Start("",tunAddr,"",tunGw,"");
 	}
-	go StartDns();
-	go StartLocalSocks5(param.Args.Sock5Addr);
+	c.dnsUdp,c.dnsTcp,_=StartDns();
+	c.lSocks5=&LocalSocks5{}
+	go c.lSocks5.Start(param.Args.Sock5Addr);
 }
 
 func init(){

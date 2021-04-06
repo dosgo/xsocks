@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/dosgo/xsocks/comm"
+	"github.com/dosgo/xsocks/comm/socks"
+	"github.com/dosgo/xsocks/param"
 	"github.com/vishalkuo/bimap"
 	"io"
 	"log"
@@ -13,20 +16,27 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"github.com/dosgo/xsocks/comm"
-	"github.com/dosgo/xsocks/comm/socks"
-	"github.com/dosgo/xsocks/param"
 )
 
+type LocalSocks5 struct {
+	started  bool
+	l net.Listener
+}
+func (lSocks5 *LocalSocks5) Shutdown()  {
+	lSocks5.started=false;
+	if lSocks5.l!=nil {
+		lSocks5.l.Close();
+	}
+}
 
-
-func StartLocalSocks5(address string) error {
+func (lSocks5 *LocalSocks5) Start(address string) error {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	l, err := net.Listen("tcp", address)
+	var err error;
+	lSocks5.l, err = net.Listen("tcp", address)
 	if err != nil {
 		return err;
 	}
-
+	lSocks5.started=true;
 	//start udpProxy
 	var  udpAddr *net.UDPAddr
 	if !strings.HasPrefix(param.Args.ServerAddr,"sudp") {
@@ -35,8 +45,9 @@ func StartLocalSocks5(address string) error {
 	if err != nil {
 		return err;
 	}
-	for {
-		client, err := l.Accept()
+
+	for lSocks5.started{
+		client, err := lSocks5.l.Accept()
 		if err != nil {
 			return err;
 		}

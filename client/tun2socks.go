@@ -23,7 +23,7 @@ import (
 
 
 /*tunType==1*/
-func StartTunDevice(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS string) {
+func StartTunDevice(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS string) io.ReadWriteCloser {
 	if len(tunDevice)==0 {
 		tunDevice="tun0";
 	}
@@ -48,18 +48,18 @@ func StartTunDevice(tunDevice string,tunAddr string,tunMask string,tunGW string,
 		os.Remove(param.Args.UnixSockTun)
 		addr, err := net.ResolveUnixAddr("unixpacket", param.Args.UnixSockTun)
 		if err != nil {
-			return ;
+			return nil;
 		}
 		lis, err := net.ListenUnix("unixpacket", addr)
 		if err != nil {                      //如果监听失败，一般是文件已存在，需要删除它
 			log.Println("UNIX Domain Socket 创 建失败，正在尝试重新创建 -> ", err)
 			os.Remove(param.Args.UnixSockTun)
-			return ;
+			return nil;
 		}
 		defer lis.Close() //虽然本次操作不会执行， 不过还是加上比较好
 		conn, err := lis.Accept() //开始接 受数据
 		if err != nil {                      //如果监听失败，一般是文件已存在，需要删除它
-			return ;
+			return nil;
 		}
 		dev=conn;
 		defer conn.Close()
@@ -77,7 +77,7 @@ func StartTunDevice(tunDevice string,tunAddr string,tunMask string,tunGW string,
 		ifce, err := water.New(config)
 		if err != nil {
 			fmt.Println("start tun err:", err)
-			return ;
+			return nil;
 		}
 
 		if runtime.GOOS=="windows" {
@@ -108,7 +108,8 @@ func StartTunDevice(tunDevice string,tunAddr string,tunMask string,tunGW string,
 		}
 		routeEdit(tunGW,remoteAddr,dnsServers,oldGw);
 	}
-	tun2socks.ForwardTransportFromIo(dev,param.Args.Mtu,rawTcpForwarder,rawUdpForwarder);
+	go tun2socks.ForwardTransportFromIo(dev,param.Args.Mtu,rawTcpForwarder,rawUdpForwarder);
+	return dev;
 }
 
 

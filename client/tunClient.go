@@ -31,7 +31,7 @@ import (
 )
 
 
-func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS string) error {
+func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS string)  (io.ReadWriteCloser,error) {
 	if len(tunDevice)==0 {
 		tunDevice="tun0";
 	}
@@ -54,21 +54,22 @@ func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS
 		os.Remove(param.Args.UnixSockTun)
 		addr, err := net.ResolveUnixAddr("unixpacket", param.Args.UnixSockTun)
 		if err != nil {
-			return err;
+			return nil,err;
 		}
 		lis, err := net.ListenUnix("unixpacket", addr)
 		if err != nil { //如果监听失败，一般是文件已存在，需要删除它
 			log.Println("UNIX Domain Socket 创 建失败，正在尝试重新创建 -> ", err)
-			return err;
+			return nil,err;
 		}
 		defer lis.Close() //虽然本次操作不会执行， 不过还是加上比较好
 		conn, err := lis.Accept() //开始接 受数据
 		defer conn.Close()
 		defer os.Remove(param.Args.UnixSockTun)
 		if err != nil {                      //如果监听失败，一般是文件已存在，需要删除它
-			return err;
+			return nil,err;
 		}
-		tunRecv(conn, param.Args.Mtu)
+		go tunRecv(conn, param.Args.Mtu)
+		return conn,nil;
 	}else{
 		var remoteAddr string;
 		if runtime.GOOS=="windows" {
@@ -87,7 +88,7 @@ func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS
 		ifce, err := water.New(config)
 		if err != nil {
 			fmt.Println("start tun err:", err)
-			return err;
+			return nil,err;
 		}
 		if runtime.GOOS=="windows" {
 			//time.Sleep(time.Second*1)
@@ -115,9 +116,10 @@ func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS
 			}
 			routeEdit(tunGW,remoteAddr,dnsServers,oldGw);
 		}
-		tunRecv(ifce, param.Args.Mtu)
+		go tunRecv(ifce, param.Args.Mtu)
+		return ifce,nil;
 	}
-	return nil;
+	return nil,nil;
 }
 
 func tunRecv(dev io.ReadWriteCloser ,mtu int) error{
