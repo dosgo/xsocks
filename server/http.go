@@ -31,7 +31,7 @@ func StartWeb(addr string) error {
 	err :=http.ListenAndServeTLS(addr,param.Args.CertFile,param.Args.KeyFile,nil)
 
 	if err != nil {
-		panic("ListenAndServe: " + err.Error())
+		return err;
 	}
 	return nil;
 }

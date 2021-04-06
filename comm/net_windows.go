@@ -25,12 +25,12 @@ import (
 func GetGateway()string {
 	table, err := routetable.NewRouteTable()
 	if err != nil {
-		panic(err.Error())
+		return "";
 	}
 	defer table.Close()
 	rows, err := table.Routes()
 	if err != nil {
-		panic(err.Error())
+		return "";
 	}
 	var minMetric uint32=0;
 	var gwIp="";

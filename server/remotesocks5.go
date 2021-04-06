@@ -16,25 +16,26 @@ import (
 
 
 
-func StartRemoteSocks51(address string) {
+func StartRemoteSocks51(address string) error{
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	l, err := net.Listen("tcp", address)
 	if err != nil {
-		log.Panic(err)
+		return err;
 	}
 	//start udp Gate
 	udpAddr,err:=startUdpGate("127.0.0.1:"+param.Args.UdpGatePort);
 	if err != nil {
-		log.Panic(err)
+		return err;
 	}
 	param.Args.UdpGatePort=fmt.Sprintf("%d",udpAddr.Port);
 	for {
 		client, err := l.Accept()
 		if err != nil {
-			log.Panic(err)
+			return err;
 		}
 		go handleRemoteRequest(client,udpAddr)
 	}
+	return nil;
 }
 var udpNat sync.Map
 /*这不是socks5协议的*/

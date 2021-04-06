@@ -20,11 +20,11 @@ import (
 
 
 
-func StartLocalSocks5(address string) {
+func StartLocalSocks5(address string) error {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	l, err := net.Listen("tcp", address)
 	if err != nil {
-		log.Panic(err)
+		return err;
 	}
 
 	//start udpProxy
@@ -33,15 +33,16 @@ func StartLocalSocks5(address string) {
 		udpAddr, err = startUdpProxy("127.0.0.1:" + param.Args.Sock5UdpPort);
 	}
 	if err != nil {
-		log.Panic(err)
+		return err;
 	}
 	for {
 		client, err := l.Accept()
 		if err != nil {
-			log.Panic(err)
+			return err;
 		}
 		go handleLocalRequest(client,udpAddr)
 	}
+	return nil;
 }
 
 var udpNat sync.Map
