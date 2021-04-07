@@ -13,7 +13,7 @@ import (
 
 
 type Client struct {
-	lSocks5  *LocalSocks5
+	lSocks5   net.Listener
 	dnsUdp  *dns.Server
 	dnsTcp  *dns.Server
 	tunDev io.ReadWriteCloser
@@ -21,7 +21,7 @@ type Client struct {
 }
 func (c *Client) Shutdown(){
 	if c.lSocks5!=nil {
-		c.lSocks5.Shutdown();
+		c.lSocks5.Close();
 	}
 	if c.dnsTcp!=nil {
 		c.dnsTcp.Shutdown();
@@ -37,7 +37,7 @@ func (c *Client) Shutdown(){
 	}
 }
 
-func (c *Client) Start( ){
+func (c *Client) Start() error{
 	//随机端口
 	if param.Args.DnsPort=="" {
 		param.Args.DnsPort,_= comm.GetFreePort();
@@ -69,8 +69,9 @@ func (c *Client) Start( ){
 		c.fakeDns.Start("",tunAddr,"",tunGw,"");
 	}
 	c.dnsUdp,c.dnsTcp,_=StartDns();
-	c.lSocks5=&LocalSocks5{}
-	go c.lSocks5.Start(param.Args.Sock5Addr);
+	var err error;
+	c.lSocks5,err=StartLocalSocks5(param.Args.Sock5Addr);
+	return err;
 }
 
 func init(){

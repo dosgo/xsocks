@@ -26,9 +26,7 @@ import (
 
 
 func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS string)  (io.ReadWriteCloser,error) {
-
 	var oldGw=comm.GetGateway();
-
 	if len(param.Args.UnixSockTun)>0 {
 		conn,err:=tun.UsocketToTun(param.Args.UnixSockTun)
 		if err!=nil {

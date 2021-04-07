@@ -2,7 +2,7 @@ package param
 
 import "time"
 
-var version ="1.5.2-(20210407)"
+var version ="1.5.3-(20210407)"
 
 var Args *ArgsParam;
 
@@ -24,7 +24,7 @@ type CommParam struct {
 	Version string;
 	Mtu int;
 	Password string
-	ConnectTime  time.Duration//=10*time.Second;
+	ConnectTime  time.Duration `json:"-"` //=10*time.Second;
 	UdpGatePort string
 }
 

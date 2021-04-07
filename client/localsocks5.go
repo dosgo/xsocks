@@ -18,42 +18,32 @@ import (
 	"time"
 )
 
-type LocalSocks5 struct {
-	started  bool
-	l net.Listener
-}
-func (lSocks5 *LocalSocks5) Shutdown()  {
-	lSocks5.started=false;
-	if lSocks5.l!=nil {
-		lSocks5.l.Close();
-	}
-}
 
-func (lSocks5 *LocalSocks5) Start(address string) error {
+func StartLocalSocks5(address string) (net.Listener,error) {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	var err error;
-	lSocks5.l, err = net.Listen("tcp", address)
+	l, err := net.Listen("tcp", address)
 	if err != nil {
-		return err;
+		return nil,err;
 	}
-	lSocks5.started=true;
 	//start udpProxy
 	var  udpAddr *net.UDPAddr
 	if !strings.HasPrefix(param.Args.ServerAddr,"sudp") {
 		udpAddr, err = startUdpProxy("127.0.0.1:" + param.Args.Sock5UdpPort);
 	}
 	if err != nil {
-		return err;
+		return nil,err;
 	}
-
-	for lSocks5.started{
-		client, err := lSocks5.l.Accept()
-		if err != nil {
-			return err;
+	go func() {
+		for {
+			client, err := l.Accept()
+			if err != nil {
+				return ;
+			}
+			go handleLocalRequest(client,udpAddr)
 		}
-		go handleLocalRequest(client,udpAddr)
-	}
-	return nil;
+	}()
+	return l,nil;
 }
 
 var udpNat sync.Map
