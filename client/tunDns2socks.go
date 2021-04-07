@@ -2,8 +2,11 @@ package client
 
 import (
 	"fmt"
+	"github.com/dosgo/xsocks/client/tun"
+	"github.com/dosgo/xsocks/client/tun2socks"
+	"github.com/dosgo/xsocks/comm"
+	"github.com/dosgo/xsocks/param"
 	"github.com/miekg/dns"
-	"github.com/songgao/water"
 	"github.com/vishalkuo/bimap"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
@@ -11,14 +14,10 @@ import (
 	"log"
 	"net"
 	"net/url"
-	"os"
 	"os/exec"
 	"runtime"
 	"strings"
 	"time"
-	"github.com/dosgo/xsocks/client/tun2socks"
-	"github.com/dosgo/xsocks/comm"
-	"github.com/dosgo/xsocks/param"
 )
 
 type FakeDns struct {
@@ -48,12 +47,10 @@ func (fakeDns *FakeDns)Start(tunDevice string,_tunAddr string,_tunMask string,_t
 	if oldDns[0]=="127.0.0.1"||oldDns[0]==tunGW || oldDns[0]==_tunGW  {
 		oldDns[0]="114.114.114.114"
 	}
-	fmt.Printf("oldDns:%v\r\n",oldDns)
 	urlInfo, _ := url.Parse(param.Args.ServerAddr)
 	tunDns.serverHost=urlInfo.Hostname()
 	fakeDns.dnsUdp,fakeDns.dnsTcp=_startSmartDns("53",oldDns[0])
 	go comm.WatchNotifyIpChange();
-	//fmt.Printf("_tunAddr:%s _tunGW:%s\r\n",_tunAddr,_tunGW)
 	fakeDns.tunDev=_startTun(tunDevice,_tunAddr,_tunMask,_tunGW,tunDNS);
 }
 
@@ -72,9 +69,6 @@ func (fakeDns *FakeDns)Shutdown(){
 
 
 func _startTun(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tunDNS string)io.ReadWriteCloser{
-	if len(tunDevice)==0 {
-		tunDevice="tun0";
-	}
 	if len(_tunAddr)>0 {
 		tunAddr =_tunAddr;
 	}
@@ -84,38 +78,19 @@ func _startTun(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tu
 	if len(_tunGW)>0 {
 		tunGW=_tunGW
 	}
-	if len(tunDNS)==0 {
-		tunDNS="114.114.114.114";
-	}
 
 	//dnsServers := strings.Split(tunDNS, ",")
 	var dev io.ReadWriteCloser;
 	if len(param.Args.UnixSockTun)>0 {
-		os.Remove(param.Args.UnixSockTun)
-		addr, err := net.ResolveUnixAddr("unixpacket", param.Args.UnixSockTun)
-		if err != nil {
-			return nil;
-		}
-		lis, err := net.ListenUnix("unixpacket", addr)
-		if err != nil {                      //如果监听失败，一般是文件已存在，需要删除它
-			log.Println("UNIX Domain Socket 创 建失败，正在尝试重新创建 -> ", err)
-			os.Remove(param.Args.UnixSockTun)
-			return nil;
-		}
-		defer lis.Close() //虽然本次操作不会执行， 不过还是加上比较好
-		conn, err := lis.Accept() //开始接 受数据
-		if err != nil {                      //如果监听失败，一般是文件已存在，需要删除它
+		conn,err:=tun.UsocketToTun(param.Args.UnixSockTun)
+		if err!=nil {
 			return nil;
 		}
 		dev=conn;
-		defer conn.Close()
 	}else{
 		fmt.Printf("tunGW:%s tunMask:%s\r\n",tunGW,tunMask)
-
-		config := comm.GetWaterConf(tunAddr,tunMask);
-		ifce, err := water.New(config)
+		ifce, err := tun.RegTunDev(tunDevice,tunAddr,tunMask,tunGW,tunDNS)
 		if err != nil {
-			fmt.Println("start tun err:", err)
 			return nil;
 		}
 		if runtime.GOOS=="windows" {

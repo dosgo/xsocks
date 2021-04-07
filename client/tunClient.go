@@ -4,68 +4,34 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/songgao/water"
-	"gvisor.dev/gvisor/pkg/tcpip/stack"
+	"github.com/dosgo/xsocks/client/tun"
 	"github.com/dosgo/xsocks/comm/udpHeader"
 	"github.com/dosgo/xsocks/param"
-
-	//"github.com/google/netstack/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip"
-	//"github.com/google/netstack/tcpip/adapters/gonet"
+	"github.com/dosgo/xsocks/comm"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
-	//"github.com/google/netstack/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"io"
 	"log"
 	"net"
 	"net/url"
-	"os"
-	//"github.com/google/netstack/tcpip/header"
 	"os/exec"
 	"runtime"
 	"strings"
 	"sync"
 	"time"
-	"github.com/dosgo/xsocks/comm"
 )
 
 
 func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS string)  (io.ReadWriteCloser,error) {
-	if len(tunDevice)==0 {
-		tunDevice="tun0";
-	}
-	if len(tunAddr)==0 {
-		tunAddr="10.0.0.2";
-	}
-	if len(tunMask)==0 {
-		tunMask="255.255.255.0";
-	}
-	if len(tunGW)==0 {
-		tunGW="10.0.0.1";
-	}
-	if len(tunDNS)==0 {
-		tunDNS="114.114.114.114";
-	}
-	//
+
 	var oldGw=comm.GetGateway();
 
 	if len(param.Args.UnixSockTun)>0 {
-		os.Remove(param.Args.UnixSockTun)
-		addr, err := net.ResolveUnixAddr("unixpacket", param.Args.UnixSockTun)
-		if err != nil {
-			return nil,err;
-		}
-		lis, err := net.ListenUnix("unixpacket", addr)
-		if err != nil { //如果监听失败，一般是文件已存在，需要删除它
-			log.Println("UNIX Domain Socket 创 建失败，正在尝试重新创建 -> ", err)
-			return nil,err;
-		}
-		defer lis.Close() //虽然本次操作不会执行， 不过还是加上比较好
-		conn, err := lis.Accept() //开始接 受数据
-		defer conn.Close()
-		defer os.Remove(param.Args.UnixSockTun)
-		if err != nil {                      //如果监听失败，一般是文件已存在，需要删除它
+		conn,err:=tun.UsocketToTun(param.Args.UnixSockTun)
+		if err!=nil {
 			return nil,err;
 		}
 		go tunRecv(conn, param.Args.Mtu)
@@ -84,8 +50,7 @@ func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS
 		//old gw
 		dnsServers := strings.Split(tunDNS, ",")
 
-		config := comm.GetWaterConf(tunAddr,tunMask);
-		ifce, err := water.New(config)
+		ifce, err := tun.RegTunDev(tunDevice,tunAddr,tunMask,tunGW,tunDNS)
 		if err != nil {
 			fmt.Println("start tun err:", err)
 			return nil,err;

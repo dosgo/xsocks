@@ -2,7 +2,7 @@ package param
 
 import "time"
 
-var version ="1.5.1-(20210407)"
+var version ="1.5.2-(20210407)"
 
 var Args *ArgsParam;
 

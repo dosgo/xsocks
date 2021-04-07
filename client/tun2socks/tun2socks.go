@@ -6,6 +6,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/dosgo/xsocks/comm"
+	"github.com/dosgo/xsocks/comm/socks"
+	"github.com/dosgo/xsocks/param"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
@@ -16,9 +19,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"github.com/dosgo/xsocks/comm"
-	"github.com/dosgo/xsocks/comm/socks"
-	"github.com/dosgo/xsocks/param"
 )
 
 func ForwardTransportFromIo(dev io.ReadWriteCloser,mtu int,tcpCallback comm.ForwarderCall,udpCallback comm.UdpForwarderCall) error {
