@@ -2,16 +2,15 @@ package client
 
 import (
 	"errors"
+	"github.com/dosgo/xsocks/comm"
+	"github.com/dosgo/xsocks/param"
 	"log"
 	"os"
-	"os/exec"
 	"os/signal"
 	"runtime"
 	"strings"
 	"sync"
 	"syscall"
-	"github.com/dosgo/xsocks/comm"
-	"github.com/dosgo/xsocks/param"
 )
 
 
@@ -70,39 +69,39 @@ func  ResetTunnel () {
 func regRoute(tunAddr string,remoteAddr string,dnsServers []string,oldGw string,localNetwork string){
 	//if localNetwork!="" {
 	//	localRoute:=strings.Split(localNetwork,"_")
-		//exec.Command("route", "add",localRoute[0],"mask",localRoute[1],oldGw,"metric","6").Output();
+		//comm.CmdHide("route", "add",localRoute[0],"mask",localRoute[1],oldGw,"metric","6").Output();
 	//}
 
 
 	//delete old
-	exec.Command("route", "delete","0.0.0.0").Output()
+	comm.CmdHide("route", "delete","0.0.0.0").Output()
 	// add socks5 add
-	exec.Command("route", "add",remoteAddr,oldGw,"metric","6").Output()
+	comm.CmdHide("route", "add",remoteAddr,oldGw,"metric","6").Output()
 	for _, v := range dnsServers {
 		// add dns add
-		exec.Command("route", "add",v,oldGw,"metric","6").Output()
+		comm.CmdHide("route", "add",v,oldGw,"metric","6").Output()
 	}
 	//route add 0.0.0.0 mask 0.0.0.0 192.168.8.1 metric 6
-	exec.Command("route", "add","0.0.0.0","mask","0.0.0.0",tunAddr,"metric","8").Output();
+	comm.CmdHide("route", "add","0.0.0.0","mask","0.0.0.0",tunAddr,"metric","8").Output();
 }
 
 func unRegRoute(tunAddr string,remoteAddr string,dnsServers []string,oldGw string,localNetwork string){
 
 	//if localNetwork!="" {
 		//localRoute:=strings.Split(localNetwork,"_")
-	//	exec.Command("route", "delete",localRoute[0],"mask",localRoute[1],oldGw).Output()
+	//	comm.CmdHide("route", "delete",localRoute[0],"mask",localRoute[1],oldGw).Output()
 	//}
 
 
-	exec.Command("route", "delete","0.0.0.0","mask","0.0.0.0",tunAddr,"metric","6").Output()
+	comm.CmdHide("route", "delete","0.0.0.0","mask","0.0.0.0",tunAddr,"metric","6").Output()
 	//route add old
-	exec.Command("route", "add","0.0.0.0","mask","0.0.0.0",oldGw,"metric","8").Output()
+	comm.CmdHide("route", "add","0.0.0.0","mask","0.0.0.0",oldGw,"metric","8").Output()
 	//delete remoteAddr
-	exec.Command("route", "delete",remoteAddr).Output()
+	comm.CmdHide("route", "delete",remoteAddr).Output()
 	//delete dns
 	for _, v := range dnsServers {
 		// delete dns
-		exec.Command("route", "delete",v).Output()
+		comm.CmdHide("route", "delete",v).Output()
 	}
 }
 

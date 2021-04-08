@@ -3,14 +3,14 @@
 package comm
 
 import (
-	"strings"
-	"syscall"
-	"os"
-	"net"
-	"time"
 	"github.com/songgao/water"
-	"os/exec"
+	"net"
+	"os"
 	"os/signal"
+	"strings"
+	"os/exec"
+	"syscall"
+	"time"
 )
 
 func GetGateway()string {
@@ -99,10 +99,10 @@ func AddRoute(tunAddr string, tunGw string, tunMask string){
 	//route add -net 192.168.2.0/24 gw 192.168.3.254
 
 	//clear old
-	cmd1:=exec.Command("route", "delete","-net",strings.Join(netNat,".")+"/"+maskAddrs[1])
+	cmd1:=CmdHide("route", "delete","-net",strings.Join(netNat,".")+"/"+maskAddrs[1])
 	//fmt.Printf("cmd.args:%s\r\n",cmd1.Args)
 	cmd1.Run()
-	cmd:=exec.Command("route", "add","-net",strings.Join(netNat,".")+"/"+maskAddrs[1],"gw",tunAddr)
+	cmd:=CmdHide("route", "add","-net",strings.Join(netNat,".")+"/"+maskAddrs[1],"gw",tunAddr)
 	//fmt.Printf("cmd.args:%s\r\n",cmd.Args)
 	cmd.Run();
 }
@@ -126,4 +126,8 @@ func GetDnsServerByGateWay(gwIp string)([]string,bool,bool){
 func WatchNotifyIpChange(){
 	time.Sleep(time.Second*2)
 	setDNSServer("127.0.0.1","0:0:0:0:0:0:0:1");
+}
+
+func CmdHide(name string, arg ...string) *exec.Cmd{
+	return exec.Command(name, arg...)
 }

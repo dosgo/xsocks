@@ -217,7 +217,7 @@ func setDNSServer(gwIp string,ip string,ipv6 string){
 		Ipv6Switch(false);
 		defer Ipv6Switch(true);
 	}
-	exec.Command("ipconfig", "/flushdns").Run()
+	CmdHide("ipconfig", "/flushdns").Run()
 	/*
 	if len(oldDns)>0 {
 		defer resetDns(iName,"ip",dHCPEnabled,oldDns);
@@ -247,16 +247,16 @@ func WatchNotifyIpChange(){
 func changeDns(iName string,netType string,ip string,oldDns []string){
 //	netsh interface ipv6 add dns
 	//netsh interface ip set dnsservers xx static 127.0.0.1 192.168.9.102
-	exec.Command("netsh", "interface",netType,"set","dnsservers",iName,"static",ip).Output()
+	CmdHide("netsh", "interface",netType,"set","dnsservers",iName,"static",ip).Output()
 	for _,v:=range oldDns{
-		exec.Command("netsh", "interface",netType,"add","dnsservers",iName,v).Output()
+		CmdHide("netsh", "interface",netType,"add","dnsservers",iName,v).Output()
 	}
 }
 
 func resetDns(iName string,netType string,dHCPEnabled bool,oldDns []string){
 	//dhcp
 	if dHCPEnabled {
-		exec.Command("netsh", "interface",netType,"set","dnsservers",iName,"dhcp").Output()
+		CmdHide("netsh", "interface",netType,"set","dnsservers",iName,"dhcp").Output()
 	}else {
 		i:=0;
 		for _,v:=range oldDns{
@@ -264,9 +264,9 @@ func resetDns(iName string,netType string,dHCPEnabled bool,oldDns []string){
 				continue;
 			}
 			if i==0 {
-				exec.Command("netsh", "interface", netType, "set", "dnsservers", iName, "static", v).Output()
+				CmdHide("netsh", "interface", netType, "set", "dnsservers", iName, "static", v).Output()
 			}else {
-				exec.Command("netsh", "interface", netType, "add", "dnsservers", iName, v).Output()
+				CmdHide("netsh", "interface", netType, "add", "dnsservers", iName, v).Output()
 			}
 			i++;
 		}
@@ -375,14 +375,14 @@ func AddRoute(tunAddr string, tunGw string, tunMask string) error {
 
 
 	//clear old
-	exec.Command("route", "delete",strings.Join(netNat,".")).Output()
-	cmd:=exec.Command("netsh", "interface","ipv4","add","route",strings.Join(netNat,".")+"/"+maskAddrs[1],iName,tunGw,"metric=6","store=active")
+	CmdHide("route", "delete",strings.Join(netNat,".")).Output()
+	cmd:=CmdHide("netsh", "interface","ipv4","add","route",strings.Join(netNat,".")+"/"+maskAddrs[1],iName,tunGw,"metric=6","store=active")
 	fmt.Printf("cmd:%s\r\n",cmd.Args)
 	cmd.Run();
 
 
 	fmt.Printf("cmd:%s\r\n",strings.Join(cmd.Args," "))
-	exec.Command("ipconfig", "/flushdns").Run()
+	CmdHide("ipconfig", "/flushdns").Run()
 	return nil;
 }
 
@@ -398,4 +398,10 @@ func Ipv6Switch(open bool)error{
 		key.SetDWordValue("DisabledComponents", 0x00000020)
 	}
 	return nil;
+}
+
+func CmdHide(name string, arg ...string) *exec.Cmd{
+	cmd:=exec.Command(name, arg...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	return cmd;
 }

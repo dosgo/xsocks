@@ -5,19 +5,18 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/dosgo/xsocks/client/tun"
+	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/comm/udpHeader"
 	"github.com/dosgo/xsocks/param"
-	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip"
-	"github.com/dosgo/xsocks/comm"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"io"
 	"log"
 	"net"
 	"net/url"
-	"os/exec"
 	"runtime"
 	"strings"
 	"sync"
@@ -56,19 +55,19 @@ func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS
 		if runtime.GOOS=="windows" {
 			//time.Sleep(time.Second*1)
 			//netsh interface ip set address name="Ehternet 2" source=static addr=10.1.0.10 mask=255.255.255.0 gateway=none
-			exec.Command("netsh", "interface","ip","set","address","name="+ifce.Name(),"source=static","addr="+tunAddr,"mask="+tunMask,"gateway=none").Run();
+			comm.CmdHide("netsh", "interface","ip","set","address","name="+ifce.Name(),"source=static","addr="+tunAddr,"mask="+tunMask,"gateway=none").Run();
 		}else if runtime.GOOS=="linux"{
 			//sudo ip addr add 10.1.0.10/24 dev O_O
 			masks:=net.ParseIP(tunMask).To4();
 			maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}
-			exec.Command("ip", "addr","add",maskAddr.String(),"dev",ifce.Name()).Run();
-			exec.Command("ip", "link","set","dev",ifce.Name(),"up").Run();
+			comm.CmdHide("ip", "addr","add",maskAddr.String(),"dev",ifce.Name()).Run();
+			comm.CmdHide("ip", "link","set","dev",ifce.Name(),"up").Run();
 		}else if runtime.GOOS=="darwin"{
 			//ifconfig utun2 10.1.0.10 10.1.0.20 up
 			masks:=net.ParseIP(tunMask).To4();
 			maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}
 			ipMin,ipMax:=comm.GetCidrIpRange(maskAddr.String());
-			exec.Command("ifconfig", "utun2",ipMin,ipMax,"up").Run();
+			comm.CmdHide("ifconfig", "utun2",ipMin,ipMax,"up").Run();
 		}
 
 		//windows

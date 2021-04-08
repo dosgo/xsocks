@@ -2,15 +2,15 @@ package comm
 
 import (
 	"crypto/md5"
+	crand "crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"io"
+	"log"
+	"math/rand"
+	"net"
 	"strconv"
 	"strings"
-	"io"
-	"math/rand"
-	"log"
-	crand "crypto/rand"
-	"net"
 	"time"
 )
 
@@ -216,3 +216,4 @@ func GetUnusedTunAddr()(string,string){
 	}
 	return "","";
 }
+
