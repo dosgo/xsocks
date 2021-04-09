@@ -1,13 +1,12 @@
-package client
+package tunnel
 
 import (
+	"github.com/dosgo/xsocks/comm"
+	"github.com/dosgo/xsocks/param"
 	"golang.org/x/net/http2"
 	"io"
 	"net/http"
 	"sync"
-	"github.com/dosgo/xsocks/client/httpcomm"
-	"github.com/dosgo/xsocks/comm"
-	"github.com/dosgo/xsocks/param"
 )
 /*http2*/
 
@@ -19,18 +18,16 @@ type http2Conn struct {
 
 var http2Dialer *http2Conn
 func init(){
-
-	http2Dialer=&http2Conn{}
+	http2Dialer =&http2Conn{}
 }
 
-
-func NewHttp2Dialer()  *http2Conn{
-	http2Dialer.client=newHttp2Client()
+func NewHttp2Dialer()  *http2Conn {
+	http2Dialer.client= newHttp2Client()
 	return http2Dialer;
 }
 
 func newHttp2Client() *http.Client{
-	tslClientConf:=httpcomm.GetTlsConf();
+	tslClientConf:= GetTlsConf();
 	t := &http2.Transport{TLSClientConfig: tslClientConf}
 	return  &http.Client{Transport: t}
 }

@@ -17,67 +17,60 @@ import (
 	"time"
 )
 
+type Tun2Socks struct {
+	tunDev io.ReadWriteCloser
+	remoteAddr string;
+	dnsServers []string;
+	oldGw string;
+	tunGW string;
+}
 
 
 /*tunType==1*/
-func StartTunDevice(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS string) io.ReadWriteCloser {
-	//
-	var oldGw=comm.GetGateway();
-	dnsServers := strings.Split(tunDNS, ",")
-	var dev io.ReadWriteCloser;
-	var remoteAddr string;
+func (_tun2socks *Tun2Socks)Start(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS string)  error{
+	_tun2socks.oldGw=comm.GetGateway();
+	_tun2socks.tunGW=tunGW;
+	_tun2socks.dnsServers = strings.Split(tunDNS, ",")
+	var err error;
 	if len(param.Args.UnixSockTun)>0 {
-		conn,err:= tun.UsocketToTun(param.Args.UnixSockTun)
+		_tun2socks.tunDev,err= tun.UsocketToTun(param.Args.UnixSockTun)
 		if err != nil {                      //如果监听失败，一般是文件已存在，需要删除它
-			return nil;
+			return err;
 		}
-		dev=conn;
 	}else{
 		if runtime.GOOS=="windows" {
 			urlInfo, _ := url.Parse(param.Args.ServerAddr)
 			addr, err := net.ResolveIPAddr("ip",urlInfo.Hostname())
 			if err == nil {
-				remoteAddr = addr.String()
+				_tun2socks.remoteAddr = addr.String()
 			}
-			fmt.Printf("remoteAddr:%s\r\n", remoteAddr)
+			fmt.Printf("remoteAddr:%s\r\n", _tun2socks.remoteAddr)
 		}
 
-		ifce,err:= tun.RegTunDev(tunDevice ,tunAddr ,tunMask ,tunGW ,tunDNS )
+		_tun2socks.tunDev,err= tun.RegTunDev(tunDevice ,tunAddr ,tunMask ,tunGW ,tunDNS )
 		if err != nil {
 			fmt.Println("start tun err:", err)
-			return nil;
+			return err;
 		}
-
-		if runtime.GOOS=="windows" {
-			//time.Sleep(time.Second*1)
-			//netsh interface ip set address name="Ehternet 2" source=static addr=10.1.0.10 mask=255.255.255.0 gateway=none
-			comm.CmdHide("netsh", "interface","ip","set","address","name="+ifce.Name(),"source=static","addr="+tunAddr,"mask="+tunMask,"gateway=none").Run();
-		}else if runtime.GOOS=="linux"{
-			//sudo ip addr add 10.1.0.10/24 dev O_O
-			masks:=net.ParseIP(tunMask).To4();
-			maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}
-			comm.CmdHide("ip", "addr","add",maskAddr.String(),"dev",ifce.Name()).Run();
-			comm.CmdHide("ip", "link","set","dev",ifce.Name(),"up").Run();
-		}else if runtime.GOOS=="darwin"{
-			//ifconfig utun2 10.1.0.10 10.1.0.20 up
-			masks:=net.ParseIP(tunMask).To4();
-			maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}
-			ipMin,ipMax:=comm.GetCidrIpRange(maskAddr.String());
-			comm.CmdHide("ifconfig", "utun2",ipMin,ipMax,"up").Run();
-		}
-		dev=ifce;
 	}
 
 	//windows
 	if runtime.GOOS=="windows" {
 		oldDns:=comm.GetDnsServer();
 		if oldDns!=nil&&len(oldDns)>0 {
-			dnsServers = append(dnsServers, oldDns...)
+			_tun2socks.dnsServers  = append(_tun2socks.dnsServers , oldDns...)
 		}
-		routeEdit(tunGW,remoteAddr,dnsServers,oldGw);
+		routeEdit(tunGW,_tun2socks.remoteAddr,_tun2socks.dnsServers ,_tun2socks.oldGw);
 	}
-	go tun2socks.ForwardTransportFromIo(dev,param.Args.Mtu,rawTcpForwarder,rawUdpForwarder);
-	return dev;
+	go tun2socks.ForwardTransportFromIo(_tun2socks.tunDev,param.Args.Mtu,rawTcpForwarder,rawUdpForwarder);
+	return nil;
+}
+/**/
+func (_tun2socks *Tun2Socks) Shutdown(){
+	if _tun2socks.tunDev!=nil {
+		_tun2socks.tunDev.Close();
+	}
+	unRegRoute(_tun2socks.tunGW ,_tun2socks.remoteAddr ,_tun2socks.dnsServers ,_tun2socks.oldGw)
 }
 
 

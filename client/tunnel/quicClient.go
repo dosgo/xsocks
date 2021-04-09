@@ -1,23 +1,23 @@
-package client
+package tunnel
 
 import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/dosgo/xsocks/comm"
+	"github.com/dosgo/xsocks/comm/udpHeader"
+	"github.com/dosgo/xsocks/param"
 	"github.com/lucas-clemente/quic-go"
 	"log"
 	"net"
 	"sync"
 	"sync/atomic"
 	"time"
-	"github.com/dosgo/xsocks/comm"
-	"github.com/dosgo/xsocks/comm/udpHeader"
-	"github.com/dosgo/xsocks/param"
 )
 var quicDialer *QuicDialer
 
 func init(){
-	quicDialer= &QuicDialer{}
+	quicDialer = &QuicDialer{}
 }
 var num int64=0;
 
@@ -33,7 +33,7 @@ func NewQuicDialer() *QuicDialer {
 }
 
 func ClearQuicDialer(){
-	sess:=quicDialer.GetSess();
+	sess:= quicDialer.GetSess();
 	if sess!=nil {
 		sess.CloseWithError(2021, "deadlocks error close")
 	}
@@ -105,7 +105,7 @@ func isActive(s quic.Session) bool {
 func (qd *QuicDialer) Dial(quicAddr string) (comm.CommConn, error) {
 	atomic.AddInt64(&num,1)
 	var retryNum=0;
-	fmt.Printf("num:%d\r\n",num);
+	fmt.Printf("num:%d\r\n", num);
 	for{
 		if retryNum>3 {
 			break;

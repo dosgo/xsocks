@@ -1,19 +1,19 @@
-package client
+package tunnel
 
 import (
 	"crypto/md5"
 	"crypto/sha1"
+	"github.com/dosgo/xsocks/client/tunnel/muxComm"
+	"github.com/dosgo/xsocks/param"
 	"github.com/xtaci/kcp-go/v5"
 	"github.com/xtaci/smux"
 	"golang.org/x/crypto/pbkdf2"
 	"io"
 	"sync"
-	"github.com/dosgo/xsocks/client/muxComm"
-	"github.com/dosgo/xsocks/param"
 )
 var kcpDialer *muxComm.SmuxComm
 func init(){
-	kcpDialer= muxComm.NewWsSmuxDialer(connectKcp)
+	kcpDialer = muxComm.NewWsSmuxDialer(connectKcp)
 }
 
 

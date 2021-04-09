@@ -13,57 +13,65 @@ import (
 type LocalDns struct {
 	remoteDns RemoteDns
 	dnsClient *dns.Client
+	udpServer  *dns.Server
+	tcpServer  *dns.Server
 }
-var localdns=LocalDns{}
+
 
 
 /*remote to loacal*/
-func StartDns() (*dns.Server,*dns.Server, error) {
-	udpServer := &dns.Server{
+func (localDns *LocalDns)StartDns()  {
+	localDns.udpServer = &dns.Server{
 		Net:          "udp",
 		Addr:         ":"+param.Args.DnsPort,
-		Handler:      dns.HandlerFunc(localdns.ServeDNS),
+		Handler:      dns.HandlerFunc(localDns.ServeDNS),
 		UDPSize:      4096,
 		ReadTimeout:  time.Duration(10) * time.Second,
 		WriteTimeout: time.Duration(10) * time.Second,
 	}
-	tcpServer:= &dns.Server{
+	localDns.tcpServer= &dns.Server{
 		Net:          "tcp",
 		Addr:         ":"+param.Args.DnsPort,
-		Handler:      dns.HandlerFunc(localdns.ServeDNS),
+		Handler:      dns.HandlerFunc(localDns.ServeDNS),
 		UDPSize:      4096,
 		ReadTimeout:  time.Duration(10) * time.Second,
 		WriteTimeout: time.Duration(10) * time.Second,
 	}
 
-	localdns.remoteDns = RemoteDns{}
-	localdns.dnsClient = &dns.Client{
+	localDns.remoteDns = RemoteDns{}
+	localDns.dnsClient = &dns.Client{
 		Net:          "udp",
 		UDPSize:      4096,
 		ReadTimeout:  time.Duration(1) * time.Second,
 		WriteTimeout: time.Duration(1) * time.Second,
 	}
-	go udpServer.ListenAndServe();
-	go tcpServer.ListenAndServe();
-	return udpServer,tcpServer,nil;
+	go localDns.udpServer.ListenAndServe();
+	go localDns.tcpServer.ListenAndServe();
+}
+
+func (localDns *LocalDns)Shutdown(){
+	if localDns.tcpServer!=nil {
+		localDns.tcpServer.Shutdown();
+	}
+	if localDns.udpServer!=nil {
+		localDns.udpServer.Shutdown();
+	}
 }
 
 
-
-
-func  (localdns *LocalDns)ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
+func  (localDns *LocalDns)ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	var msg *dns.Msg
 	var err error
 	switch r.Question[0].Qtype {
 		case  dns.TypeA:
-			msg, err = localdns.doIPv4Query(r)
+			msg, err = localDns.doIPv4Query(r)
 		break;
 		case  dns.TypeAAAA:
 			//ipv6
-			msg, err = localdns.resolve(r)
+			msg, err = localDns.resolve(r)
 		break;
 	default:
-		msg,_,err = localdns.dnsClient.Exchange(r,"114.114.114.114:53")
+		msg,_,err = localDns.dnsClient.Exchange(r,"114.114.114.114:53")
 		break;
 	}
 	if err != nil {
@@ -73,7 +81,7 @@ func  (localdns *LocalDns)ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	}
 }
 
-func (localdns *LocalDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
+func (localDns *LocalDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	m := &dns.Msg{}
 	m.SetReply(r)
 	m.Authoritative = false
@@ -81,7 +89,7 @@ func (localdns *LocalDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	var ip string;
 	var err error;
 	if param.Args.LocalDns==1 {
-		m1,_,err := localdns.dnsClient.Exchange(r,"114.114.114.114:53")
+		m1,_,err := localDns.dnsClient.Exchange(r,"114.114.114.114:53")
 		if err == nil {
 			for _, v := range m1.Answer {
 				record, isType := v.(*dns.A)
@@ -94,7 +102,7 @@ func (localdns *LocalDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 			}
 		}
 	}
-	ip, err = localdns.remoteDns.Resolve(domain[0 : len(domain)-1])
+	ip, err = localDns.remoteDns.Resolve(domain[0 : len(domain)-1])
 	if err!=nil {
 		fmt.Printf("dns domain:%s Resolve err:%v\r\n",domain,err)
 		return m, err;
@@ -110,14 +118,14 @@ func (localdns *LocalDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 
 
 
-func  (localdns *LocalDns) resolve(r *dns.Msg) (*dns.Msg, error) {
+func  (localDns *LocalDns) resolve(r *dns.Msg) (*dns.Msg, error) {
 	m :=  &dns.Msg{}
 	m.SetReply(r)
 	m.Authoritative = false
 	domain := r.Question[0].Name
 	fmt.Printf("dns ipv6 :%s Qtype:%d\r\n",domain,r.Question[0].Qtype)
 
-	m1,_,err := localdns.dnsClient.Exchange(r,"114.114.114.114:53")
+	m1,_,err := localDns.dnsClient.Exchange(r,"114.114.114.114:53")
 	if err == nil {
 		for _, v := range m1.Answer {
 			_, isType := v.(*dns.AAAA)

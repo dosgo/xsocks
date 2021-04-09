@@ -14,12 +14,13 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"os/signal"
 	"strings"
 	"syscall"
 	"time"
 	"unsafe"
 )
+
+
 
 
 func GetGateway()string {
@@ -66,21 +67,7 @@ func getAdapterList() (*syscall.IpAdapterInfo, error) {
 	return a, nil
 }
 
-func NotifyIpChange(notifyCh chan int) error{
-	var  notifyAddrChange        *syscall.Proc
-	if iphlpapi, err := syscall.LoadDLL("Iphlpapi.dll"); err == nil {
-		if p, err := iphlpapi.FindProc("NotifyAddrChange"); err == nil {
-			notifyAddrChange = p
-		}
-	}
-	if notifyAddrChange==nil {
-		return errors.New("NotifyAddrChange\r\n");
-	}
-	for {
-		notifyAddrChange.Call(0, 0)
-		notifyCh <- 0
-	}
-}
+
 func GetLocalAddresses() ([]lAddr ,error) {
 	lAddrs := []lAddr{}
 	ifaces, err := net.Interfaces()
@@ -171,7 +158,26 @@ loop:
 	return dns
 }
 
-func setDNSServer(gwIp string,ip string,ipv6 string){
+var _watchIpChange *watchIpChange
+
+
+func SetDNSServer(ip string,ipv6 string,gwIp string){
+	//注册变动
+	_watchIpChange=&watchIpChange{Run: true,AdapterConf: make(map[string]*adapterConf,0)}
+	go _watchIpChange.Watch(func() {
+		time.Sleep(time.Second*2)
+		gwIp:=GetGateway()
+		fmt.Printf("SetDNSServer gwip:%s\r\n",gwIp)
+		_adapterConf:=&adapterConf{}
+		var devName="";
+		_adapterConf.oldDns,devName,_adapterConf.dHCPEnabled,_adapterConf.isIPv6=_setDNSServer(gwIp,"127.0.0.1","0:0:0:0:0:0:0:1");
+		_watchIpChange.AdapterConf[devName]=_adapterConf;
+	})
+	oneAdapter=&adapterConf{}
+	oneAdapter.oldDns,oneAdapter.iName,oneAdapter.dHCPEnabled,oneAdapter.isIPv6=_setDNSServer(ip,ipv6,gwIp);
+}
+
+func _setDNSServer(ip string,ipv6 string,gwIp string) ([]string,string,bool,bool){
 	log.Printf("SetDNSServer-gwIp:%s\r\n",gwIp)
 	oldDns,dHCPEnabled,isIPv6:=GetDnsServerByGateWay(gwIp);
 	lAdds,err:=GetLocalAddresses();
@@ -184,7 +190,7 @@ func setDNSServer(gwIp string,ip string,ipv6 string){
 			}
 		}
 	}
-
+	/*
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch,
 		syscall.SIGHUP,
@@ -204,44 +210,60 @@ func setDNSServer(gwIp string,ip string,ipv6 string){
 			}
 		}
 		os.Exit(0);
-	}()
+	}()*/
 	//ipv4
 	changeDns(iName,"ip",ip,oldDns)
 	//ipv6
 	if isIPv6 {
 		changeDns(iName, "ipv6", ipv6, []string{ipv6})
 	}
-
 	//ipv4优先
 	if isIPv6 {
 		Ipv6Switch(false);
-		defer Ipv6Switch(true);
 	}
 	CmdHide("ipconfig", "/flushdns").Run()
-	/*
-	if len(oldDns)>0 {
-		defer resetDns(iName,"ip",dHCPEnabled,oldDns);
-		if isIPv6 {
-			defer resetDns(iName, "ipv6", dHCPEnabled, []string{ipv6});
+	return oldDns,iName,dHCPEnabled,isIPv6;
+}
+
+
+type adapterConf struct {
+	iName string;
+	oldDns []string
+	dHCPEnabled bool
+	isIPv6 bool
+}
+/*第一个适配器配置*/
+var oneAdapter *adapterConf;
+
+type watchIpChange struct {
+	Run bool
+	AdapterConf map[string]*adapterConf
+}
+
+func (wtp *watchIpChange) Watch(callBack func())error{
+	var  notifyAddrChange        *syscall.Proc
+	if iphlpapi, err := syscall.LoadDLL("Iphlpapi.dll"); err == nil {
+		if p, err := iphlpapi.FindProc("NotifyAddrChange"); err == nil {
+			notifyAddrChange = p
 		}
 	}
-	c := make(chan int)
-	<-c*/
+	if notifyAddrChange==nil {
+		return errors.New("NotifyAddrChange\r\n");
+	}
+	for wtp.Run {
+		notifyAddrChange.Call(0, 0)
+		callBack();
+	}
+	return nil;
 }
 
-
-func WatchNotifyIpChange(){
-	notifyCh := make(chan int)
-	go NotifyIpChange(notifyCh)
-	go func() {
-		for _ = range notifyCh {
-			time.Sleep(time.Second*2)
-			gwIp:=GetGateway()
-			fmt.Printf("SetDNSServer gwip:%s\r\n",gwIp)
-			setDNSServer(gwIp,"127.0.0.1","0:0:0:0:0:0:0:1");
-		}
-	}()
+func (wtp *watchIpChange) Shutdown(){
+	wtp.Run=false;
+	for iName,v:=range wtp.AdapterConf{
+		_resetDns(iName,"ip",v.dHCPEnabled,v.oldDns);
+	}
 }
+
 
 
 func changeDns(iName string,netType string,ip string,oldDns []string){
@@ -253,7 +275,17 @@ func changeDns(iName string,netType string,ip string,oldDns []string){
 	}
 }
 
-func resetDns(iName string,netType string,dHCPEnabled bool,oldDns []string){
+
+func ResetDns(ip string){
+	if _watchIpChange!=nil {
+		_watchIpChange.Shutdown();
+	}
+	if oneAdapter!=nil {
+		_resetDns(oneAdapter.iName, "ip", oneAdapter.dHCPEnabled, oneAdapter.oldDns);
+	}
+}
+
+func _resetDns(iName string,netType string,dHCPEnabled bool,oldDns []string){
 	//dhcp
 	if dHCPEnabled {
 		CmdHide("netsh", "interface",netType,"set","dnsservers",iName,"dhcp").Output()
@@ -289,7 +321,6 @@ func GetDnsServerByGateWay(gwIp string)([]string,bool,bool){
 					break;
 				}
 			}
-
 			return v.DNSServerSearchOrder,v.DHCPEnabled,isIpv6;
 		}
 	}
@@ -354,14 +385,8 @@ func AddRoute(tunAddr string, tunGw string, tunMask string) error {
 			netNat[i]="0";
 		}
 	}
-
-
 	maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}
-
-
 	maskAddrs:=strings.Split(maskAddr.String(),"/")
-
-
 	lAdds,err:=GetLocalAddresses();
 	var iName="";
 	if err==nil {
@@ -372,7 +397,6 @@ func AddRoute(tunAddr string, tunGw string, tunMask string) error {
 			}
 		}
 	}
-
 
 	//clear old
 	CmdHide("route", "delete",strings.Join(netNat,".")).Output()

@@ -24,64 +24,64 @@ import (
 )
 
 
-func StartTun(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS string)  (io.ReadWriteCloser,error) {
-	var oldGw=comm.GetGateway();
+type RemoteTun struct {
+	tunDev io.ReadWriteCloser
+	remoteAddr string;
+	dnsServers []string;
+	oldGw string;
+	tunGW string;
+}
+
+
+func (remoteTun *RemoteTun)Start(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS string) error {
+	remoteTun.oldGw=comm.GetGateway();
+	remoteTun.tunGW=tunGW;
+	var err error;
 	if len(param.Args.UnixSockTun)>0 {
-		conn,err:=tun.UsocketToTun(param.Args.UnixSockTun)
+		remoteTun.tunDev,err=tun.UsocketToTun(param.Args.UnixSockTun)
 		if err!=nil {
-			return nil,err;
+			return err;
 		}
-		go tunRecv(conn, param.Args.Mtu)
-		return conn,nil;
+		go tunRecv(remoteTun.tunDev, param.Args.Mtu)
+		return nil;
 	}else{
-		var remoteAddr string;
 		if runtime.GOOS=="windows" {
 			urlInfo, _ := url.Parse(param.Args.ServerAddr)
 			addr, err := net.ResolveIPAddr("ip",urlInfo.Hostname())
 			if err == nil {
-				remoteAddr = addr.String()
+				remoteTun.remoteAddr = addr.String()
 			}
-			fmt.Printf("remoteAddr:%s\r\n", remoteAddr)
+			fmt.Printf("remoteAddr:%s\r\n", remoteTun.remoteAddr)
 		}
 
 		//old gw
-		dnsServers := strings.Split(tunDNS, ",")
-
-		ifce, err := tun.RegTunDev(tunDevice,tunAddr,tunMask,tunGW,tunDNS)
+		remoteTun.dnsServers = strings.Split(tunDNS, ",")
+		remoteTun.tunDev, err = tun.RegTunDev(tunDevice,tunAddr,tunMask,tunGW,tunDNS)
 		if err != nil {
 			fmt.Println("start tun err:", err)
-			return nil,err;
-		}
-		if runtime.GOOS=="windows" {
-			//time.Sleep(time.Second*1)
-			//netsh interface ip set address name="Ehternet 2" source=static addr=10.1.0.10 mask=255.255.255.0 gateway=none
-			comm.CmdHide("netsh", "interface","ip","set","address","name="+ifce.Name(),"source=static","addr="+tunAddr,"mask="+tunMask,"gateway=none").Run();
-		}else if runtime.GOOS=="linux"{
-			//sudo ip addr add 10.1.0.10/24 dev O_O
-			masks:=net.ParseIP(tunMask).To4();
-			maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}
-			comm.CmdHide("ip", "addr","add",maskAddr.String(),"dev",ifce.Name()).Run();
-			comm.CmdHide("ip", "link","set","dev",ifce.Name(),"up").Run();
-		}else if runtime.GOOS=="darwin"{
-			//ifconfig utun2 10.1.0.10 10.1.0.20 up
-			masks:=net.ParseIP(tunMask).To4();
-			maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}
-			ipMin,ipMax:=comm.GetCidrIpRange(maskAddr.String());
-			comm.CmdHide("ifconfig", "utun2",ipMin,ipMax,"up").Run();
+			return err;
 		}
 
 		//windows
 		if runtime.GOOS=="windows" {
 			oldDns:=comm.GetDnsServer();
 			if oldDns!=nil&&len(oldDns)>0 {
-				dnsServers = append(dnsServers, oldDns...)
+				remoteTun.dnsServers = append(remoteTun.dnsServers, oldDns...)
 			}
-			routeEdit(tunGW,remoteAddr,dnsServers,oldGw);
+			routeEdit(tunGW,remoteTun.remoteAddr,remoteTun.dnsServers, remoteTun.oldGw);
 		}
-		go tunRecv(ifce, param.Args.Mtu)
-		return ifce,nil;
+		go tunRecv(remoteTun.tunDev, param.Args.Mtu)
+		return nil;
 	}
-	return nil,nil;
+	return nil;
+}
+
+/**/
+func (remoteTun *RemoteTun) Shutdown(){
+	if remoteTun.tunDev!=nil {
+		remoteTun.tunDev.Close();
+	}
+	unRegRoute(remoteTun.tunGW ,remoteTun.remoteAddr ,remoteTun.dnsServers ,remoteTun.oldGw)
 }
 
 func tunRecv(dev io.ReadWriteCloser ,mtu int) error{

@@ -6,15 +6,11 @@ import (
 	"github.com/songgao/water"
 	"net"
 	"os"
-	"os/signal"
-	"strings"
 	"os/exec"
-	"syscall"
-	"time"
+	"strings"
 )
 
 func GetGateway()string {
-
 	return "";
 }
 
@@ -39,29 +35,14 @@ func GetWaterConf(tunAddr string,tunMask string)water.Config{
 }
 
 
-func setDNSServer(ip string,ipv6 string){
+func SetDNSServer(ip string,ipv6 string,_gwIp string){
 	var dnsByte=[]byte("nameserver "+ip+"\n");
 	oldByte,_:=os.ReadFile("/etc/resolv.conf")
 	dnsByte=append(dnsByte,oldByte...)
 	os.WriteFile("/etc/resolv.conf",dnsByte,os.ModePerm)
-
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch,
-		syscall.SIGHUP,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGKILL,
-		syscall.SIGABRT,
-		syscall.SIGSEGV,
-		syscall.SIGQUIT)
-	go func() {
-		_= <-ch
-		resetDns(ip);
-		os.Exit(0);
-	}()
 }
 
-func resetDns(ip string){
+func ResetDns(ip string){
 	oldByte,_:=os.ReadFile("/etc/resolv.conf")
 	dnss:=strings.Split(string(oldByte),"\n");
 	var reDnsStr="";
@@ -91,8 +72,6 @@ func AddRoute(tunAddr string, tunGw string, tunMask string){
 
 
 	maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}
-
-
 	maskAddrs:=strings.Split(maskAddr.String(),"/")
 
 	//route add –net IP netmask MASK gw IP
@@ -121,11 +100,6 @@ func GetDnsServerByGateWay(gwIp string)([]string,bool,bool){
 		}
 	}
 	return DnsList,false,false;
-}
-
-func WatchNotifyIpChange(){
-	time.Sleep(time.Second*2)
-	setDNSServer("127.0.0.1","0:0:0:0:0:0:0:1");
 }
 
 func CmdHide(name string, arg ...string) *exec.Cmd{

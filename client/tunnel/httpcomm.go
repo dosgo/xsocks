@@ -1,4 +1,4 @@
-package httpcomm
+package tunnel
 
 import (
 	"crypto/tls"

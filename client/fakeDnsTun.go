@@ -14,60 +14,71 @@ import (
 	"log"
 	"net"
 	"net/url"
-	"runtime"
 	"strings"
 	"time"
 )
 
-type FakeDns struct {
-	dnsUdp  *dns.Server
-	dnsTcp  *dns.Server
+type FakeDnsTun struct {
+	tunDns *TunDns
 	tunDev io.ReadWriteCloser
+	remoteDns *RemoteDns
 }
 
 type TunDns struct {
-	remoteDns RemoteDns
 	dnsClient *dns.Client
 	oldDns string
+	udpServer  *dns.Server
+	tcpServer  *dns.Server
 	serverHost string
+	dnsAddr string;
+	dnsAddrV6 string;
+	dnsPort string;
+	ip2Domain *bimap.BiMap
 }
-var tunDns TunDns;
-var ip2Domain = bimap.NewBiMap()
 
-var tunAddr="10.0.0.2"
-var tunGW="10.0.0.1";
+
+var tunAddr ="10.0.0.2";
+var tunGW ="10.0.0.1";
 var tunMask="255.255.0.0"
 
-//var tunMask="255.255.255.0"
 
-func (fakeDns *FakeDns)Start(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tunDNS string) {
+func (fakeDns *FakeDnsTun)Start(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tunDNS string) {
+	//remote dns
+	fakeDns.remoteDns = &RemoteDns{}
+	//start local dns
+	fakeDns.tunDns =&TunDns{};
+	fakeDns.tunDns.dnsPort="53";
+	fakeDns.tunDns.dnsAddr="127.0.0.1"
+	fakeDns.tunDns.dnsAddrV6="0:0:0:0:0:0:0:1"
+	fakeDns.tunDns.ip2Domain= bimap.NewBiMap()
 	gwIp:=comm.GetGateway()
 	oldDns,_,_:=comm.GetDnsServerByGateWay(gwIp);
-	if oldDns[0]=="127.0.0.1"||oldDns[0]==tunGW || oldDns[0]==_tunGW  {
+	if oldDns[0]==fakeDns.tunDns.dnsAddr||oldDns[0]==tunGW || oldDns[0]==_tunGW  {
 		oldDns[0]="114.114.114.114"
 	}
+	fmt.Printf("oldDns:%v\r\n",oldDns)
 	urlInfo, _ := url.Parse(param.Args.ServerAddr)
-	tunDns.serverHost=urlInfo.Hostname()
-	fakeDns.dnsUdp,fakeDns.dnsTcp=_startSmartDns("53",oldDns[0])
-	go comm.WatchNotifyIpChange();
-	fakeDns.tunDev=_startTun(tunDevice,_tunAddr,_tunMask,_tunGW,tunDNS);
+	fakeDns.tunDns.serverHost=urlInfo.Hostname()
+	fakeDns.tunDns._startSmartDns(oldDns[0])
+
+	//edit DNS
+	comm.SetDNSServer(fakeDns.tunDns.dnsAddr,fakeDns.tunDns.dnsAddrV6,gwIp);
+	fakeDns._startTun(tunDevice,_tunAddr,_tunMask,_tunGW,tunDNS);
 }
 
-func (fakeDns *FakeDns)Shutdown(){
+func (fakeDns *FakeDnsTun)Shutdown(){
 	if fakeDns.tunDev!=nil {
 		fakeDns.tunDev.Close();
 	}
-	if fakeDns.dnsTcp!=nil {
-		fakeDns.dnsTcp.Shutdown();
-	}
-	if fakeDns.dnsUdp!=nil {
-		fakeDns.dnsUdp.Shutdown();
+	if fakeDns.tunDns!=nil {
+		comm.ResetDns(fakeDns.tunDns.dnsAddr);
+		fakeDns.tunDns.Shutdown();
 	}
 }
 
 
 
-func _startTun(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tunDNS string)io.ReadWriteCloser{
+func (fakeDns *FakeDnsTun) _startTun(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tunDNS string)error{
 	if len(_tunAddr)>0 {
 		tunAddr =_tunAddr;
 	}
@@ -77,55 +88,35 @@ func _startTun(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tu
 	if len(_tunGW)>0 {
 		tunGW=_tunGW
 	}
-
+	var err error
 	//dnsServers := strings.Split(tunDNS, ",")
-	var dev io.ReadWriteCloser;
 	if len(param.Args.UnixSockTun)>0 {
-		conn,err:=tun.UsocketToTun(param.Args.UnixSockTun)
+		fakeDns.tunDev,err=tun.UsocketToTun(param.Args.UnixSockTun)
 		if err!=nil {
-			return nil;
+			return err;
 		}
-		dev=conn;
 	}else{
 		fmt.Printf("tunGW:%s tunMask:%s\r\n",tunGW,tunMask)
-		ifce, err := tun.RegTunDev(tunDevice,tunAddr,tunMask,tunGW,tunDNS)
+		fakeDns.tunDev, err = tun.RegTunDev(tunDevice,tunAddr,tunMask,tunGW,tunDNS)
 		if err != nil {
-			return nil;
+			return err;
 		}
-		if runtime.GOOS=="windows" {
-			//time.Sleep(time.Second*1)
-			//netsh interface ip set address name="Ehternet 2" source=static addr=10.1.0.10 mask=255.255.255.0 gateway=none
-			comm.CmdHide("netsh", "interface","ip","set","address","name="+ifce.Name(),"source=static","addr="+tunAddr,"mask="+tunMask,"gateway=none").Run();
-		}else if runtime.GOOS=="linux"{
-			//sudo ip addr add 10.1.0.10/24 dev O_O
-			masks:=net.ParseIP(tunMask).To4();
-			maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}
-			comm.CmdHide("ip", "addr","add",maskAddr.String(),"dev",ifce.Name()).Run();
-			comm.CmdHide("ip", "link","set","dev",ifce.Name(),"up").Run();
-		}else if runtime.GOOS=="darwin"{
-			//ifconfig utun2 10.1.0.10 10.1.0.20 up
-			masks:=net.ParseIP(tunMask).To4();
-			maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}
-			ipMin,ipMax:=comm.GetCidrIpRange(maskAddr.String());
-			comm.CmdHide("ifconfig", "utun2",ipMin,ipMax,"up").Run();
-		}
-		dev=ifce;
 	}
 	go func() {
 		time.Sleep(time.Second*1)
 		comm.AddRoute(tunAddr, tunGW,tunMask)
 	}()
-	go tun2socks.ForwardTransportFromIo(dev,param.Args.Mtu,dnsTcpForwarder,dnsUdpForwarder);
-	return dev;
+	go tun2socks.ForwardTransportFromIo(fakeDns.tunDev,param.Args.Mtu,fakeDns.dnsTcpForwarder,fakeDns.dnsUdpForwarder);
+	return nil;
 }
 
 
-func dnsTcpForwarder(conn *gonet.TCPConn)error{
+func (fakeDns *FakeDnsTun) dnsTcpForwarder(conn *gonet.TCPConn)error{
 
 	//local dns
-	if conn.LocalAddr().String()==(tunGW+":53"){
+	if conn.LocalAddr().String()==(tunGW+":53") && fakeDns.tunDns!=nil{
 		log.Printf("local dns\r\n")
-		conn2, err := net.DialTimeout("tcp","127.0.0.1:53",time.Second*15);
+		conn2, err := net.DialTimeout("tcp",fakeDns.tunDns.dnsAddr+":"+fakeDns.tunDns.dnsPort,time.Second*15);
 		if err != nil {
 			return err;
 		}
@@ -133,7 +124,7 @@ func dnsTcpForwarder(conn *gonet.TCPConn)error{
 		return nil;
 	}
 
-	remoteAddr:=dnsToAddr(conn.LocalAddr().String())
+	remoteAddr:=fakeDns.dnsToAddr(conn.LocalAddr().String())
 	if remoteAddr==""{
 		log.Printf("remoteAddr:%v\r\n",remoteAddr)
 		conn.Close();
@@ -152,15 +143,15 @@ func dnsTcpForwarder(conn *gonet.TCPConn)error{
 	return nil
 }
 
-func dnsUdpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)error{
+func (fakeDns *FakeDnsTun) dnsUdpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)error{
 	//log.Printf("udpAddr:%s\r\n",conn.LocalAddr().String())
 	defer ep.Close();
 	defer conn.Close();
 
 	//local dns
-	if conn.LocalAddr().String()==(tunGW+":53"){
+	if conn.LocalAddr().String()==(tunGW+":53") && fakeDns.tunDns!=nil{
 		log.Printf("local dns\r\n")
-		conn2, err := net.DialTimeout("udp","127.0.0.1:53",time.Second*15);
+		conn2, err := net.DialTimeout("udp",fakeDns.tunDns.dnsAddr+":"+fakeDns.tunDns.dnsPort,time.Second*15);
 		if err != nil {
 			log.Printf("local dns2\r\n")
 			return err;
@@ -169,8 +160,7 @@ func dnsUdpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)error{
 		return nil;
 	}
 
-
-	remoteAddr:=dnsToAddr(conn.LocalAddr().String())
+	remoteAddr:=fakeDns.dnsToAddr(conn.LocalAddr().String())
 	if remoteAddr==""{
 		conn.Close();
 		return nil;
@@ -181,14 +171,17 @@ func dnsUdpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)error{
 	return nil;
 }
 /*dns addr swap*/
-func dnsToAddr(remoteAddr string) string{
+func (fakeDns *FakeDnsTun) dnsToAddr(remoteAddr string) string{
+	if fakeDns.tunDns==nil {
+		return "";
+	}
 	remoteAddrs:=strings.Split(remoteAddr,":")
-	_domain,ok:= ip2Domain.Get(remoteAddrs[0])
+	_domain,ok:= fakeDns.tunDns.ip2Domain.Get(remoteAddrs[0])
 	if !ok{
 		return "";
 	}
 	domain:=_domain.(string)
-	ip, err := tunDns.remoteDns.Resolve(domain[0 : len(domain)-1])
+	ip, err := fakeDns.remoteDns.Resolve(domain[0 : len(domain)-1])
 	if err!=nil{
 		return "";
 	}
@@ -198,24 +191,23 @@ func dnsToAddr(remoteAddr string) string{
 
 
 
-func _startSmartDns(dnsPort string,oldDns string) (*dns.Server,*dns.Server) {
-	udpServer := &dns.Server{
+func (tunDns *TunDns)_startSmartDns(oldDns string)  {
+	tunDns.udpServer = &dns.Server{
 		Net:          "udp",
-		Addr:         ":"+dnsPort,
+		Addr:         ":"+tunDns.dnsPort,
 		Handler:      dns.HandlerFunc(tunDns.ServeDNS),
 		UDPSize:      4096,
 		ReadTimeout:  time.Duration(10) * time.Second,
 		WriteTimeout: time.Duration(10) * time.Second,
 	}
-	tcpServer:= &dns.Server{
+	tunDns.tcpServer= &dns.Server{
 		Net:          "tcp",
-		Addr:         ":"+dnsPort,
+		Addr:         ":"+tunDns.dnsPort,
 		Handler:      dns.HandlerFunc(tunDns.ServeDNS),
 		UDPSize:      4096,
 		ReadTimeout:  time.Duration(10) * time.Second,
 		WriteTimeout: time.Duration(10) * time.Second,
 	}
-	tunDns.remoteDns = RemoteDns{}
 	tunDns.oldDns=oldDns
 	tunDns.dnsClient = &dns.Client{
 		Net:          "udp",
@@ -223,11 +215,18 @@ func _startSmartDns(dnsPort string,oldDns string) (*dns.Server,*dns.Server) {
 		ReadTimeout:  time.Duration(1) * time.Second,
 		WriteTimeout: time.Duration(1) * time.Second,
 	}
-	go udpServer.ListenAndServe();
-	go tcpServer.ListenAndServe();
-	return udpServer,tcpServer;
+	go tunDns.udpServer.ListenAndServe();
+	go tunDns.tcpServer.ListenAndServe();
 }
 
+func (tunDns *TunDns)Shutdown(){
+	if tunDns.tcpServer!=nil {
+		tunDns.tcpServer.Shutdown();
+	}
+	if tunDns.udpServer!=nil {
+		tunDns.udpServer.Shutdown();
+	}
+}
 
 
 
@@ -237,7 +236,7 @@ func (tunDns *TunDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	m.SetReply(r)
 	m.Authoritative = false
 	domain := r.Question[0].Name
-	m.Answer =ipv4Res(domain,nil,r);
+	m.Answer =tunDns.ipv4Res(domain,nil,r);
 	// final
 	return m, nil
 }
@@ -263,16 +262,16 @@ func  (tunDns *TunDns)ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	}
 }
 /*ipv4智能响应*/
-func ipv4Res(domain string,_ip  net.IP,r *dns.Msg) []dns.RR {
+func (tunDns *TunDns)ipv4Res(domain string,_ip  net.IP,r *dns.Msg) []dns.RR {
 	var ip ="";
-	ipLog,ok :=ip2Domain.GetInverse(domain)
+	ipLog,ok :=tunDns.ip2Domain.GetInverse(domain)
 	if ok && strings.Index(domain, tunDns.serverHost) == -1{
 		ip=ipLog.(string);
 	}else {
 		if _ip==nil && r!=nil  {
 			//为空的话智能dns的话先解析一遍
 			if param.Args.SmartDns==1  {
-				m1,_,err := localdns.dnsClient.Exchange(r,tunDns.oldDns+":53")
+				m1,_,err := tunDns.dnsClient.Exchange(r,tunDns.oldDns+":53")
 				if err == nil {
 					for _, v := range m1.Answer {
 						record, isType := v.(*dns.A)
@@ -295,9 +294,9 @@ func ipv4Res(domain string,_ip  net.IP,r *dns.Msg) []dns.RR {
 			//外国随机分配一个代理ip
 			for i := 0; i <= 2; i++ {
 				ip = comm.GetCidrRandIpByNet(tunAddr, tunMask)
-				_, ok := ip2Domain.Get(ip)
+				_, ok := tunDns.ip2Domain.Get(ip)
 				if !ok && ip!=tunAddr {
-					ip2Domain.Insert(ip, domain)
+					tunDns.ip2Domain.Insert(ip, domain)
 					break;
 				} else {
 					fmt.Println("ip used up")
@@ -320,7 +319,7 @@ func  (tunDns *TunDns)resolve(r *dns.Msg) (*dns.Msg, error) {
 	domain := r.Question[0].Name
 	fmt.Printf("ipv6:%s\r\n",domain)
 	//ipv6
-	m1,_,err := localdns.dnsClient.Exchange(r,"114.114.114.114:53")
+	m1,_,err := tunDns.dnsClient.Exchange(r,"114.114.114.114:53")
 	if err == nil {
 		return m1,nil;
 	}

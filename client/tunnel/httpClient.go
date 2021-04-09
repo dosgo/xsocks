@@ -1,13 +1,12 @@
-package client
+package tunnel
 
 import (
 	"crypto/tls"
+	"github.com/dosgo/xsocks/comm"
+	"github.com/dosgo/xsocks/param"
 	"net/http"
 	"net/url"
 	"sync"
-	"github.com/dosgo/xsocks/client/httpcomm"
-	"github.com/dosgo/xsocks/comm"
-	"github.com/dosgo/xsocks/param"
 )
 
 /*
@@ -21,18 +20,17 @@ type httpConn struct {
 
 var httpDialer *httpConn
 func init(){
-
-	httpDialer=&httpConn{}
+	httpDialer =&httpConn{}
 }
 
 
-func NewHttpDialer()  *httpConn{
-	httpDialer.client=newHttpClient()
+func NewHttpDialer()  *httpConn {
+	httpDialer.client= newHttpClient()
 	return httpDialer;
 }
 
 func newHttpClient() *http.Client{
-	tslClientConf:=httpcomm.GetTlsConf();
+	tslClientConf:= GetTlsConf();
 	t := &http.Transport{TLSClientConfig: tslClientConf}
 	return  &http.Client{Transport: t}
 }
@@ -40,7 +38,7 @@ func newHttpClient() *http.Client{
 func (qd *httpConn) Dial(_url string) (comm.CommConn, error) {
 	qd.Lock()
 	defer qd.Unlock()
-	tslClientConf:=httpcomm.GetTlsConf();
+	tslClientConf:= GetTlsConf();
 	urlInfo, err := url.Parse(_url)
 	conn, err := tls.Dial("tcp", urlInfo.Host, tslClientConf)
 

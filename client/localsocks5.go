@@ -47,7 +47,6 @@ func StartLocalSocks5(address string) (net.Listener,error) {
 }
 
 var udpNat sync.Map
-var remoteUdpNat sync.Map
 /*这里得保持socks5协议兼容*/
 func startUdpProxy(addr string) ( *net.UDPAddr ,error){
 	udpAddr, err := net.ResolveUDPAddr("udp", addr)

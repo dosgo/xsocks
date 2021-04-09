@@ -1,18 +1,18 @@
 package muxComm
 
 import (
-	"github.com/xtaci/smux"
-	"math/rand"
-	"time"
-	"sync"
 	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/param"
+	"github.com/xtaci/smux"
+	"math/rand"
+	"sync"
+	"time"
 )
 
 
 type SmuxComm struct {
-	sess          [] *smux.Session
-	dialFc  DialConn
+	sess   [] *smux.Session
+	dialFc DialConn
 	sync.Mutex
 }
 

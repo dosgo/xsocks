@@ -1,19 +1,19 @@
 package muxComm
 
 import (
+	"errors"
+	"github.com/dosgo/xsocks/comm"
+	"github.com/dosgo/xsocks/param"
 	"github.com/hashicorp/yamux"
 	"io"
-	"math/rand"
-	"time"
-	"github.com/dosgo/xsocks/comm"
-	"sync"
 	"log"
-	"errors"
-	"github.com/dosgo/xsocks/param"
+	"math/rand"
+	"sync"
+	"time"
 )
 type YamuxComm struct {
-	sess           []*yamux.Session
-	dialFc  DialConn
+	sess   []*yamux.Session
+	dialFc DialConn
 	sync.Mutex
 }
 
@@ -35,7 +35,7 @@ func (qd *YamuxComm) Dial(url string) (comm.CommConn, error) {
 			log.Printf("err:%v\r\n",err);
 			return nil,err;
 		}
-		session,err:=newYamuxSession(wsConn);
+		session,err:= newYamuxSession(wsConn);
 		if err!=nil {
 			log.Printf("err:%v\r\n",err);
 			return nil,err;
@@ -48,7 +48,7 @@ func (qd *YamuxComm) Dial(url string) (comm.CommConn, error) {
 				log.Printf("err:%v\r\n",err);
 				return nil,err;
 			}
-			session,err:=newYamuxSession(wsConn);
+			session,err:= newYamuxSession(wsConn);
 			if err==nil {
 				qd.sess=append(qd.sess,session)
 			}else{
@@ -74,7 +74,7 @@ func (qd *YamuxComm) Dial(url string) (comm.CommConn, error) {
 					log.Printf("err:%v\r\n",err);
 					return nil,err;
 				}
-				session,err:=newYamuxSession(wsConn);
+				session,err:= newYamuxSession(wsConn);
 				if err==nil {
 					qd.sess=append(qd.sess,session)
 				}else{
@@ -92,7 +92,7 @@ func (qd *YamuxComm) Dial(url string) (comm.CommConn, error) {
 					log.Printf("err:%v\r\n",err);
 					return nil,err;
 				}
-				session,err:=newYamuxSession(wsConn);
+				session,err:= newYamuxSession(wsConn);
 				if err==nil {
 					qd.sess=append(qd.sess,session)
 				}else{

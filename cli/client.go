@@ -4,6 +4,9 @@ import (
 	"flag"
 	"github.com/dosgo/xsocks/client"
 	"github.com/dosgo/xsocks/param"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 
@@ -28,7 +31,8 @@ func main() {
 	c:=client.Client{}
 	c.Start();
 	defer c.Shutdown();
-	select {
-
-	}
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL, syscall.SIGABRT, syscall.SIGSEGV, syscall.SIGQUIT)
+	_= <-ch
+	c.Shutdown()
 }
