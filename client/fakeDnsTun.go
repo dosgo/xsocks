@@ -52,14 +52,18 @@ func (fakeDns *FakeDnsTun)Start(tunDevice string,_tunAddr string,_tunMask string
 	fakeDns.tunDns.dnsAddrV6="0:0:0:0:0:0:0:1"
 	fakeDns.tunDns.ip2Domain= bimap.NewBiMap()
 	gwIp:=comm.GetGateway()
-	oldDns,_,_:=comm.GetDnsServerByGateWay(gwIp);
-	if oldDns[0]==fakeDns.tunDns.dnsAddr||oldDns[0]==tunGW || oldDns[0]==_tunGW  {
-		oldDns[0]="114.114.114.114"
+	var oldDns="114.114.114.114";
+	dnsServers,_,_:=comm.GetDnsServerByGateWay(gwIp);
+	for _,v:=range dnsServers{
+		if v!=fakeDns.tunDns.dnsAddr&&v!=tunGW && v!=_tunGW  {
+			oldDns=v;
+			break;
+		}
 	}
-	fmt.Printf("oldDns:%v\r\n",oldDns)
+	fmt.Printf("dnsServers:%v\r\n",dnsServers)
 	urlInfo, _ := url.Parse(param.Args.ServerAddr)
 	fakeDns.tunDns.serverHost=urlInfo.Hostname()
-	fakeDns.tunDns._startSmartDns(oldDns[0])
+	fakeDns.tunDns._startSmartDns(oldDns)
 
 	//edit DNS
 	comm.SetDNSServer(fakeDns.tunDns.dnsAddr,fakeDns.tunDns.dnsAddrV6,gwIp);
