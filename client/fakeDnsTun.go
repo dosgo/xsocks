@@ -264,9 +264,11 @@ func  (tunDns *TunDns)ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 /*ipv4智能响应*/
 func (tunDns *TunDns)ipv4Res(domain string,_ip  net.IP,r *dns.Msg) []dns.RR {
 	var ip ="";
+	var ipTtl uint32=60;
 	ipLog,ok :=tunDns.ip2Domain.GetInverse(domain)
 	if ok && strings.Index(domain, tunDns.serverHost) == -1{
 		ip=ipLog.(string);
+		ipTtl=1;
 	}else {
 		if _ip==nil && r!=nil  {
 			//为空的话智能dns的话先解析一遍
@@ -296,6 +298,7 @@ func (tunDns *TunDns)ipv4Res(domain string,_ip  net.IP,r *dns.Msg) []dns.RR {
 				ip = comm.GetCidrRandIpByNet(tunAddr, tunMask)
 				_, ok := tunDns.ip2Domain.Get(ip)
 				if !ok && ip!=tunAddr {
+					ipTtl=1;
 					tunDns.ip2Domain.Insert(ip, domain)
 					break;
 				} else {
@@ -307,7 +310,7 @@ func (tunDns *TunDns)ipv4Res(domain string,_ip  net.IP,r *dns.Msg) []dns.RR {
 	}
 	fmt.Printf("domain:%s ip:%s\r\n",domain,ip)
 	return []dns.RR{&dns.A{
-		Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
+		Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: ipTtl},
 		A:   net.ParseIP(ip),
 	}}
 }

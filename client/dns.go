@@ -109,7 +109,7 @@ func (localDns *LocalDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	}
 	fmt.Printf("dns domain:%s Resolve ip:%v\r\n",domain,ip)
 	m.Answer = append(r.Answer, &dns.A{
-		Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
+		Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 1},
 		A:   net.ParseIP(ip),
 	})
 	// final
