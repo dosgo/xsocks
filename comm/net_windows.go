@@ -21,7 +21,8 @@ import (
 )
 
 
-
+var oldDns="114.114.114.114";
+var defaultDns="114.114.114.114";
 
 func GetGateway()string {
 	table, err := routetable.NewRouteTable()
@@ -101,8 +102,22 @@ func GetLocalAddresses() ([]lAddr ,error) {
 	return lAddrs,err
 }
 
-
-
+/*获取旧的dns,内网解析用*/
+func GetOldDns(dnsAddr string,tunGW string,_tunGW string) string{
+	//非默认值说明设置过
+	if oldDns!=defaultDns{
+		return oldDns;
+	}
+	gwIp:=GetGateway()
+	dnsServers,_,_:=GetDnsServerByGateWay(gwIp);
+	for _,v:=range dnsServers{
+		if v!=dnsAddr&&v!=tunGW && v!=_tunGW  {
+			oldDns=v;
+			break;
+		}
+	}
+	return oldDns;
+}
 
 //dns
 
@@ -161,74 +176,52 @@ loop:
 var _watchIpChange *watchIpChange
 
 
-func SetDNSServer(ip string,ipv6 string,gwIp string){
+
+/*
+修改配置
+*/
+func SetNetConf(dnsIpv4 string,dnsIpv6 string){
+	//修改dns配置
+	gwIp:=GetGateway()
+	oneAdapter=&adapterConf{}
+	oneAdapter.gwIp=gwIp;
+	oneAdapter.dHCPEnabled,oneAdapter.isIPv6=_setDNSServer(dnsIpv4,dnsIpv6,gwIp);
+
+	//注册网络变动
 	//注册变动
-	_watchIpChange=&watchIpChange{Run: true,AdapterConf: make(map[string]*adapterConf,0)}
+	_watchIpChange:=&watchIpChange{Run: true,AdapterConf: make(map[string]*adapterConf,0)}
 	go _watchIpChange.Watch(func() {
 		time.Sleep(time.Second*2)
 		gwIp:=GetGateway()
 		fmt.Printf("SetDNSServer gwip:%s\r\n",gwIp)
 		_adapterConf:=&adapterConf{}
-		var devName="";
-		_adapterConf.oldDns,devName,_adapterConf.dHCPEnabled,_adapterConf.isIPv6=_setDNSServer(gwIp,"127.0.0.1","0:0:0:0:0:0:0:1");
-		_watchIpChange.AdapterConf[devName]=_adapterConf;
+		_adapterConf.gwIp=gwIp;
+		_adapterConf.dHCPEnabled,_adapterConf.isIPv6=_setDNSServer("127.0.0.1","0:0:0:0:0:0:0:1",gwIp);
+		_watchIpChange.AdapterConf[gwIp]=_adapterConf;
+		oldDns=defaultDns;//设置回默认值
 	})
-	oneAdapter=&adapterConf{}
-	oneAdapter.oldDns,oneAdapter.iName,oneAdapter.dHCPEnabled,oneAdapter.isIPv6=_setDNSServer(ip,ipv6,gwIp);
 }
 
-func _setDNSServer(ip string,ipv6 string,gwIp string) ([]string,string,bool,bool){
+func _setDNSServer(dnsIpv4 string,dnsIpv6 string,gwIp string) (bool,bool){
 	log.Printf("SetDNSServer-gwIp:%s\r\n",gwIp)
-	oldDns,dHCPEnabled,isIPv6:=GetDnsServerByGateWay(gwIp);
-	lAdds,err:=GetLocalAddresses();
-	var iName="";
-	if err==nil {
-		for _, v := range lAdds {
-			if strings.Index(v.GateWay,gwIp)!=-1 {
-				iName=v.Name;
-				break;
-			}
-		}
-	}
-	/*
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch,
-		syscall.SIGHUP,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGKILL,
-		syscall.SIGABRT,
-		syscall.SIGSEGV,
-		syscall.SIGQUIT)
-	go func() {
-		_= <-ch
-		if len(oldDns)>0 {
-			resetDns(iName,"ip",dHCPEnabled,oldDns);
-			if isIPv6 {
-				resetDns(iName, "ipv6", dHCPEnabled, []string{ipv6});
-				Ipv6Switch(true);
-			}
-		}
-		os.Exit(0);
-	}()*/
+	_,dHCPEnabled,isIPv6:=GetDnsServerByGateWay(gwIp);
 	//ipv4
-	changeDns(iName,"ip",ip,oldDns)
+	changeDns("ip",dnsIpv4,gwIp)
 	//ipv6
 	if isIPv6 {
-		changeDns(iName, "ipv6", ipv6, []string{ipv6})
+		changeDns( "ipv6", dnsIpv6,gwIp)
 	}
 	//ipv4优先
 	if isIPv6 {
 		Ipv6Switch(false);
 	}
 	CmdHide("ipconfig", "/flushdns").Run()
-	return oldDns,iName,dHCPEnabled,isIPv6;
+	return dHCPEnabled,isIPv6;
 }
 
 
 type adapterConf struct {
-	iName string;
-	oldDns []string
+	gwIp string;
 	dHCPEnabled bool
 	isIPv6 bool
 }
@@ -259,39 +252,63 @@ func (wtp *watchIpChange) Watch(callBack func())error{
 
 func (wtp *watchIpChange) Shutdown(){
 	wtp.Run=false;
-	for iName,v:=range wtp.AdapterConf{
-		_resetDns(iName,"ip",v.dHCPEnabled,v.oldDns);
+	for _,v:=range wtp.AdapterConf{
+		_resetDns("ip",v.dHCPEnabled,v.gwIp);
+		if v.isIPv6 {
+			_resetDns("ipv5",v.dHCPEnabled,v.gwIp);
+		}
 	}
 }
 
 
+func gwIpToName(gwIp string)string{
+	lAdds,err:=GetLocalAddresses();
+	var iName="";
+	if err==nil {
+		for _, v := range lAdds {
+			if strings.Index(v.GateWay,gwIp)!=-1 {
+				iName=v.Name;
+				break;
+			}
+		}
+	}
+	return iName;
+}
 
-func changeDns(iName string,netType string,ip string,oldDns []string){
+
+func changeDns(netType string,ip string,gwIp string){
+	dnsServers,_,_:=GetDnsServerByGateWay(gwIp);
+	var iName=gwIpToName(gwIp);
 //	netsh interface ipv6 add dns
 	//netsh interface ip set dnsservers xx static 127.0.0.1 192.168.9.102
 	CmdHide("netsh", "interface",netType,"set","dnsservers",iName,"static",ip).Output()
-	for _,v:=range oldDns{
+	for _,v:=range dnsServers{
 		CmdHide("netsh", "interface",netType,"add","dnsservers",iName,v).Output()
 	}
 }
 
 
-func ResetDns(ip string){
+func ResetNetConf(dnsAddr string){
 	if _watchIpChange!=nil {
 		_watchIpChange.Shutdown();
 	}
 	if oneAdapter!=nil {
-		_resetDns(oneAdapter.iName, "ip", oneAdapter.dHCPEnabled, oneAdapter.oldDns);
+		_resetDns("ip", oneAdapter.dHCPEnabled,oneAdapter.gwIp);
+		if oneAdapter.isIPv6 {
+			_resetDns("ipv6", oneAdapter.dHCPEnabled,oneAdapter.gwIp);
+		}
 	}
 }
 
-func _resetDns(iName string,netType string,dHCPEnabled bool,oldDns []string){
+func _resetDns(netType string,dHCPEnabled bool,gwIp string){
+	var iName=gwIpToName(gwIp);
+	dnsServers,_,_:=GetDnsServerByGateWay(gwIp);
 	//dhcp
 	if dHCPEnabled {
 		CmdHide("netsh", "interface",netType,"set","dnsservers",iName,"dhcp").Output()
 	}else {
 		i:=0;
-		for _,v:=range oldDns{
+		for _,v:=range dnsServers{
 			if v=="127.0.0.1"{
 				continue;
 			}
@@ -327,17 +344,7 @@ func GetDnsServerByGateWay(gwIp string)([]string,bool,bool){
 	return nil,false,isIpv6;
 }
 
-//BIOS信息
-func GetBiosInfo() string {
-	var s = []struct {
-		Name string
-	}{}
-	err := wmi.Query("SELECT Name FROM Win32_BIOS WHERE (Name IS NOT NULL)", &s) // WHERE (BIOSVersion IS NOT NULL)
-	if err != nil {
-		return ""
-	}
-	return s[0].Name
-}
+
 type NetworkAdapter struct {
 	DNSServerSearchOrder   []string
 	DefaultIPGateway []string
