@@ -7,7 +7,7 @@ require (
 	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/hashicorp/yamux v0.0.0-20200609203250-aecfd211c9ce
 	github.com/lucas-clemente/quic-go v0.21.1
-	github.com/miekg/dns v1.1.35
+	github.com/miekg/dns v1.1.43
 	github.com/songgao/water v0.0.0-20200317203138-2b4b6d7c09d8
 	github.com/vishalkuo/bimap v0.0.0-20180703190407-09cff2814645
 	github.com/xtaci/kcp-go/v5 v5.6.1
