@@ -272,12 +272,16 @@ func (tunDns *TunDns)ipv4Res(domain string,_ip  net.IP,r *dns.Msg) []dns.RR {
 					for _, v := range m1.Answer {
 						record, isType := v.(*dns.A)
 						if isType {
-							_ip=record.A;
-							ipTtl=record.Hdr.Ttl;
-							break;
+							//有些dns会返回127.0.0.1
+							if record.A.String()!="127.0.0.1" {
+								_ip=record.A;
+								ipTtl=record.Hdr.Ttl;
+								break;
+							}
 						}
 					}
 				}else{
+					fmt.Printf("local dns error:%v\r\n",err)
 					//解析错误说明无网络,否则就算不存在也会回复的
 					dnsErr=true;//标记为错误
 				}
