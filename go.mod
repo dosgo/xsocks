@@ -19,5 +19,4 @@ require (
 	golang.org/x/sys v0.0.0-20210510120138-977fb7262007
 	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324
 	gvisor.dev/gvisor v0.0.0-20201215175918-b0f23fb7e0cf
-	k8s.io/apimachinery v0.16.14-rc.0
 )
