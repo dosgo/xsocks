@@ -52,6 +52,7 @@ func (qd *QuicDialer) Connect(quicAddr string) error{
 	var quicConfig = &quic.Config{
 	//	MaxIncomingStreams:                    32,
 	//	MaxIncomingUniStreams:                 -1,              // disable unidirectional streams
+		Versions: []quic.VersionNumber{quic.Version1},
 		MaxIdleTimeout:maxIdleTimeout,
 		KeepAlive: true,
 	}
