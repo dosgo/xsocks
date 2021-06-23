@@ -21,9 +21,7 @@ func StartQuic(_addr string) error {
 		MaxIncomingStreams:                    72,
 		MaxIncomingUniStreams:                 -1,              // disable unidirectional streams
 		KeepAlive: true,
-		MaxReceiveStreamFlowControlWindow:5*1024*1024,
 		MaxIdleTimeout:time.Minute*5,
-		MaxReceiveConnectionFlowControlWindow:5*1024*1024,
 	}
 	addr, err := net.ResolveUDPAddr("udp", _addr)
 	if err != nil {
