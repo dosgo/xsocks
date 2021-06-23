@@ -2,7 +2,7 @@ package client
 
 import (
 	"fmt"
-	"github.com/emicklei/go-restful/log"
+	"log"
 	"github.com/miekg/dns"
 	"net"
 	"time"
