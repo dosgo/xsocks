@@ -258,6 +258,7 @@ func  (tunDns *TunDns)ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 func (tunDns *TunDns)ipv4Res(domain string,_ip  net.IP,r *dns.Msg) []dns.RR {
 	var ip ="";
 	var ipTtl uint32=60;
+	var dnsErr=false;
 	ipLog,ok :=tunDns.ip2Domain.GetInverse(domain)
 	if ok && strings.Index(domain, tunDns.serverHost) == -1{
 		ip=ipLog.(string);
@@ -272,9 +273,13 @@ func (tunDns *TunDns)ipv4Res(domain string,_ip  net.IP,r *dns.Msg) []dns.RR {
 						record, isType := v.(*dns.A)
 						if isType {
 							_ip=record.A;
+							ipTtl=record.Hdr.Ttl;
 							break;
 						}
 					}
+				}else{
+					//解析错误说明无网络,否则就算不存在也会回复的
+					dnsErr=true;//标记为错误
 				}
 			}
 		}
@@ -285,7 +290,7 @@ func (tunDns *TunDns)ipv4Res(domain string,_ip  net.IP,r *dns.Msg) []dns.RR {
 			if _ip!=nil {
 				ip = _ip.String();
 			}
-		} else if strings.Index(domain, tunDns.serverHost) == -1 {
+		} else if strings.Index(domain, tunDns.serverHost) == -1 &&!dnsErr {
 			//外国随机分配一个代理ip
 			for i := 0; i <= 2; i++ {
 				ip = comm.GetCidrRandIpByNet(tunAddr, tunMask)
