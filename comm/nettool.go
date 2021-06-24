@@ -27,8 +27,7 @@ func GetCidrRandIp(cidr string) string {
 }
 
 func IntnRange(min, max int) int{
-	_rand:=rand.New(rand.NewSource(time.Now().UnixNano()))
-	return _rand.Intn(max-min) + min
+	return rand.Intn(max-min) + min
 }
 
 func GetCidrIpRange(cidr string) (string, string) {
