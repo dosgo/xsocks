@@ -42,8 +42,8 @@ func (localDns *LocalDns)StartDns()  {
 	localDns.dnsClient = &dns.Client{
 		Net:          "udp",
 		UDPSize:      4096,
-		ReadTimeout:  time.Duration(1) * time.Second,
-		WriteTimeout: time.Duration(1) * time.Second,
+		ReadTimeout:  time.Duration(2) * time.Second,
+		WriteTimeout: time.Duration(2) * time.Second,
 	}
 	go localDns.udpServer.ListenAndServe();
 	go localDns.tcpServer.ListenAndServe();
