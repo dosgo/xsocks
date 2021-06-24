@@ -107,17 +107,6 @@ func (fakeDns *FakeDnsTun) _startTun(tunDevice string,_tunAddr string,_tunMask s
 
 func (fakeDns *FakeDnsTun) dnsTcpForwarder(conn *gonet.TCPConn)error{
 
-	//local dns
-	if conn.LocalAddr().String()==(tunGW+":53") && fakeDns.tunDns!=nil{
-		log.Printf("local dns\r\n")
-		conn2, err := net.DialTimeout("tcp",fakeDns.tunDns.dnsAddr+":"+fakeDns.tunDns.dnsPort,time.Second*15);
-		if err != nil {
-			return err;
-		}
-		comm.TcpPipe(conn,conn2,time.Second*30)
-		return nil;
-	}
-
 	remoteAddr:=fakeDns.dnsToAddr(conn.LocalAddr().String())
 	if remoteAddr==""{
 		log.Printf("remoteAddr:%v\r\n",remoteAddr)
@@ -142,17 +131,7 @@ func (fakeDns *FakeDnsTun) dnsUdpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoin
 	defer ep.Close();
 	defer conn.Close();
 
-	//local dns
-	if conn.LocalAddr().String()==(tunGW+":53") && fakeDns.tunDns!=nil{
-		log.Printf("local dns\r\n")
-		conn2, err := net.DialTimeout("udp",fakeDns.tunDns.dnsAddr+":"+fakeDns.tunDns.dnsPort,time.Second*15);
-		if err != nil {
-			log.Printf("local dns2\r\n")
-			return err;
-		}
-		comm.UdpPipe(conn,conn2,time.Second*30)
-		return nil;
-	}
+
 
 	remoteAddr:=fakeDns.dnsToAddr(conn.LocalAddr().String())
 	if remoteAddr==""{
@@ -260,7 +239,7 @@ func (tunDns *TunDns)ipv4Res(domain string,_ip  net.IP,r *dns.Msg) []dns.RR {
 	var ipTtl uint32=60;
 	var dnsErr=false;
 	ipLog,ok :=tunDns.ip2Domain.GetInverse(domain)
-	if ok && strings.Index(domain, tunDns.serverHost) == -1{
+	if ok && strings.Index(domain, tunDns.serverHost) == -1 && strings.HasPrefix(ipLog.(string), tunAddr[0:4]) {
 		ip=ipLog.(string);
 		ipTtl=1;
 	}else {
