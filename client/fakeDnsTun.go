@@ -184,7 +184,7 @@ func (tunDns *TunDns)_startSmartDns()  {
 	tunDns.dnsClient = &dns.Client{
 		Net:          "udp",
 		UDPSize:      4096,
-		ReadTimeout:  time.Duration(2) * time.Second,
+		ReadTimeout:  time.Duration(3) * time.Second,
 		WriteTimeout: time.Duration(2) * time.Second,
 	}
 	go tunDns.udpServer.ListenAndServe();
