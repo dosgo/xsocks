@@ -14,8 +14,10 @@ var oldDns="";
 
 
 /**/
-func SetSystenProxy() bool{
-
+func SetSystenProxy(proxyServer string,whiteList string,open bool) bool{
+	return true;
+}
+func CloseSystenProxy() bool{
 	return true;
 }
 
