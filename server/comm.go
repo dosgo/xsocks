@@ -66,7 +66,7 @@ func proxy(conn comm.CommConn){
 		case 0x02:
 			//连接socks5
 			sConn, err := net.DialTimeout("tcp", "127.0.0.1:"+param.Args.Sock5Port,param.Args.ConnectTime)
-			if(err!=nil){
+			if err!=nil {
 				log.Printf("err:%v\r\n",param.Args.Sock5Port)
 				return ;
 			}

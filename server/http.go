@@ -19,7 +19,7 @@ func StartWeb(addr string) error {
 		param.Args.CertFile="localhost_server.pem"
 		addrs:=strings.Split(addr,":")
 		var ip="127.0.0.1";
-		if(addrs[0]!="0.0.0.0"||addrs[0]!=""){
+		if addrs[0]!="0.0.0.0"||addrs[0]!="" {
 			 ip=addrs[0];
 		}
 		_,err:=os.Stat(param.Args.KeyFile)

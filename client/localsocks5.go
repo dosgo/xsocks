@@ -11,7 +11,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -81,7 +80,7 @@ func startUdpProxy(addr string) ( *net.UDPAddr ,error){
 				continue;
 			}
 			//本地转发
-			if (!comm.IsPublicIP(dstAddr.IP) || comm.IsChinaMainlandIP(dstAddr.IP.String()))&&(runtime.GOOS!="windows"||param.Args.TunType!=1) {
+			if (!comm.IsPublicIP(dstAddr.IP) || comm.IsChinaMainlandIP(dstAddr.IP.String()))&&(param.Args.TunType!=1) {
 				socksNatSawp(udpListener,data,dataStart,localAddr,dstAddr);
 			} else{
 				udpTunnel.sendRemote(data,localAddr)
@@ -351,7 +350,7 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 
 
 			//如果是内网IP,或者是中国IP(如果被污染的IP一定返回的是国外IP地址ChinaDNS也是这个原理)
-			if (!comm.IsPublicIP(ipAddr) || comm.IsChinaMainlandIP(ipAddr.String()))&&runtime.GOOS!="windows" {
+			if !comm.IsPublicIP(ipAddr) || comm.IsChinaMainlandIP(ipAddr.String()) {
 				server, err := net.DialTimeout("tcp", net.JoinHostPort(ipAddr.String(), port),param.Args.ConnectTime)
 				if err != nil {
 					log.Printf("host:%s err:%v\r\n", net.JoinHostPort(ipAddr.String(), port),err);

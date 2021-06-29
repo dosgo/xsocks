@@ -10,6 +10,16 @@ import (
 	"strings"
 )
 var oldDns="";
+
+
+
+/**/
+func SetSystenProxy() bool{
+
+	return true;
+}
+
+
 func GetGateway()string {
 	return "";
 }

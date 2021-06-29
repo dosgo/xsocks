@@ -24,6 +24,56 @@ import (
 var oldDns="114.114.114.114";
 var defaultDns="114.114.114.114";
 
+/*set system proxy*/
+/*set system proxy*/
+func SetSystenProxy(proxyServer string,whiteList string,open bool) bool{
+	key,  err := registry.OpenKey(registry.CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", registry.ALL_ACCESS)
+	if err != nil {
+		fmt.Printf("err:%s",err.Error());
+		return false;
+	}
+	defer key.Close()
+	if open {
+		err=key.SetDWordValue("ProxyEnable", 0x01)
+		if err != nil {
+			fmt.Printf("err:%s",err.Error());
+			return false;
+		}
+	}else{
+		err=key.SetDWordValue("ProxyEnable", 0x00);
+		if err != nil {
+			fmt.Printf("err:%s",err.Error());
+			return false;
+		}
+	}
+
+	err=key.SetStringValue("ProxyServer",proxyServer);
+	if err != nil {
+		fmt.Printf("err:%s",err.Error());
+		return false;
+	}
+	if len(whiteList)>0{
+		err=key.SetStringValue("ProxyOverride",whiteList)
+		if err != nil {
+			fmt.Printf("err:%s",err.Error());
+			return false;
+		}
+	}
+	return true;
+}
+
+func CloseSystenProxy() bool{
+	key,  err := registry.OpenKey(registry.CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", registry.ALL_ACCESS)
+	if err != nil {
+		return false;
+	}
+	defer key.Close()
+	key.SetDWordValue("ProxyEnable", 0x00);
+	return true;
+}
+
+
+
 func GetGateway()string {
 	table, err := routetable.NewRouteTable()
 	if err != nil {

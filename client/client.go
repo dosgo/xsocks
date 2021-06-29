@@ -7,6 +7,7 @@ import (
 	"github.com/dosgo/xsocks/param"
 	"net"
 	"os"
+	"runtime"
 )
 
 
@@ -33,6 +34,10 @@ func (c *Client) Shutdown(){
 	if c.remoteTun!=nil {
 		c.remoteTun.Shutdown();
 	}
+	//关闭代理
+	if param.Args.TunType==4 && runtime.GOOS=="windows" {
+		comm.CloseSystenProxy();
+	}
 }
 
 func (c *Client) Start() error{
@@ -54,20 +59,36 @@ func (c *Client) Start() error{
 	if os.Getenv("ANDROID_DATA")=="" {
 		tunAddr, tunGw = comm.GetUnusedTunAddr();
 	}
-	//1==tun2sock
+	//1==tun2sock  (android+linux(use iptable))
 	if param.Args.TunType==1 {
-		c.tun2Socks=&Tun2Socks{}
-		c.tun2Socks.Start("",tunAddr,"",tunGw,"")
+		if runtime.GOOS=="windows"{
+			fmt.Printf("Windows does not support the TUNTYPE 1 parameter, use TUNTYPE 3\r\n")
+		}else {
+			c.tun2Socks = &Tun2Socks{}
+			c.tun2Socks.Start("", tunAddr, "", tunGw, "")
+		}
 	}
-	//2==tun2remote tun
+	//2==tun2remote tun (android)
 	if param.Args.TunType==2 {
 		c.remoteTun=&RemoteTun{}
 		c.remoteTun.Start("","","","","");
 	}
+	//windows + linux +mac
 	if param.Args.TunType==3 {
 		c.fakeDns=&FakeDnsTun{}
 		c.fakeDns.Start("",tunAddr,"",tunGw,"");
 	}
+
+	//only windows  (system proxy)
+	if param.Args.TunType==4 {
+		if runtime.GOOS!="windows"{
+			fmt.Printf("TunType 4 supports Windows only\r\n")
+		}else{
+			comm.SetSystenProxy("socks://"+param.Args.Sock5Addr,"",true);
+		}
+	}
+
+
 	c.lDns=&LocalDns{}
 	c.lDns.StartDns();
 	var err error;
