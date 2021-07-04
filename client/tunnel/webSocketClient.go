@@ -6,6 +6,7 @@ import (
 	"github.com/dosgo/xsocks/param"
 	"golang.org/x/net/websocket"
 	"io"
+	"strings"
 )
 var wsYamuxDialer *muxComm.YamuxComm
 func init(){
@@ -17,7 +18,13 @@ func NewWsYamuxDialer()  *muxComm.YamuxComm {
 }
 
 func dialWs(url string)(io.ReadWriteCloser, error){
-	config, err := websocket.NewConfig(url, url)
+	var origin="";
+	if strings.HasPrefix(url,"wss") {
+		 origin = strings.Replace(url, "wss:", "https:", -1);
+	}else {
+		 origin = strings.Replace(url, "ws:", "http:", -1);
+	}
+	config, err := websocket.NewConfig(url, origin)
 	if err != nil {
 		fmt.Printf("webSocketUrl:%s err:%v\r\n",url,err)
 		return nil,err;
