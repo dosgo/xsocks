@@ -112,6 +112,6 @@ func newYamuxSession(conn io.ReadWriteCloser)(*yamux.Session, error){
 	conf.AcceptBacklog=512;
 	conf.KeepAliveInterval=52* time.Second;
 	conf.MaxStreamWindowSize=1024*1024;
-	conf.ConnectionWriteTimeout=20* time.Second;
+	conf.ConnectionWriteTimeout=50* time.Second;
 	return yamux.Client(conn, conf)
 }

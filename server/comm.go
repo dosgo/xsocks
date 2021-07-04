@@ -286,7 +286,7 @@ func streamToSocks5Yamux(conn io.ReadWriteCloser) {
 	conf.AcceptBacklog=1024;
 	conf.KeepAliveInterval=52* time.Second;
 	conf.MaxStreamWindowSize=1024*1024;
-	conf.ConnectionWriteTimeout=20* time.Second;
+	conf.ConnectionWriteTimeout=50* time.Second;
 	// Setup server side of yamux
 	session, err := yamux.Server(conn, conf)
 	if err != nil {
