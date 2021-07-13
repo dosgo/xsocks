@@ -22,7 +22,9 @@ func init(){
 }
 
 func NewHttp2Dialer()  *http2Conn {
-	http2Dialer.client= newHttp2Client()
+	if http2Dialer.client==nil {
+		http2Dialer.client= newHttp2Client()
+	}
 	return http2Dialer;
 }
 
