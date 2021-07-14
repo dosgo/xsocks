@@ -1,4 +1,4 @@
-package client
+package tunnelbase
 
 import (
 	"github.com/dosgo/xsocks/client/tunnel"
