@@ -3,11 +3,14 @@ package client
 import (
 	"context"
 	"fmt"
+	"github.com/dosgo/xsocks/client/tunnel"
+	"github.com/dosgo/xsocks/client/tunnelcomm"
 	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/param"
 	"net"
 	"os"
 	"runtime"
+	"strings"
 )
 
 
@@ -41,6 +44,9 @@ func (c *Client) Shutdown(){
 }
 
 func (c *Client) Start() error{
+	//init tunnel
+	initTunnel();
+
 	//随机端口
 	if param.Args.DnsPort=="" {
 		param.Args.DnsPort,_= comm.GetFreePort();
@@ -112,4 +118,28 @@ func setDefaultDNS(addrs string) {
 			return d.DialContext(ctx, "udp",addrs)
 		},
 	}
+}
+
+func initTunnel(){
+	//初始化连接通道
+	var tunnelDialer tunnelcomm.CallerTunnel;
+	var tunnelUrl string;
+	if strings.HasPrefix(param.Args.ServerAddr,"wss") {
+		tunnelDialer=tunnel.NewWsYamuxDialer()
+		tunnelUrl=param.Args.ServerAddr
+	}else if strings.HasPrefix(param.Args.ServerAddr,"http2") {
+		tunnelDialer= tunnel.NewHttp2Dialer()
+		tunnelUrl="https"+param.Args.ServerAddr[5:]
+	}else if strings.HasPrefix(param.Args.ServerAddr,"http") {
+		tunnelDialer= tunnel.NewHttpDialer()
+		tunnelUrl="https"+param.Args.ServerAddr[4:]
+	}else if strings.HasPrefix(param.Args.ServerAddr,"quic") {
+		tunnelDialer= tunnel.NewQuicDialer()
+		tunnelUrl=param.Args.ServerAddr[7:]
+	}else if strings.HasPrefix(param.Args.ServerAddr,"kcp") {
+		tunnelDialer= tunnel.NewKcpDialer()
+		tunnelUrl=param.Args.ServerAddr[6:]
+	}
+	//init tunnel
+	tunnelcomm.SetTunnel(tunnelDialer,tunnelUrl,param.Args.Password)
 }

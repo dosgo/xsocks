@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/dosgo/xsocks/client/tunnelbase"
+	"github.com/dosgo/xsocks/client/tunnelcomm"
 	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/comm/socks"
 	"github.com/dosgo/xsocks/param"
@@ -115,7 +115,7 @@ func (ut *UdpTunnel)Connect() (comm.CommConn,error){
 	//cmd
 	sendBuf =append(sendBuf,0x04);//dns
 	var err error;
-	tunnel, err:= tunnelbase.NewTunnel();
+	tunnel, err:= tunnelcomm.NewTunnel();
 	if err!=nil {
 		return nil,err;
 	}
@@ -365,7 +365,7 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 			} else {
 				//保存記錄
 				PolluteDomainName.Store(string(hostBuf), 1)
-				var stream,err= tunnelbase.NewTunnel();
+				var stream,err= tunnelcomm.NewTunnel();
 				if err != nil || stream == nil {
 					log.Printf("err:%v\r\n",err);
 					return err
@@ -393,7 +393,7 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 				_, err =stream.Write(buffer.Bytes());
 				if err != nil {
 					if strings.Contains(err.Error(),"deadline"){
-						tunnelbase.ResetTunnel();
+						tunnelcomm.ResetTunnel();
 					}
 					fmt.Printf("read remote error err:%v errStr:%s\r\n ",err)
 					return err
@@ -404,7 +404,7 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 				_, err = io.ReadFull(stream, socks5AuthBack)
 				if err != nil {
 					if strings.Contains(err.Error(),"deadline"){
-						tunnelbase.ResetTunnel()
+						tunnelcomm.ResetTunnel()
 					}
 					fmt.Printf("read remote error err:%v\r\n ",err)
 					return err

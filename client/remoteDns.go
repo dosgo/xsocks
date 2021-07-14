@@ -3,7 +3,7 @@ package client
 import (
 	"errors"
 	"fmt"
-	"github.com/dosgo/xsocks/client/tunnelbase"
+	"github.com/dosgo/xsocks/client/tunnelcomm"
 	"github.com/dosgo/xsocks/comm"
 	"io"
 	"net"
@@ -38,7 +38,7 @@ func (rd *RemoteDns)Connect() (comm.CommConn,error){
 	//cmd
 	sendBuf =append(sendBuf,0x01);//dns
 	var err error;
-	tunnel, err:= tunnelbase.NewTunnel();
+	tunnel, err:= tunnelcomm.NewTunnel();
 	if err!=nil {
 		return nil,err;
 	}

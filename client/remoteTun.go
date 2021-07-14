@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/dosgo/xsocks/client/tun"
-	"github.com/dosgo/xsocks/client/tunnelbase"
+	"github.com/dosgo/xsocks/client/tunnelcomm"
 	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/comm/udpHeader"
 	"github.com/dosgo/xsocks/param"
@@ -176,10 +176,10 @@ func (rd *TunConn) PutPacket(tunnel *udpHeader.UdpConn){
 
 
 /*send cmd  and UniqueId  and mtu*/
-func  ConnectTun(uniqueId string,mtu int)(comm.CommConn,error){
+func  connectTun(uniqueId string,mtu int)(comm.CommConn,error){
 	var err error;
-	tunnelbase.ResetTunnel();
-	tunnel,err:= tunnelbase.NewTunnel();
+	tunnelcomm.ResetTunnel();
+	tunnel,err:= tunnelcomm.NewTunnel();
 	if err != nil {
 		fmt.Printf("connect tunnel err:%v\r\n",err)
 		return nil,err;
@@ -324,7 +324,7 @@ func  StreamSwapTun(dev io.ReadWriteCloser,mtu int){
 	for {
 		tunnel=tunStream.GetTunnel();
 		if tunnel==nil {
-			_tunnel,err:=ConnectTun(tunStream.UniqueId,tunStream.Mtu);
+			_tunnel,err:=connectTun(tunStream.UniqueId,tunStream.Mtu);
 			if err==nil {
 				tunStream.PutTunnel(_tunnel)
 			}else {
