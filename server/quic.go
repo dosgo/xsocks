@@ -59,7 +59,7 @@ func quicToSocks5(sess quic.Session) {
 			log.Printf("err:%v\r\n",err)
 			return ;
 		}
-		go proxy(stream)
+		go Proxy(stream)
 	}
 }
 

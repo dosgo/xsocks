@@ -35,7 +35,7 @@ var poolAuthHeadBuf = &sync.Pool{
 /*save uniqueId Tun */
 var uniqueIdTun sync.Map
 
-func proxy(conn comm.CommConn){
+func Proxy(conn comm.CommConn){
 	defer conn.Close()
 	//read auth Head
 	var authHead = poolAuthHeadBuf.Get().([]byte)
@@ -301,7 +301,7 @@ func streamToSocks5Yamux(conn io.ReadWriteCloser) {
 			log.Printf("err:%v\r\n",err);
 			return ;
 		}
-		go proxy(stream)
+		go Proxy(stream)
 	}
 }
 
@@ -324,7 +324,7 @@ func streamToSocks5Smux(conn io.ReadWriteCloser) {
 			log.Printf("err:%v\r\n",err);
 			return ;
 		}
-		go proxy(stream)
+		go Proxy(stream)
 	}
 }
 

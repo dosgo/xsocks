@@ -51,7 +51,7 @@ func webHandler(w http.ResponseWriter, req *http.Request){
 		// First flash response headers
 		if f, ok := w.(http.Flusher); ok {
 			f.Flush()
-			proxy(comm.HttpConn{w, f, req.Body})
+			Proxy(comm.HttpConn{w, f, req.Body})
 		}
 	}else {
 		//http 1.1 connect　proxy
@@ -62,7 +62,7 @@ func webHandler(w http.ResponseWriter, req *http.Request){
 				//接管连接
 				client_conn, _, err := hijacker.Hijack()
 				if err==nil {
-					proxy(client_conn)
+					Proxy(client_conn)
 				}
 			}
 		}else {
