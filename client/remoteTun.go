@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/dosgo/xsocks/client/tun"
+	"github.com/dosgo/xsocks/client/tunnelbase"
 	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/comm/udpHeader"
 	"github.com/dosgo/xsocks/param"
@@ -177,8 +178,8 @@ func (rd *TunConn) PutPacket(tunnel *udpHeader.UdpConn){
 /*send cmd  and UniqueId  and mtu*/
 func  ConnectTun(uniqueId string,mtu int)(comm.CommConn,error){
 	var err error;
-	ResetTunnel();
-	tunnel,err:=NewTunnel();
+	tunnelbase.ResetTunnel();
+	tunnel,err:= tunnelbase.NewTunnel();
 	if err != nil {
 		fmt.Printf("connect tunnel err:%v\r\n",err)
 		return nil,err;
