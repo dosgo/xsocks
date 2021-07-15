@@ -351,7 +351,7 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 
 
 			//如果是内网IP,或者是中国IP(如果被污染的IP一定返回的是国外IP地址ChinaDNS也是这个原理)
-			if !comm.IsPublicIP(ipAddr) || comm.IsChinaMainlandIP(ipAddr.String()) {
+			if !comm.IsPublicIP(ipAddr) || (comm.IsChinaMainlandIP(ipAddr.String()) && param.Args.SmartDns==1) {
 				server, err := net.DialTimeout("tcp", net.JoinHostPort(ipAddr.String(), port),param.Args.ConnectTime)
 				if err != nil {
 					log.Printf("host:%s err:%v\r\n", net.JoinHostPort(ipAddr.String(), port),err);
