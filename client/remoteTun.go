@@ -346,7 +346,7 @@ func  StreamSwapTun(dev io.ReadWriteCloser,mtu int){
 			continue;
 		}else {
 			_, err = dev.Write(bufByte[:int(packLen)])
-			if (err != nil) {
+			if err != nil {
 				fmt.Printf("e:%v\r\n", err)
 			}
 		}

@@ -60,7 +60,7 @@ func (rd *RemoteDns)Resolve(remoteHost string) (string,error){
 	if rd.Tunnel==nil {
 		fmt.Printf("Resolve Tunnel null connect\r\n")
 		tunnel,err := rd.Connect();
-		if (err != nil) {
+		if err != nil {
 			fmt.Printf("Resolve1\r\n")
 			return "",err
 		}
@@ -93,7 +93,7 @@ func (rd *RemoteDns)Resolve(remoteHost string) (string,error){
 	_, err = io.ReadFull(rd.Tunnel, backHead)
 	if err != nil {
 		//回收
-		if(rd.Tunnel!=nil) {
+		if rd.Tunnel!=nil {
 			rd.Tunnel.Close();
 			rd.Tunnel = nil;
 		}
@@ -101,7 +101,7 @@ func (rd *RemoteDns)Resolve(remoteHost string) (string,error){
 		return "",err
 	}
 	if backHead[0]!=0x00 {
-		fmt.Printf("Resolve5 backHead:%v\r\n",backHead)
+		fmt.Printf("host:%s Resolve5 backHead:%v\r\n",remoteHost,backHead)
 		return "",errors.New("remote dns err");
 	}
 	//ipv4

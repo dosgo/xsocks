@@ -58,7 +58,6 @@ func RegTunDev(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDN
 		fmt.Println("start tun err:", err)
 		return nil,err;
 	}
-
 	//set ifco conf
 	if runtime.GOOS=="windows" {
 		comm.CmdHide("netsh", "interface","ip","set","address","name="+ifce.Name(),"source=static","addr="+tunAddr,"mask="+tunMask,"gateway=none").Run();

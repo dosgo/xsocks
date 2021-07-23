@@ -7,6 +7,7 @@ import (
 	"github.com/dosgo/xsocks/client/tunnelcomm"
 	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/param"
+	"errors"
 	"net"
 	"os"
 	"runtime"
@@ -15,6 +16,7 @@ import (
 
 
 type Client struct {
+	isStart bool;
 	lSocks5   net.Listener
 	lDns  *LocalDns
 	tun2Socks *Tun2Socks //tuntype1
@@ -41,9 +43,15 @@ func (c *Client) Shutdown(){
 	if param.Args.TunType==4 && runtime.GOOS=="windows" {
 		comm.CloseSystenProxy();
 	}
+	c.isStart=false;
 }
 
 func (c *Client) Start() error{
+	if c.isStart {
+		fmt.Printf("clien runing...\r\n");
+		return errors.New("clien runing...\n");
+	}
+	c.isStart=true;
 	//init tunnel
 	initTunnel();
 
@@ -93,7 +101,6 @@ func (c *Client) Start() error{
 			comm.SetSystenProxy("socks://"+param.Args.Sock5Addr,"",true);
 		}
 	}
-
 
 	c.lDns=&LocalDns{}
 	c.lDns.StartDns();

@@ -68,3 +68,13 @@ func getIpSegRange(userSegIp, offset uint8) (int, int) {
 	segMaxIp := userSegIp & (255 << offset) | ^(255 << offset)
 	return int(segMinIp), int(segMaxIp)
 }
+
+func IpIsCidr(addr string,mask string,ip string)bool{
+	masks:=net.ParseIP(mask).To4();
+	cidr:=net.IPNet{IP: net.ParseIP(addr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}
+	_, n, err := net.ParseCIDR(cidr.String())
+	if err!=nil {
+		return false;
+	}
+	return n.Contains(net.ParseIP(ip))
+}

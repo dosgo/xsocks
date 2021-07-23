@@ -17,6 +17,7 @@ var poolDnsBuf = &sync.Pool{
 
 
 
+
 func regRoute(tunAddr string,remoteAddr string,dnsServers []string,oldGw string){
 	//delete old
 	comm.CmdHide("route", "delete","0.0.0.0").Output()

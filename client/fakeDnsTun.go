@@ -5,6 +5,7 @@ import (
 	"github.com/dosgo/xsocks/client/tun"
 	"github.com/dosgo/xsocks/client/tun2socks"
 	"github.com/dosgo/xsocks/comm"
+	"github.com/dosgo/xsocks/comm/winDivert"
 	"github.com/dosgo/xsocks/param"
 	"github.com/miekg/dns"
 	"github.com/vishalkuo/bimap"
@@ -14,6 +15,8 @@ import (
 	"log"
 	"net"
 	"net/url"
+	"runtime"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -26,6 +29,7 @@ type FakeDnsTun struct {
 
 type TunDns struct {
 	dnsClient *dns.Client
+	dnsClientConn *dns.Conn
 	udpServer  *dns.Server
 	tcpServer  *dns.Server
 	serverHost string
@@ -49,15 +53,25 @@ func (fakeDns *FakeDnsTun)Start(tunDevice string,_tunAddr string,_tunMask string
 	fakeDns.tunDns.dnsPort="53";
 	fakeDns.tunDns.dnsAddr="127.0.0.1"
 	fakeDns.tunDns.dnsAddrV6="0:0:0:0:0:0:0:1"
+
 	fakeDns.tunDns.ip2Domain= bimap.NewBiMap()
 	//fmt.Printf("dnsServers:%v\r\n",dnsServers)
 	urlInfo, _ := url.Parse(param.Args.ServerAddr)
 	fakeDns.tunDns.serverHost=urlInfo.Hostname()
-	fakeDns.tunDns._startSmartDns()
+
+	//生成本地udp端口避免过滤的时候变动了
+	clientPort,_:=comm.GetFreeUdpPort();
+	fakeDns.tunDns._startSmartDns(clientPort)
 
 	//edit DNS
-	comm.SetNetConf(fakeDns.tunDns.dnsAddr,fakeDns.tunDns.dnsAddrV6);
+	if runtime.GOOS!="windows" {
+		comm.SetNetConf(fakeDns.tunDns.dnsAddr, fakeDns.tunDns.dnsAddrV6);
+	}
 	fakeDns._startTun(tunDevice,_tunAddr,_tunMask,_tunGW,tunDNS);
+
+	if runtime.GOOS=="windows" {
+		go winDivert.RedirectDNS(fakeDns.tunDns.dnsAddr,fakeDns.tunDns.dnsPort,clientPort);
+	}
 }
 
 func (fakeDns *FakeDnsTun)Shutdown(){
@@ -68,11 +82,12 @@ func (fakeDns *FakeDnsTun)Shutdown(){
 		comm.ResetNetConf(fakeDns.tunDns.dnsAddr);
 		fakeDns.tunDns.Shutdown();
 	}
+	winDivert.CloseWinDivert();
 }
 
 
 
-func (fakeDns *FakeDnsTun) _startTun(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tunDNS string)error{
+func (fakeDns *FakeDnsTun) _startTun(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tunDNS string) (error){
 	if len(_tunAddr)>0 {
 		tunAddr =_tunAddr;
 	}
@@ -106,14 +121,14 @@ func (fakeDns *FakeDnsTun) _startTun(tunDevice string,_tunAddr string,_tunMask s
 
 
 func (fakeDns *FakeDnsTun) dnsTcpForwarder(conn *gonet.TCPConn)error{
-
-	remoteAddr:=fakeDns.dnsToAddr(conn.LocalAddr().String())
+	var srcAddr=conn.LocalAddr().String();
+	remoteAddr:=fakeDns.dnsToAddr(srcAddr)
 	if remoteAddr==""{
-		log.Printf("remoteAddr:%v\r\n",remoteAddr)
+		log.Printf("remoteAddr:%v\r\n", remoteAddr)
 		conn.Close();
 		return nil;
 	}
-	log.Printf("remoteAddr:%v\r\n",remoteAddr)
+	log.Printf("remoteAddr:%v\r\n", remoteAddr)
 	socksConn,err1:= net.DialTimeout("tcp",param.Args.Sock5Addr,time.Second*15)
 	if err1 != nil {
 		log.Printf("err:%v",err1)
@@ -127,13 +142,10 @@ func (fakeDns *FakeDnsTun) dnsTcpForwarder(conn *gonet.TCPConn)error{
 }
 
 func (fakeDns *FakeDnsTun) dnsUdpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)error{
-	//log.Printf("udpAddr:%s\r\n",conn.LocalAddr().String())
 	defer ep.Close();
 	defer conn.Close();
-
-
-
-	remoteAddr:=fakeDns.dnsToAddr(conn.LocalAddr().String())
+	var srcAddr=conn.LocalAddr().String();
+	remoteAddr:=fakeDns.dnsToAddr(srcAddr)
 	if remoteAddr==""{
 		conn.Close();
 		return nil;
@@ -164,7 +176,7 @@ func (fakeDns *FakeDnsTun) dnsToAddr(remoteAddr string) string{
 
 
 
-func (tunDns *TunDns)_startSmartDns()  {
+func (tunDns *TunDns)_startSmartDns(clientPort string)  {
 	tunDns.udpServer = &dns.Server{
 		Net:          "udp",
 		Addr:         ":"+tunDns.dnsPort,
@@ -181,12 +193,19 @@ func (tunDns *TunDns)_startSmartDns()  {
 		ReadTimeout:  time.Duration(10) * time.Second,
 		WriteTimeout: time.Duration(10) * time.Second,
 	}
+
+	localPort, _ := strconv.Atoi(clientPort)
+	netAddr := &net.UDPAddr{Port:localPort}
+	_Dialer := &net.Dialer{Timeout:3*time.Second,LocalAddr: netAddr}
 	tunDns.dnsClient = &dns.Client{
 		Net:          "udp",
 		UDPSize:      4096,
+		Dialer: _Dialer,
+		SingleInflight:true,
 		ReadTimeout:  time.Duration(3) * time.Second,
 		WriteTimeout: time.Duration(2) * time.Second,
 	}
+	tunDns.dnsClientConn,_=tunDns.dnsClient.Dial( comm.GetOldDns(tunDns.dnsAddr,tunGW,"")+":53");
 	go tunDns.udpServer.ListenAndServe();
 	go tunDns.tcpServer.ListenAndServe();
 }
@@ -224,7 +243,7 @@ func  (tunDns *TunDns)ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 		msg, err = tunDns.resolve(r)
 		break;
 	default:
-		msg,_,err = tunDns.dnsClient.Exchange(r,comm.GetOldDns(tunDns.dnsAddr,"","")+":53")
+		msg,_,err = tunDns.dnsClient.ExchangeWithConn(r,tunDns.dnsClientConn)
 		break;
 	}
 	if err != nil {
@@ -233,6 +252,11 @@ func  (tunDns *TunDns)ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 		w.WriteMsg(msg)
 	}
 }
+
+
+
+
+
 /*ipv4智能响应*/
 func (tunDns *TunDns)ipv4Res(domain string,_ip  net.IP,r *dns.Msg) []dns.RR {
 	var ip ="";
@@ -246,7 +270,7 @@ func (tunDns *TunDns)ipv4Res(domain string,_ip  net.IP,r *dns.Msg) []dns.RR {
 		if _ip==nil && r!=nil  {
 			//为空的话智能dns的话先解析一遍
 			if param.Args.SmartDns==1  {
-				m1,_,err := tunDns.dnsClient.Exchange(r,comm.GetOldDns(tunDns.dnsAddr,"","")+":53")
+				m1,_,err := tunDns.dnsClient.ExchangeWithConn(r,tunDns.dnsClientConn)
 				if err == nil {
 					for _, v := range m1.Answer {
 						record, isType := v.(*dns.A)
@@ -261,6 +285,15 @@ func (tunDns *TunDns)ipv4Res(domain string,_ip  net.IP,r *dns.Msg) []dns.RR {
 					}
 				}else{
 					fmt.Printf("local dns error:%v\r\n",err)
+					oldDns:=comm.GetOldDns(tunDns.dnsAddr,tunGW,"");
+					//检测网关DNS是否改变
+					if strings.Index(tunDns.dnsClientConn.RemoteAddr().String(),oldDns)==-1 {
+						tunDns.dnsClientConn.Close();
+						dnsClientConn,err:=tunDns.dnsClient.Dial(oldDns+":53");
+						if err==nil {
+							tunDns.dnsClientConn=dnsClientConn;
+						}
+					}
 					//解析错误说明无网络,否则就算不存在也会回复的
 					dnsErr=true;//标记为错误
 				}

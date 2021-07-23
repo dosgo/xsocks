@@ -11,8 +11,6 @@ import (
 )
 var oldDns="";
 
-
-
 /**/
 func SetSystenProxy(proxyServer string,whiteList string,open bool) bool{
 	return true;
