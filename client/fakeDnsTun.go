@@ -208,7 +208,7 @@ func (fakeDns *FakeDnsTun) udpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)e
 		var limit *comm.UdpLimit;
 		_limit,ok:=fakeDns.udpLimit.Load(remoteAddr)
 		if !ok{
-			limit=&comm.UdpLimit{Limit: rate.NewLimiter(rate.Every(1 * time.Second), 10),Expired: time.Now().Unix()+5}
+			limit=&comm.UdpLimit{Limit: rate.NewLimiter(rate.Every(1 * time.Second), 50),Expired: time.Now().Unix()+5}
 		}else{
 			limit=_limit.(*comm.UdpLimit);
 		}
