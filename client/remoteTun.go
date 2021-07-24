@@ -9,11 +9,6 @@ import (
 	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/comm/udpHeader"
 	"github.com/dosgo/xsocks/param"
-	"gvisor.dev/gvisor/pkg/tcpip"
-	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
-	"gvisor.dev/gvisor/pkg/tcpip/buffer"
-	"gvisor.dev/gvisor/pkg/tcpip/header"
-	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"io"
 	"log"
 	"net"
@@ -87,50 +82,7 @@ func (remoteTun *RemoteTun) Shutdown(){
 
 func tunRecv(dev io.ReadWriteCloser ,mtu int) error{
 	if param.Args.TunSmartProxy {
-		_,channelLinkID, err := comm.NewDefaultStack(mtu, tcpForward, udpForward);
-		if err != nil {
-			return err;
-		}
-		// write tun
-		go func() {
-			var buffer = new(bytes.Buffer)
-			for {
-				pkt,res:=channelLinkID.Read()
-				if !res {
-					continue;
-				}
-				buffer.Reset()
-				//buffer.Write(pkt.Pkt.LinkHeader().View())
-				buffer.Write(pkt.Pkt.NetworkHeader().View())
-				buffer.Write(pkt.Pkt.TransportHeader().View())
-				buffer.Write(pkt.Pkt.Data.ToView())
-				//tmpBuf:=append(pkt.Pkt.Header.View(),pkt.Pkt.Data.ToView()...)
-				if buffer.Len() > 0 {
-					dev.Write(buffer.Bytes())
-				}
-			}
-		}()
-
-		// read tun data
-		var buf = make([]byte, mtu)
-		for {
-			n, e := dev.Read(buf[:])
-			if e != nil {
-				fmt.Printf("e:%v\r\n", e)
-				break;
-			}
-			//判断是否是本地数据,如果是直接转发给远程
-			if true {
-				fmt.Printf("dsfsd");
-			} else {
-				tmpView:=buffer.NewVectorisedView(n,[]buffer.View{
-					buffer.NewViewFromBytes(buf[:n]),
-				})
-				channelLinkID.InjectInbound(header.IPv4ProtocolNumber, stack.NewPacketBuffer(stack.PacketBufferOptions{
-					Data: tmpView,
-				}))
-			}
-		}
+		//未实现
 	}else{
 		if strings.HasPrefix(param.Args.ServerAddr,"sudp") {
 			packetSwapTun(dev, mtu);
@@ -351,30 +303,4 @@ func  StreamSwapTun(dev io.ReadWriteCloser,mtu int){
 			}
 		}
 	}
-}
-
-
-/*udp 转发*/
-func udpForward(conn *gonet.UDPConn, ep tcpip.Endpoint) error{
-	defer conn.Close();
-	defer ep.Close();
-	conn2, err := net.DialTimeout("udp",conn.LocalAddr().String(),param.Args.ConnectTime);
-	if err != nil {
-		fmt.Println(err.Error())
-		return err;
-	}
-	defer conn2.Close();
-	comm.UdpPipe(conn,conn2,time.Minute*5);
-	return nil;
-}
-
-/*udp 转发*/
-func tcpForward(conn *gonet.TCPConn) error{
-	conn2, err := net.DialTimeout("tcp", conn.LocalAddr().String(),param.Args.ConnectTime);
-	if err != nil {
-		fmt.Println(err.Error())
-		return err;
-	}
-	comm.TcpPipe(conn,conn2,time.Minute*5)
-	return nil;
 }

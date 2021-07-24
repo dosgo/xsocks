@@ -5,6 +5,7 @@ import (
 	"github.com/dosgo/xsocks/client/tun"
 	"github.com/dosgo/xsocks/client/tun2socks"
 	"github.com/dosgo/xsocks/comm"
+	"github.com/dosgo/xsocks/comm/socks"
 	"github.com/dosgo/xsocks/param"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
@@ -14,6 +15,7 @@ import (
 	"net/url"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -24,7 +26,7 @@ type Tun2Socks struct {
 	oldGw string;
 	tunGW string;
 }
-
+var tun2UdpNat sync.Map
 
 /*tunType==1*/
 func (_tun2socks *Tun2Socks)Start(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS string)  error{
@@ -87,7 +89,7 @@ func rawTcpForwarder(conn *gonet.TCPConn)error{
 		return nil
 	}
 	defer socksConn.Close();
-	if tun2socks.SocksCmd(socksConn,1,remoteAddr)==nil {
+	if socks.SocksCmd(socksConn,1,1,remoteAddr)==nil {
 		comm.TcpPipe(conn,socksConn,time.Minute*5)
 	}
 	return nil
@@ -101,17 +103,12 @@ func rawUdpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)error{
 		dnsReqUdp(conn);
 	}else{
 		dstAddr,_:=net.ResolveUDPAddr("udp",conn.LocalAddr().String())
-		tun2socks.SocksUdpGate(conn,dstAddr);
+		socks.SocksUdpGate(conn,dstAddr);
 	}
 	return nil;
 }
 func dnsReqUdp(conn *gonet.UDPConn) error{
-	dnsConn, err := net.DialTimeout("udp", "127.0.0.1:"+param.Args.DnsPort,time.Second*15);
-	if err != nil {
-		fmt.Println(err.Error())
-		return err;
-	}
-	comm.UdpPipe(conn,dnsConn,time.Minute*5)
+	comm.NatSawp(tun2UdpNat,conn,"127.0.0.1:"+param.Args.DnsPort)
 	return nil;
 }
 /*to dns*/

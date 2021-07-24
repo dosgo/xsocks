@@ -4,14 +4,17 @@ import (
 	"flag"
 	"github.com/dosgo/xsocks/client"
 	"github.com/dosgo/xsocks/param"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	_"net/http/pprof"
 )
 
 
 
 func main() {
+	go http.ListenAndServe(":9999",nil);
 	paramParam:=param.Args;
 	flag.StringVar(&paramParam.Sock5Addr, "sock5Addr", "127.0.0.1:6000", "remote socks5 addr ")
 	//"quic://127.0.0.1:5002" or "wss://127.0.0.1:5003"

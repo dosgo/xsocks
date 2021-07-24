@@ -1,16 +1,19 @@
 package comm
 
 import (
+	"bytes"
 	"crypto/md5"
 	crand "crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"io"
 	"log"
 	"math/rand"
 	"net"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -131,15 +134,50 @@ func UniqueId(_len int) string {
 	return hex.EncodeToString(h.Sum(nil))[:_len]
 }
 
-/*udp swap*/
-func UdpPipe(src net.Conn, dst net.Conn,duration time.Duration) {
-	defer src.Close()
-	defer dst.Close()
-	srcT:=TimeoutConn{src,duration}
-	dstT:=TimeoutConn{dst,duration}
-	go io.Copy(srcT, dstT)
-	io.Copy(dstT, srcT)
+
+
+/*udp nat sawp*/
+func NatSawp(fakeUdpNat sync.Map,conn *gonet.UDPConn,dstAddr string){
+	natKey:=conn.LocalAddr().String()+"_"+dstAddr;
+	var remoteConn net.Conn
+	var err error;
+	_conn,ok:=fakeUdpNat.Load(natKey)
+	if !ok{
+		remoteConn, err = net.DialTimeout("udp", dstAddr,time.Second*15);
+		if err != nil {
+			return
+		}
+		buf:= make([]byte, 1024*5);
+		var buffer bytes.Buffer
+		fakeUdpNat.Store(natKey,remoteConn)
+		go func(_remoteConn net.Conn) {
+			defer fakeUdpNat.Delete(natKey);
+			defer _remoteConn.Close()
+			for {
+				_remoteConn.SetReadDeadline(time.Now().Add(2*time.Minute))
+				n, err:= _remoteConn.Read(buf);
+				if err!=nil {
+					log.Printf("err:%v\r\n",err);
+					return ;
+				}
+				buffer.Reset();
+				buffer.Write(buf[:n])
+				conn.Write(buffer.Bytes())
+			}
+		}(remoteConn)
+	}else{
+		remoteConn=_conn.(net.Conn)
+	}
+	buf:= make([]byte, 1024*5);
+	udpSize,_,err:=conn.ReadFrom(buf);
+	if err==nil {
+		remoteConn.Write(buf[:udpSize])
+	}
 }
+
+
+
+
 
 /*tcp swap*/
 func TcpPipe(src CommConn, dst CommConn,duration time.Duration) {

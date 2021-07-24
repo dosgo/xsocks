@@ -5,6 +5,7 @@ import (
 	"github.com/dosgo/xsocks/client/tun"
 	"github.com/dosgo/xsocks/client/tun2socks"
 	"github.com/dosgo/xsocks/comm"
+	"github.com/dosgo/xsocks/comm/socks"
 	"github.com/dosgo/xsocks/comm/winDivert"
 	"github.com/dosgo/xsocks/param"
 	"github.com/miekg/dns"
@@ -15,6 +16,7 @@ import (
 	"log"
 	"net"
 	"net/url"
+	"sync"
 	"runtime"
 	"strconv"
 	"strings"
@@ -22,6 +24,8 @@ import (
 )
 
 type FakeDnsTun struct {
+	tunType int;// 3 or 5
+	localSocks string;
 	tunDns *TunDns
 	tunDev io.ReadWriteCloser
 	remoteDns *RemoteDns
@@ -43,16 +47,27 @@ type TunDns struct {
 var tunAddr ="10.0.0.2";
 var tunGW ="10.0.0.1";
 var tunMask="255.255.0.0"
+var fakeUdpNat sync.Map
 
 
-func (fakeDns *FakeDnsTun)Start(tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tunDNS string) {
-	//remote dns
-	fakeDns.remoteDns = &RemoteDns{}
+func (fakeDns *FakeDnsTun)Start(tunType int,tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tunDNS string) {
+	fakeDns.tunType=tunType;
 	//start local dns
 	fakeDns.tunDns =&TunDns{};
 	fakeDns.tunDns.dnsPort="53";
 	fakeDns.tunDns.dnsAddr="127.0.0.1"
 	fakeDns.tunDns.dnsAddrV6="0:0:0:0:0:0:0:1"
+
+	if fakeDns.tunType==3 {
+		//remote dns
+		fakeDns.remoteDns = &RemoteDns{}
+		fakeDns.localSocks=param.Args.Sock5Addr;
+	}
+	if fakeDns.tunType==5 {
+		//remote dns
+		fakeDns.localSocks=	param.Args.ServerAddr[9:];
+	}
+
 
 	fakeDns.tunDns.ip2Domain= bimap.NewBiMap()
 	//fmt.Printf("dnsServers:%v\r\n",dnsServers)
@@ -115,46 +130,70 @@ func (fakeDns *FakeDnsTun) _startTun(tunDevice string,_tunAddr string,_tunMask s
 		time.Sleep(time.Second*1)
 		comm.AddRoute(tunAddr, tunGW,tunMask)
 	}()
-	go tun2socks.ForwardTransportFromIo(fakeDns.tunDev,param.Args.Mtu,fakeDns.dnsTcpForwarder,fakeDns.dnsUdpForwarder);
+	go tun2socks.ForwardTransportFromIo(fakeDns.tunDev,param.Args.Mtu,fakeDns.tcpForwarder,fakeDns.udpForwarder);
 	return nil;
 }
 
 
-func (fakeDns *FakeDnsTun) dnsTcpForwarder(conn *gonet.TCPConn)error{
+func (fakeDns *FakeDnsTun) tcpForwarder(conn *gonet.TCPConn)error{
 	var srcAddr=conn.LocalAddr().String();
-	remoteAddr:=fakeDns.dnsToAddr(srcAddr)
+	var remoteAddr="";
+	var addrType uint8;
+	if fakeDns.tunType==3 {
+		addrType =0x01;
+		remoteAddr = fakeDns.dnsToAddr(srcAddr)
+	}
+	if fakeDns.tunType==5 {
+		addrType =0x03;
+		remoteAddr = fakeDns.dnsToDomain(srcAddr)
+	}
 	if remoteAddr==""{
 		log.Printf("remoteAddr:%v\r\n", remoteAddr)
 		conn.Close();
 		return nil;
 	}
 	log.Printf("remoteAddr:%v\r\n", remoteAddr)
-	socksConn,err1:= net.DialTimeout("tcp",param.Args.Sock5Addr,time.Second*15)
+	socksConn,err1:= net.DialTimeout("tcp",fakeDns.localSocks,time.Second*15)
 	if err1 != nil {
 		log.Printf("err:%v",err1)
 		return nil
 	}
 	defer socksConn.Close();
-	if tun2socks.SocksCmd(socksConn,1,remoteAddr)==nil {
+	if socks.SocksCmd(socksConn,1,addrType,remoteAddr)==nil {
 		comm.TcpPipe(conn,socksConn,time.Minute*5)
 	}
 	return nil
 }
 
-func (fakeDns *FakeDnsTun) dnsUdpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)error{
+func (fakeDns *FakeDnsTun) udpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)error{
 	defer ep.Close();
 	defer conn.Close();
 	var srcAddr=conn.LocalAddr().String();
-	remoteAddr:=fakeDns.dnsToAddr(srcAddr)
+    var remoteAddr="";
+	if fakeDns.tunType==3 {
+		remoteAddr = fakeDns.dnsToAddr(srcAddr)
+	}
+	if fakeDns.tunType==5 {
+		remoteAddr = fakeDns.dnsToDomain(srcAddr)
+	}
 	if remoteAddr==""{
 		conn.Close();
 		return nil;
 	}
-	dstAddr,_:=net.ResolveUDPAddr("udp",remoteAddr)
-	fmt.Printf("udp-remoteAddr:%s\r\n",remoteAddr)
-	tun2socks.SocksUdpGate(conn,dstAddr);
+	if fakeDns.tunType==3 {
+		dstAddr,_:=net.ResolveUDPAddr("udp",remoteAddr)
+		fmt.Printf("udp-remoteAddr:%s\r\n",remoteAddr)
+		socks.SocksUdpGate(conn,dstAddr);
+	}
+	//tuntype 直连
+	if fakeDns.tunType==5 {
+		//本地直连交换
+		comm.NatSawp(fakeUdpNat,conn,remoteAddr);
+	}
 	return nil;
 }
+
+
 /*dns addr swap*/
 func (fakeDns *FakeDnsTun) dnsToAddr(remoteAddr string) string{
 	if fakeDns.tunDns==nil {
@@ -173,6 +212,18 @@ func (fakeDns *FakeDnsTun) dnsToAddr(remoteAddr string) string{
 	return ip+":"+remoteAddrs[1]
 }
 
+/*dns addr swap*/
+func (fakeDns *FakeDnsTun) dnsToDomain(remoteAddr string) string{
+	if fakeDns.tunDns==nil {
+		return "";
+	}
+	remoteAddrs:=strings.Split(remoteAddr,":")
+	_domain,ok:= fakeDns.tunDns.ip2Domain.Get(remoteAddrs[0])
+	if !ok{
+		return "";
+	}
+	return _domain.(string)+":"+remoteAddrs[1]
+}
 
 
 
@@ -334,9 +385,9 @@ func  (tunDns *TunDns)resolve(r *dns.Msg) (*dns.Msg, error) {
 	m.SetReply(r)
 	m.Authoritative = false
 	domain := r.Question[0].Name
-	fmt.Printf("ipv6:%s\r\n",domain)
+	fmt.Printf("ipv6:%s %s\r\n",domain,tunDns.dnsClientConn.RemoteAddr().String())
 	//ipv6
-	m1,_,err := tunDns.dnsClient.Exchange(r,"114.114.114.114:53")
+	m1,_,err :=	tunDns.dnsClient.ExchangeWithConn(r,tunDns.dnsClientConn)
 	if err == nil {
 		return m1,nil;
 	}

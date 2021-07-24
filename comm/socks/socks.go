@@ -3,8 +3,14 @@ package socks
 import (
 	"bytes"
 	"encoding/binary"
+	"github.com/dosgo/xsocks/param"
+	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"io"
+	"log"
 	"net"
+	"strconv"
+	"strings"
+	"time"
 )
 import "fmt"
 import "errors"
@@ -89,5 +95,143 @@ func UdpProxyRes(clientConn net.Conn,udpAddr *net.UDPAddr)  error{
 	binary.Write(buffer, binary.BigEndian, udpAddr.IP.To4())
 	binary.Write(buffer, binary.BigEndian, uint16(bindPort))
 	clientConn.Write(buffer.Bytes())
+	return nil;
+}
+
+
+/*socks5  udp gate 这里必须保持socks5兼容 */
+func SocksUdpGate(conn *gonet.UDPConn,dstAddr *net.UDPAddr) error{
+	gateConn, err := net.DialTimeout("udp", "127.0.0.1:"+param.Args.Sock5UdpPort,time.Second*15);
+	if err != nil {
+		fmt.Println(err.Error())
+		return err;
+	}
+	defer conn.Close()
+	defer gateConn.Close()
+
+	go func() {
+		var buffer bytes.Buffer
+		var b1=make([]byte,65535);
+		for {
+			conn.SetReadDeadline(time.Now().Add(2*time.Minute))
+			n,err:=conn.Read(b1);
+			if err != nil {
+				return ;
+			}
+			buffer.Reset()
+			buffer.Write(UdpHeadEncode(dstAddr))
+			buffer.Write(b1[:n])
+			_, _ = gateConn.Write(buffer.Bytes())
+		}
+	}()
+	for {
+		var b2=make([]byte,65535);
+		gateConn.SetReadDeadline(time.Now().Add(2*time.Minute))
+		n,err:=gateConn.Read(b2);
+		if err != nil {
+			return err;
+		}
+		_,dataStart,err:= UdpHeadDecode(b2[:n])
+		if err != nil {
+			return nil;
+		}
+		_, _ = conn.Write(b2[dataStart:n])
+	}
+}
+
+/*socks5协议动态获取udp端口映射*/
+func GetUdpGate(socksConn net.Conn,remoteAddr string) (string,error){
+	//socks5 auth
+	socksConn.Write([]byte{0x05, 0x01,0x00});
+	//connect head
+	addrs:=strings.Split(remoteAddr,":");
+	rAddr:=net.ParseIP(addrs[0])
+	_port, _ := strconv.Atoi(addrs[1])
+	msg := []byte{0x05, 0x03, 0x00, 0x01}
+	buffer := bytes.NewBuffer(msg)
+	//ip
+	binary.Write(buffer, binary.BigEndian, rAddr.To4())
+	//port
+	binary.Write(buffer, binary.BigEndian, uint16(_port))
+	socksConn.Write(buffer.Bytes());
+	//recv auth back
+	authBack := make([]byte, 2)
+	_, err:= io.ReadFull(socksConn, authBack)
+	if err != nil {
+		log.Println(err)
+		return "",err
+	}
+	if authBack[0]!=0x05||authBack[1]!=0x00 {
+		log.Println("auth error")
+		return "",errors.New("auth error");
+	}
+	//recv connectBack
+	connectBack := make([]byte, 10)
+	_, err = io.ReadFull(socksConn, connectBack)
+	if connectBack[0]!=0x05 {
+		return "",errors.New("ver error");
+	}
+	if connectBack[1]!=0x00 {
+		return "",errors.New("back error");
+	}
+	ipAddr := net.IPv4(connectBack[4], connectBack[5], connectBack[6], connectBack[7])
+	port := strconv.Itoa(int(connectBack[8])<<8 | int(connectBack[9]))
+	return ipAddr.String()+":"+port,nil;
+}
+
+
+/*
+to socks5
+cmd socks cmd
+addrtype socks type  0x01  0x03  0x04
+*/
+func SocksCmd(socksConn net.Conn,cmd uint8,addrType uint8,host string) error{
+	//socks5 auth
+	socksConn.Write([]byte{0x05, 0x01,0x00});
+	//connect head
+	hosts:=strings.Split(host,":");
+	_port, _ := strconv.Atoi(hosts[1])
+	msg := []byte{0x05, cmd, 0x00, addrType}
+	buffer := bytes.NewBuffer(msg)
+	switch addrType {
+		case 0x01:
+			rAddr:=net.ParseIP(hosts[0])
+			//ip
+			binary.Write(buffer, binary.BigEndian, rAddr.To4())
+		break;
+		case 0x03:
+			buffer.WriteByte(uint8(len(hosts[0])))
+			buffer.Write([]byte(hosts[0]))
+		break
+		case 0x04:
+			rAddr:=net.ParseIP(hosts[0])
+			binary.Write(buffer, binary.BigEndian, rAddr.To16())
+			break;
+
+	}
+
+	//port
+	binary.Write(buffer, binary.BigEndian, uint16(_port))
+	socksConn.Write(buffer.Bytes());
+
+	//recv auth back
+	authBack := make([]byte, 2)
+	_, err:= io.ReadFull(socksConn, authBack)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	if authBack[0]!=0x05||authBack[1]!=0x00 {
+		log.Println("auth error")
+		return errors.New("auth error");
+	}
+
+	//recv connectBack
+	connectBack := make([]byte, 10)
+	_, err = io.ReadFull(socksConn, connectBack)
+	if err!= nil {
+		log.Println(err)
+		return err
+	}
 	return nil;
 }

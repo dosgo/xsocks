@@ -2,12 +2,12 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/dosgo/xsocks/client/tunnel"
 	"github.com/dosgo/xsocks/client/tunnelcomm"
 	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/param"
-	"errors"
 	"net"
 	"os"
 	"runtime"
@@ -90,7 +90,7 @@ func (c *Client) Start() error{
 	//windows + linux +mac
 	if param.Args.TunType==3 {
 		c.fakeDns=&FakeDnsTun{}
-		c.fakeDns.Start("",tunAddr,"",tunGw,"");
+		c.fakeDns.Start(3,"",tunAddr,"",tunGw,"");
 	}
 
 	//only windows  (system proxy)
@@ -101,12 +101,20 @@ func (c *Client) Start() error{
 			comm.SetSystenProxy("socks://"+param.Args.Sock5Addr,"",true);
 		}
 	}
+	//to local safe socks5(udp support)
+	if param.Args.TunType==5 {
+		c.fakeDns=&FakeDnsTun{}
+		c.fakeDns.Start(5,"",tunAddr,"",tunGw,"");
+	}
 
-	c.lDns=&LocalDns{}
-	c.lDns.StartDns();
-	var err error;
-	c.lSocks5,err=StartLocalSocks5(param.Args.Sock5Addr);
-	return err;
+	if param.Args.TunType!=5 {
+		c.lDns = &LocalDns{}
+		c.lDns.StartDns();
+		var err error;
+		c.lSocks5, err =StartLocalSocks5(param.Args.Sock5Addr);
+		return err;
+	}
+	return nil;
 }
 
 func init(){
@@ -146,6 +154,8 @@ func initTunnel(){
 	}else if strings.HasPrefix(param.Args.ServerAddr,"kcp") {
 		tunnelDialer= tunnel.NewKcpDialer()
 		tunnelUrl=param.Args.ServerAddr[6:]
+	}else{
+		return ;
 	}
 	//init tunnel
 	tunnelcomm.SetTunnel(tunnelDialer,tunnelUrl,param.Args.Password)

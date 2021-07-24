@@ -9,6 +9,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/link/channel"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"log"
+	"sync"
 
 	//"github.com/google/netstack/tcpip/adapters/gonet"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
@@ -19,7 +20,7 @@ import (
 	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/param"
 )
-
+var remoteTunUdpNat sync.Map
 
 func InjectInbound(channelLinkID *channel.Endpoint,buf []byte) error{
 	tmpView:=buffer.NewVectorisedView(len(buf),[]buffer.View{
@@ -45,21 +46,16 @@ func StartTunStack(mtu uint16) (*stack.Stack,*channel.Endpoint,error){
 func udpForward(conn *gonet.UDPConn,ep tcpip.Endpoint) error{
 	defer ep.Close();
 	var remoteAddr="";
-	var duration time.Duration=time.Second*100;
+	//var duration time.Duration=time.Second*100;
 	//dns 8.8.8.8
 	if strings.HasSuffix(conn.LocalAddr().String(),":53") {
 		fmt.Printf("udpForward dnsAddr:%s",conn.LocalAddr().String()+"localAddr:"+conn.RemoteAddr().String()+"SafeDns:"+param.Args.SafeDns+"\r\n")
 		remoteAddr=param.Args.SafeDns+":53"
-		duration=time.Second*15;
+	//	duration=time.Second*15;
 	}else{
 		remoteAddr=conn.LocalAddr().String();
 	}
-	conn2, err := net.DialTimeout("udp",remoteAddr,time.Second*15);
-	if err != nil {
-		fmt.Println("udpForward"+conn.LocalAddr().String()+ err.Error())
-		return err;
-	}
-	comm.UdpPipe(conn,conn2,duration)
+	comm.NatSawp(remoteTunUdpNat,conn,remoteAddr)
 	return nil;
 }
 
