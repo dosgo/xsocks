@@ -14,6 +14,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"io"
 	"log"
+	"golang.org/x/time/rate"
 	"net"
 	"net/url"
 	"sync"
@@ -23,9 +24,12 @@ import (
 	"time"
 )
 
+
 type FakeDnsTun struct {
 	tunType int;// 3 or 5
 	localSocks string;
+	udpLimit sync.Map;
+	run bool;
 	tunDns *TunDns
 	tunDev io.ReadWriteCloser
 	remoteDns *RemoteDns
@@ -57,7 +61,6 @@ func (fakeDns *FakeDnsTun)Start(tunType int,tunDevice string,_tunAddr string,_tu
 	fakeDns.tunDns.dnsPort="53";
 	fakeDns.tunDns.dnsAddr="127.0.0.1"
 	fakeDns.tunDns.dnsAddrV6="0:0:0:0:0:0:0:1"
-
 	if fakeDns.tunType==3 {
 		//remote dns
 		fakeDns.remoteDns = &RemoteDns{}
@@ -87,6 +90,9 @@ func (fakeDns *FakeDnsTun)Start(tunType int,tunDevice string,_tunAddr string,_tu
 	if runtime.GOOS=="windows" {
 		go winDivert.RedirectDNS(fakeDns.tunDns.dnsAddr,fakeDns.tunDns.dnsPort,clientPort);
 	}
+	//udp limit auto remove
+	fakeDns.run=true;
+	go fakeDns.autoFree();
 }
 
 func (fakeDns *FakeDnsTun)Shutdown(){
@@ -97,6 +103,7 @@ func (fakeDns *FakeDnsTun)Shutdown(){
 		comm.ResetNetConf(fakeDns.tunDns.dnsAddr);
 		fakeDns.tunDns.Shutdown();
 	}
+	fakeDns.run=false;
 	winDivert.CloseWinDivert();
 }
 
@@ -133,7 +140,18 @@ func (fakeDns *FakeDnsTun) _startTun(tunDevice string,_tunAddr string,_tunMask s
 	go tun2socks.ForwardTransportFromIo(fakeDns.tunDev,param.Args.Mtu,fakeDns.tcpForwarder,fakeDns.udpForwarder);
 	return nil;
 }
-
+func (fakeDns *FakeDnsTun) autoFree(){
+	for fakeDns.run{
+		fakeDns.udpLimit.Range(func(k, v interface{}) bool {
+			_v:=v.(*comm.UdpLimit);
+			if _v.Expired<time.Now().Unix() {
+				fakeDns.udpLimit.Delete(k)
+			}
+			return true
+		})
+		time.Sleep(time.Second*30);
+	}
+}
 
 func (fakeDns *FakeDnsTun) tcpForwarder(conn *gonet.TCPConn)error{
 	var srcAddr=conn.LocalAddr().String();
@@ -187,8 +205,20 @@ func (fakeDns *FakeDnsTun) udpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)e
 	}
 	//tuntype 直连
 	if fakeDns.tunType==5 {
-		//本地直连交换
-		comm.NatSawp(&fakeUdpNat,conn,remoteAddr,65*time.Second);
+		var limit *comm.UdpLimit;
+		_limit,ok:=fakeDns.udpLimit.Load(remoteAddr)
+		if !ok{
+			limit=&comm.UdpLimit{Limit: rate.NewLimiter(rate.Every(1 * time.Second), 10),Expired: time.Now().Unix()+5}
+		}else{
+			limit=_limit.(*comm.UdpLimit);
+		}
+		//限流
+		if limit.Limit.Allow(){
+			limit.Expired=time.Now().Unix()+5;
+			//本地直连交换
+			comm.NatSawp(&fakeUdpNat, conn, remoteAddr, 65*time.Second);
+			fakeDns.udpLimit.Store(remoteAddr,limit);
+		}
 	}
 	return nil;
 }

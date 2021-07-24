@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"fmt"
+	"golang.org/x/time/rate"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
@@ -22,6 +23,8 @@ import (
 )
 var remoteTunUdpNat sync.Map
 
+var udpLimit sync.Map;
+
 func InjectInbound(channelLinkID *channel.Endpoint,buf []byte) error{
 	tmpView:=buffer.NewVectorisedView(len(buf),[]buffer.View{
 		buffer.NewViewFromBytes(buf),
@@ -36,8 +39,9 @@ func InjectInbound(channelLinkID *channel.Endpoint,buf []byte) error{
 	return nil;
 }
 
-/*tcp*/
+/*start */
 func StartTunStack(mtu uint16) (*stack.Stack,*channel.Endpoint,error){
+	go autoFree();
 	return comm.NewDefaultStack(int(mtu),tcpForward,udpForward);
 }
 
@@ -55,10 +59,35 @@ func udpForward(conn *gonet.UDPConn,ep tcpip.Endpoint) error{
 	}else{
 		remoteAddr=conn.LocalAddr().String();
 	}
-	comm.NatSawp(&remoteTunUdpNat,conn,remoteAddr,duration)
+	//限流处理
+	var limit *comm.UdpLimit;
+	_limit,ok:=udpLimit.Load(remoteAddr)
+	if !ok{
+		limit=&comm.UdpLimit{Limit: rate.NewLimiter(rate.Every(1 * time.Second), 60),Expired: time.Now().Unix()+5}
+	}else{
+		limit=_limit.(*comm.UdpLimit);
+	}
+	//限流
+	if limit.Limit.Allow() {
+		limit.Expired = time.Now().Unix() + 5;
+		comm.NatSawp(&remoteTunUdpNat,conn,remoteAddr,duration)
+		udpLimit.Store(remoteAddr,limit);
+	}
 	return nil;
 }
 
+func  autoFree(){
+	for{
+		udpLimit.Range(func(k, v interface{}) bool {
+			_v:=v.(*comm.UdpLimit);
+			if _v.Expired<time.Now().Unix() {
+				udpLimit.Delete(k)
+			}
+			return true
+		})
+		time.Sleep(time.Second*30);
+	}
+}
 
 
 /*tcpForward*/

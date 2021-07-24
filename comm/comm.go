@@ -6,6 +6,7 @@ import (
 	crand "crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"golang.org/x/time/rate"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"io"
 	"log"
@@ -266,3 +267,7 @@ func GetUnusedTunAddr()(string,string){
 	return "","";
 }
 
+type UdpLimit struct{
+	Limit *rate.Limiter
+	Expired int64;
+}
