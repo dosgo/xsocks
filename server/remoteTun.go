@@ -48,7 +48,7 @@ func StartTunStack(mtu uint16) (*stack.Stack,*channel.Endpoint,error){
 
 /*udp 转发*/
 func udpForward(conn *gonet.UDPConn,ep tcpip.Endpoint) error{
-	defer ep.Close();
+	//defer ep.Close();
 	var remoteAddr="";
 	var duration time.Duration=time.Second*100;
 	//dns 8.8.8.8
@@ -70,7 +70,7 @@ func udpForward(conn *gonet.UDPConn,ep tcpip.Endpoint) error{
 	//限流
 	if limit.Limit.Allow() {
 		limit.Expired = time.Now().Unix() + 5;
-		comm.NatSawp(&remoteTunUdpNat,conn,remoteAddr,duration)
+		comm.TunNatSawp(&remoteTunUdpNat,conn,ep,remoteAddr,duration)
 		udpLimit.Store(remoteAddr,limit);
 	}
 	return nil;

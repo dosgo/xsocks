@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"golang.org/x/time/rate"
+	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"io"
 	"log"
@@ -146,11 +147,11 @@ func UniqueId(_len int) string {
 
 
 /*udp nat sawp*/
-func NatSawp(_udpNat *sync.Map,conn *gonet.UDPConn,dstAddr string,duration time.Duration){
+func TunNatSawp(_udpNat *sync.Map,conn *gonet.UDPConn,ep tcpip.Endpoint,dstAddr string,duration time.Duration){
 	natKey:=conn.RemoteAddr().String()+"_"+dstAddr;
 	var remoteConn net.Conn
 	var err error;
-	_conn,ok:=_udpNat.Load(natKey)
+	_remoteConn,ok:=_udpNat.Load(natKey)
 	if !ok{
 		remoteConn, err = net.DialTimeout("udp", dstAddr,time.Second*15);
 		if err != nil {
@@ -158,9 +159,11 @@ func NatSawp(_udpNat *sync.Map,conn *gonet.UDPConn,dstAddr string,duration time.
 		}
 		var buffer bytes.Buffer
 		_udpNat.Store(natKey,remoteConn)
-		go func(_remoteConn net.Conn) {
+		go func(_remoteConn net.Conn,_conn *gonet.UDPConn) {
+			defer ep.Close();
 			defer _udpNat.Delete(natKey);
 			defer _remoteConn.Close()
+			defer _conn.Close();
 			//buf:= make([]byte, 1024*5);
 			for {
 				_remoteConn.SetReadDeadline(time.Now().Add(duration))
@@ -172,17 +175,23 @@ func NatSawp(_udpNat *sync.Map,conn *gonet.UDPConn,dstAddr string,duration time.
 				}
 				buffer.Reset();
 				buffer.Write(buf[:n])
-				conn.Write(buffer.Bytes())
+				_,err=_conn.Write(buffer.Bytes())
+				if err!=nil {
+					log.Printf("err:%v\r\n",err);
+				}
 				poolNatBuf.Put(buf)
 			}
-		}(remoteConn)
+		}(remoteConn,conn)
 	}else{
-		remoteConn=_conn.(net.Conn)
+		remoteConn=_remoteConn.(net.Conn)
 	}
 	buf := poolNatBuf.Get().([]byte)
-	udpSize,_,err:=conn.ReadFrom(buf);
+	udpSize,err:=conn.Read(buf);
 	if err==nil {
-		remoteConn.Write(buf[:udpSize])
+		_,err=remoteConn.Write(buf[:udpSize])
+		if err!=nil {
+			log.Printf("err:%v\r\n",err);
+		}
 	}
 	poolNatBuf.Put(buf)
 }

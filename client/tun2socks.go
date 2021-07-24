@@ -96,19 +96,18 @@ func rawTcpForwarder(conn *gonet.TCPConn)error{
 }
 
 func rawUdpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)error{
-	defer ep.Close();
-	defer conn.Close();
 	//dns port
 	if strings.HasSuffix(conn.LocalAddr().String(),":53") {
-		dnsReqUdp(conn);
+		dnsReqUdp(conn,ep);
 	}else{
+		defer ep.Close();
 		dstAddr,_:=net.ResolveUDPAddr("udp",conn.LocalAddr().String())
 		socks.SocksUdpGate(conn,dstAddr);
 	}
 	return nil;
 }
-func dnsReqUdp(conn *gonet.UDPConn) error{
-	comm.NatSawp(&tun2UdpNat,conn,"127.0.0.1:"+param.Args.DnsPort,15*time.Second)
+func dnsReqUdp(conn *gonet.UDPConn,ep tcpip.Endpoint) error{
+	comm.TunNatSawp(&tun2UdpNat,conn,ep,"127.0.0.1:"+param.Args.DnsPort,15*time.Second)
 	return nil;
 }
 /*to dns*/

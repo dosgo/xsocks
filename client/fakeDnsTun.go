@@ -184,8 +184,6 @@ func (fakeDns *FakeDnsTun) tcpForwarder(conn *gonet.TCPConn)error{
 }
 
 func (fakeDns *FakeDnsTun) udpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)error{
-	defer ep.Close();
-	defer conn.Close();
 	var srcAddr=conn.LocalAddr().String();
     var remoteAddr="";
 	if fakeDns.tunType==3 {
@@ -199,6 +197,7 @@ func (fakeDns *FakeDnsTun) udpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)e
 		return nil;
 	}
 	if fakeDns.tunType==3 {
+		defer ep.Close();
 		dstAddr,_:=net.ResolveUDPAddr("udp",remoteAddr)
 		fmt.Printf("udp-remoteAddr:%s\r\n",remoteAddr)
 		socks.SocksUdpGate(conn,dstAddr);
@@ -216,7 +215,7 @@ func (fakeDns *FakeDnsTun) udpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)e
 		if limit.Limit.Allow(){
 			limit.Expired=time.Now().Unix()+5;
 			//本地直连交换
-			comm.NatSawp(&fakeUdpNat, conn, remoteAddr, 65*time.Second);
+			comm.TunNatSawp(&fakeUdpNat, conn,ep, remoteAddr, 65*time.Second);
 			fakeDns.udpLimit.Store(remoteAddr,limit);
 		}
 	}
