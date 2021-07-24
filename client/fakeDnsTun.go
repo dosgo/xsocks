@@ -188,7 +188,7 @@ func (fakeDns *FakeDnsTun) udpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)e
 	//tuntype 直连
 	if fakeDns.tunType==5 {
 		//本地直连交换
-		comm.NatSawp(fakeUdpNat,conn,remoteAddr);
+		comm.NatSawp(&fakeUdpNat,conn,remoteAddr);
 	}
 	return nil;
 }

@@ -55,7 +55,7 @@ func udpForward(conn *gonet.UDPConn,ep tcpip.Endpoint) error{
 	}else{
 		remoteAddr=conn.LocalAddr().String();
 	}
-	comm.NatSawp(remoteTunUdpNat,conn,remoteAddr)
+	comm.NatSawp(&remoteTunUdpNat,conn,remoteAddr)
 	return nil;
 }
 

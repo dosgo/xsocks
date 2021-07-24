@@ -108,7 +108,7 @@ func rawUdpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)error{
 	return nil;
 }
 func dnsReqUdp(conn *gonet.UDPConn) error{
-	comm.NatSawp(tun2UdpNat,conn,"127.0.0.1:"+param.Args.DnsPort)
+	comm.NatSawp(&tun2UdpNat,conn,"127.0.0.1:"+param.Args.DnsPort)
 	return nil;
 }
 /*to dns*/

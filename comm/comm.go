@@ -137,22 +137,22 @@ func UniqueId(_len int) string {
 
 
 /*udp nat sawp*/
-func NatSawp(fakeUdpNat sync.Map,conn *gonet.UDPConn,dstAddr string){
+func NatSawp(_udpNat *sync.Map,conn *gonet.UDPConn,dstAddr string){
 	natKey:=conn.LocalAddr().String()+"_"+dstAddr;
 	var remoteConn net.Conn
 	var err error;
-	_conn,ok:=fakeUdpNat.Load(natKey)
+	_conn,ok:=_udpNat.Load(natKey)
 	if !ok{
 		remoteConn, err = net.DialTimeout("udp", dstAddr,time.Second*15);
 		if err != nil {
 			return
 		}
-		buf:= make([]byte, 1024*5);
 		var buffer bytes.Buffer
-		fakeUdpNat.Store(natKey,remoteConn)
+		_udpNat.Store(natKey,remoteConn)
 		go func(_remoteConn net.Conn) {
-			defer fakeUdpNat.Delete(natKey);
+			defer _udpNat.Delete(natKey);
 			defer _remoteConn.Close()
+			buf:= make([]byte, 1024*5);
 			for {
 				_remoteConn.SetReadDeadline(time.Now().Add(2*time.Minute))
 				n, err:= _remoteConn.Read(buf);
