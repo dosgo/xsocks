@@ -111,7 +111,7 @@ func SocksUdpGate(conn *gonet.UDPConn,dstAddr *net.UDPAddr) error{
 
 	go func() {
 		var buffer bytes.Buffer
-		var b1=make([]byte,65535);
+		var b1=make([]byte,1024*5);
 		for {
 			conn.SetReadDeadline(time.Now().Add(2*time.Minute))
 			n,err:=conn.Read(b1);
@@ -125,7 +125,7 @@ func SocksUdpGate(conn *gonet.UDPConn,dstAddr *net.UDPAddr) error{
 		}
 	}()
 	for {
-		var b2=make([]byte,65535);
+		var b2=make([]byte,1024*5);
 		gateConn.SetReadDeadline(time.Now().Add(2*time.Minute))
 		n,err:=gateConn.Read(b2);
 		if err != nil {
