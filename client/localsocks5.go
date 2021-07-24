@@ -57,7 +57,7 @@ func startUdpProxy(addr string) ( *net.UDPAddr ,error){
 	if err != nil {
 		return nil,err
 	}
-	buf := make([]byte, 65535)
+	buf := make([]byte, 1024*10)
 	//隧道
 	udpTunnel:=UdpTunnel{}
 	udpTunnel.natTable=bimap.NewBiMap();
@@ -179,7 +179,7 @@ func (ut *UdpTunnel)sendRemote(data []byte,localAddr *net.UDPAddr) (error){
 
 func (ut *UdpTunnel) recv(){
 	var packLenByte []byte = make([]byte, 2)
-	var bufByte []byte = make([]byte,65535)
+	var bufByte []byte = make([]byte,1024*10)
 	var tunnel comm.CommConn
 	var buffer bytes.Buffer
 	for {
@@ -241,7 +241,7 @@ func socksNatSawp(udpGate *net.UDPConn,data []byte,dataStart int,localAddr *net.
 			log.Printf("err:%v\r\n",err)
 			return
 		}
-		buf:= make([]byte, 65535)
+		buf:= make([]byte, 1024*10)
 		var buffer bytes.Buffer
 		udpNat.Store(natKey,remoteConn)
 		go func() {

@@ -26,7 +26,7 @@ func NewUdpConn(conn *net.UDPConn) *UdpConn {
 
 
 func (uh *UdpConn) ReadFrom(b []byte) ( int,  net.Addr,  error) {
-	data := make([]byte,65535)
+	data := make([]byte,1024*10)
 	n,addr,err:=uh.conn.ReadFrom(data);
 	if err!=nil || n==0 {
 		return n,addr,err

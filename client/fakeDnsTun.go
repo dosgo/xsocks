@@ -385,11 +385,11 @@ func  (tunDns *TunDns)resolve(r *dns.Msg) (*dns.Msg, error) {
 	m.SetReply(r)
 	m.Authoritative = false
 	domain := r.Question[0].Name
-	fmt.Printf("ipv6:%s %s\r\n",domain,tunDns.dnsClientConn.RemoteAddr().String())
 	//ipv6
 	m1,_,err :=	tunDns.dnsClient.ExchangeWithConn(r,tunDns.dnsClientConn)
+	fmt.Printf("ipv6:%s err:%+v\r\n",domain,err)
 	if err == nil {
 		return m1,nil;
 	}
-	return m, nil
+	return m, err;
 }

@@ -88,7 +88,7 @@ func Proxy(conn comm.CommConn){
 /*转发到本地的udp网关*/
 func tcpToUdpProxy(conn comm.CommConn){
 	var packLenByte []byte = make([]byte, 2)
-	var bufByte []byte = make([]byte,65535)
+	var bufByte []byte = make([]byte,1024*10)
 	remoteConn, err := net.DialTimeout("udp", "127.0.0.1:"+param.Args.UdpGatePort,time.Second*15);
 	if err!=nil {
 		log.Printf("err:%v\r\n",err);
@@ -97,7 +97,7 @@ func tcpToUdpProxy(conn comm.CommConn){
 	defer remoteConn.Close()
 
 	go func() {
-		var bufByte1 []byte = make([]byte,65535)
+		var bufByte1 []byte = make([]byte,1024*10)
 		var buffer bytes.Buffer
 		var packLenByte []byte = make([]byte, 2)
 		for {

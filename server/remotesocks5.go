@@ -48,7 +48,7 @@ func startUdpGate(address string) ( *net.UDPAddr ,error){
 	if err != nil {
 		return nil,err
 	}
-	buf := make([]byte, 65535)
+	buf := make([]byte, 1024*10)
 	go func() {
 		for {
 			n, localAddr, err := udpListener.ReadFromUDP(buf[0:])
@@ -76,7 +76,7 @@ func natSawp(udpGate *net.UDPConn,data []byte,localAddr *net.UDPAddr){
 		if err != nil {
 			return
 		}
-		buf:= make([]byte, 65535)
+		buf:= make([]byte, 1024*10)
 		var buffer bytes.Buffer
 		udpNat.Store(natKey,remoteConn)
 		go func(_remoteConn net.Conn) {

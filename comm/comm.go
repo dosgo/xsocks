@@ -17,6 +17,14 @@ import (
 	"time"
 )
 
+
+var poolNatBuf = &sync.Pool{
+	New: func() interface{} {
+		return make([]byte, 4096)
+	},
+}
+
+
 type CommConn interface {
 	SetDeadline(t time.Time) error
 	io.ReadWriteCloser
@@ -152,9 +160,10 @@ func NatSawp(_udpNat *sync.Map,conn *gonet.UDPConn,dstAddr string,duration time.
 		go func(_remoteConn net.Conn) {
 			defer _udpNat.Delete(natKey);
 			defer _remoteConn.Close()
-			buf:= make([]byte, 1024*5);
+			//buf:= make([]byte, 1024*5);
 			for {
 				_remoteConn.SetReadDeadline(time.Now().Add(duration))
+				buf := poolNatBuf.Get().([]byte)
 				n, err:= _remoteConn.Read(buf);
 				if err!=nil {
 					log.Printf("err:%v\r\n",err);
@@ -163,16 +172,18 @@ func NatSawp(_udpNat *sync.Map,conn *gonet.UDPConn,dstAddr string,duration time.
 				buffer.Reset();
 				buffer.Write(buf[:n])
 				conn.Write(buffer.Bytes())
+				poolNatBuf.Put(buf)
 			}
 		}(remoteConn)
 	}else{
 		remoteConn=_conn.(net.Conn)
 	}
-	buf:= make([]byte, 1024*5);
+	buf := poolNatBuf.Get().([]byte)
 	udpSize,_,err:=conn.ReadFrom(buf);
 	if err==nil {
 		remoteConn.Write(buf[:udpSize])
 	}
+	poolNatBuf.Put(buf)
 }
 
 

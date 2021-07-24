@@ -37,7 +37,7 @@ func StartSudp(_addr string) error {
 	}
 	conn:=udpHeader.NewUdpConn(_conn);
 	defer conn.Close()
-	data := make([]byte,65535)
+	data := make([]byte,1024*10)
 	var buffer bytes.Buffer
 	var aesGcm=comm.NewAesGcm();
 	if aesGcm==nil {
