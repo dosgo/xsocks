@@ -26,12 +26,12 @@ var winDivert32Sys []byte;
 var winDivert64Sys []byte;
 
 var divertDll="WinDivert32.dll";
-var divertSys="C:\\Windows\\System32\\WinDivert32.sys";
+var divertSys="WinDivert32.sys";
 
 func init() {
 	if runtime.GOARCH == "amd64" {
 		divertDll="WinDivert64.dll"
-		divertSys="C:\\Windows\\System32\\WinDivert64.sys";
+		divertSys="WinDivert64.sys";
 	}
 	_,err:=os.Stat(divertDll)
 	if err!=nil {

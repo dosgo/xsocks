@@ -103,6 +103,10 @@ func (c *Client) Start() error{
 	}
 	//to local safe socks5(udp support)
 	if param.Args.TunType==5 {
+		if !strings.HasPrefix(param.Args.ServerAddr,"socks5"){
+			fmt.Printf("-serverAddr socks5://127.0.0.1:1080 \r\n")
+			return errors.New("-tuntype 5 -serverAddr socks5://127.0.0.1:1080");
+		}
 		c.fakeDns=&FakeDnsTun{}
 		c.fakeDns.Start(5,"",tunAddr,"",tunGw,"");
 	}

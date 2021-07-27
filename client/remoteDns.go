@@ -7,26 +7,19 @@ import (
 	"github.com/dosgo/xsocks/comm"
 	"io"
 	"net"
-	"strconv"
-	"strings"
 	"sync"
-	"time"
 )
-var dnsCache *DnsCache
+var dnsCache *comm.DnsCache
 var dnsIng sync.Map
 //污染的域名不用再尝试解析
 var PolluteDomainName sync.Map
 
 
 func init(){
-	dnsCache = &DnsCache{cache: make(map[string]string, 128)}
+	dnsCache = &comm.DnsCache{Cache: make(map[string]string, 128)}
 }
 
 
-type DnsCache struct {
-	cache        map[string]string;
-	sync.Mutex
-}
 
 type RemoteDns struct {
 	Tunnel comm.CommConn
@@ -53,7 +46,7 @@ func (rd *RemoteDns)Resolve(remoteHost string) (string,error){
 	rd.Lock();
 	defer  rd.Unlock()
 	var err error
-	cache:= readDnsCache(remoteHost)
+	cache,_:= dnsCache.ReadDnsCache(remoteHost)
 	if cache!="" {
 		return  cache,nil;
 	}
@@ -113,7 +106,7 @@ func (rd *RemoteDns)Resolve(remoteHost string) (string,error){
 			return "",err
 		}
 		ipAddr := net.IPv4(ipBuf[0], ipBuf[1], ipBuf[2], ipBuf[3])
-		writeDnsCache(remoteHost,ipAddr.String())
+		dnsCache.WriteDnsCache(remoteHost,100,ipAddr.String())
 		return ipAddr.String(),nil;
 	}else{
 		fmt.Printf("backHead no v4 backHead:%v\r\n",backHead)
@@ -124,22 +117,3 @@ func (rd *RemoteDns)Resolve(remoteHost string) (string,error){
 
 
 
-func readDnsCache(remoteHost string)string{
-	dnsCache.Lock();
-	defer dnsCache.Unlock();
-	if v, ok := dnsCache.cache[remoteHost]; ok {
-		cache:=strings.Split(v,"_")
-		cacheTime, _ := strconv.ParseInt(cache[1], 10, 64)
-		//60ms
-		if time.Now().Unix()-cacheTime<3*60 {
-			return cache[0];
-		}
-	}
-	return "";
-}
-func writeDnsCache(remoteHost string,ip string)string{
-	dnsCache.Lock();
-	defer dnsCache.Unlock();
-	dnsCache.cache[remoteHost]=ip+"_"+strconv.FormatInt(time.Now().Unix(),10)
-	return "";
-}
