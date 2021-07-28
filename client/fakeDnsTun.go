@@ -72,10 +72,7 @@ var fakeUdpNat sync.Map
 func (fakeDns *FakeDnsTun)Start(tunType int,tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tunDNS string) {
 	fakeDns.tunType=tunType;
 	//start local dns
-	fakeDns.tunDns =&TunDns{};
-	fakeDns.tunDns.dnsPort="53";
-	fakeDns.tunDns.dnsAddr="127.0.0.1"
-	fakeDns.tunDns.dnsAddrV6="0:0:0:0:0:0:0:1"
+	fakeDns.tunDns =&TunDns{dnsPort:"53",dnsAddr:"127.0.0.1",dnsAddrV6:"0:0:0:0:0:0:0:1"};
 	if fakeDns.tunType==3 {
 		fakeDns.localSocks=param.Args.Sock5Addr;
 		fakeDns.safeDns = &dot.DoT{ServerName:"dns.google",Addr:"8.8.8.8:853",LSocks:fakeDns.localSocks}
@@ -83,7 +80,9 @@ func (fakeDns *FakeDnsTun)Start(tunType int,tunDevice string,_tunAddr string,_tu
 	if fakeDns.tunType==5 {
 		fakeDns.localSocks=	param.Args.ServerAddr[9:];
 		fakeDns.safeDns = &dot.DoT{ServerName:"dns.google",Addr:"8.8.8.8:853",LSocks:fakeDns.localSocks}
-		fakeDns.autoFilter=true;
+		if runtime.GOOS=="windows" {
+			fakeDns.autoFilter = true;
+		}
 	}
 
 
@@ -91,21 +90,19 @@ func (fakeDns *FakeDnsTun)Start(tunType int,tunDevice string,_tunAddr string,_tu
 	fakeDns.tunDns.singleflight  = &singleflight.Group{}
 	fakeDns.tunDns.excludeDomains=make([]string,0)
 	if fakeDns.tunType==3 {
-	urlInfo, _ := url.Parse(param.Args.ServerAddr)
-	fakeDns.tunDns.excludeDomains=append(fakeDns.tunDns.excludeDomains,urlInfo.Hostname()+".");
+		urlInfo, _ := url.Parse(param.Args.ServerAddr)
+		fakeDns.tunDns.excludeDomains=append(fakeDns.tunDns.excludeDomains,urlInfo.Hostname()+".");
 	}
 	//生成本地udp端口避免过滤的时候变动了
 	clientPort,_:=comm.GetFreeUdpPort();
 	fakeDns.tunDns._startSmartDns(clientPort)
-
-	//edit DNS
-	if runtime.GOOS!="windows" {
-		comm.SetNetConf(fakeDns.tunDns.dnsAddr, fakeDns.tunDns.dnsAddrV6);
-	}
 	fakeDns._startTun(tunDevice,_tunAddr,_tunMask,_tunGW,tunDNS);
 
+	//edit DNS
 	if runtime.GOOS=="windows" {
 		go winDivert.RedirectDNS(fakeDns.tunDns.dnsAddr,fakeDns.tunDns.dnsPort,clientPort);
+	} else {
+		comm.SetNetConf(fakeDns.tunDns.dnsAddr, fakeDns.tunDns.dnsAddrV6);
 	}
 	//udp limit auto remove
 	fakeDns.run=true;
