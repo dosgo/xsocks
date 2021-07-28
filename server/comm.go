@@ -239,7 +239,7 @@ func dnsResolve(conn comm.CommConn) {
 			return
 		}
 		addr, err := net.ResolveIPAddr("ip4", string(hostBuf[:hostLen]))
-		if(err!=nil){
+		if err!=nil {
 			fmt.Printf("host:%s hostLen:%d\r\n",string(hostBuf[:hostLen]),hostLen)
 			//err
 			conn.Write([]byte{0x01, 0x04}) //0x01==error  0x04==ipv4
@@ -247,7 +247,7 @@ func dnsResolve(conn comm.CommConn) {
 		}
 		_, err =conn.Write([]byte{0x00, 0x04}) //响应客户端
 		_, err =conn.Write(addr.IP.To4()) //响应客户端
-		if(err!=nil){
+		if err!=nil {
 			return ;
 		}
 	}

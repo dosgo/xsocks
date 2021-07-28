@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46
+	github.com/cakturk/go-netstat v0.0.0-20200220111822-e5b49efee7a5
 	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/hashicorp/yamux v0.0.0-20210707203944-259a57b3608c
 	github.com/lucas-clemente/quic-go v0.21.1

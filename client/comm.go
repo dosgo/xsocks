@@ -57,3 +57,6 @@ func routeEdit(tunGW string,remoteAddr string, dnsServers []string,oldGw string)
 
 
 
+type SafeDns interface {
+	Resolve(remoteHost string) (string,error)
+}

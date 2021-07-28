@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"github.com/dosgo/xsocks/comm/dot"
 	"log"
 	"github.com/miekg/dns"
 	"net"
@@ -11,7 +12,7 @@ import (
 )
 
 type LocalDns struct {
-	remoteDns RemoteDns
+	safeDns SafeDns
 	dnsClient *dns.Client
 	udpServer  *dns.Server
 	tcpServer  *dns.Server
@@ -38,7 +39,7 @@ func (localDns *LocalDns)StartDns()  {
 		WriteTimeout: time.Duration(10) * time.Second,
 	}
 
-	localDns.remoteDns = RemoteDns{}
+	localDns.safeDns = &dot.DoT{ServerName:"dns.google",Addr:"8.8.8.8:853",LSocks:param.Args.Sock5Addr}
 	localDns.dnsClient = &dns.Client{
 		Net:          "udp",
 		UDPSize:      4096,
@@ -103,7 +104,7 @@ func (localDns *LocalDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 			}
 		}
 	}
-	ip, err = localDns.remoteDns.Resolve(domain[0 : len(domain)-1])
+	ip, err = localDns.safeDns.Resolve(domain[0 : len(domain)-1])
 	if err!=nil {
 		fmt.Printf("dns domain:%s Resolve err:%v\r\n",domain,err)
 		return m, err;

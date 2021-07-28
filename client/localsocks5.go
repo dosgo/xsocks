@@ -18,6 +18,9 @@ import (
 	"time"
 )
 
+//污染的域名不用再尝试解析
+var PolluteDomainName sync.Map
+
 
 func StartLocalSocks5(address string) (net.Listener,error) {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
