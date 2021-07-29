@@ -43,6 +43,7 @@ type FakeDnsTun struct {
 	udpLimit sync.Map;
 	socksServerPid int
 	autoFilter bool
+	udpProxy bool;
 	run bool;
 	tunDns *TunDns
 	tunDev io.ReadWriteCloser
@@ -69,8 +70,9 @@ var tunMask="255.255.0.0"
 var fakeUdpNat sync.Map
 
 
-func (fakeDns *FakeDnsTun)Start(tunType int,tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tunDNS string) {
+func (fakeDns *FakeDnsTun)Start(tunType int,udpProxy bool,tunDevice string,_tunAddr string,_tunMask string,_tunGW string,tunDNS string) {
 	fakeDns.tunType=tunType;
+	fakeDns.udpProxy=udpProxy;
 	//start local dns
 	fakeDns.tunDns =&TunDns{dnsPort:"53",dnsAddr:"127.0.0.1",dnsAddrV6:"0:0:0:0:0:0:0:1"};
 	if fakeDns.tunType==3 {
@@ -235,25 +237,25 @@ func (fakeDns *FakeDnsTun) udpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)e
 	}
 	//tuntype 直连
 	if fakeDns.tunType==5 {
-		socksConn, err := net.DialTimeout("tcp", fakeDns.localSocks, time.Second*15)
-		if err == nil {
-			defer socksConn.Close();
-			gateWay,err:=socks.GetUdpGate(socksConn,remoteAddr);
-			fmt.Printf("gateWay:%s %v\r\n",gateWay,err)
-			if err==nil {
-				defer ep.Close();
-				dstAddr,_:=net.ResolveUDPAddr("udp",remoteAddr)
-				fmt.Printf("udp-remoteAddr:%s\r\n",remoteAddr)
-				socks.SocksUdpGate(conn,gateWay,dstAddr);
-			}else{
-				fakeDns.UdpDirect(remoteAddr,conn,ep);
+		if fakeDns.udpProxy {
+			socksConn, err := net.DialTimeout("tcp", fakeDns.localSocks, time.Second*15)
+			if err == nil {
+				defer socksConn.Close();
+				gateWay, err := socks.GetUdpGate(socksConn, remoteAddr);
+				fmt.Printf("gateWay:%s %v\r\n", gateWay, err)
+				if err == nil {
+					defer ep.Close();
+					dstAddr, _ := net.ResolveUDPAddr("udp", remoteAddr)
+					fmt.Printf("udp-remoteAddr:%s\r\n", remoteAddr)
+					return socks.SocksUdpGate(conn, gateWay, dstAddr);
+				}
 			}
-		}else{
-			fakeDns.UdpDirect(remoteAddr,conn,ep);
 		}
+		fakeDns.UdpDirect(remoteAddr,conn,ep);
 	}
 	return nil;
 }
+
 
 /*直连*/
 func (fakeDns *FakeDnsTun) UdpDirect(remoteAddr string,conn *gonet.UDPConn, ep tcpip.Endpoint ){

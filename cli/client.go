@@ -27,6 +27,7 @@ func main() {
 	flag.IntVar(&paramParam.MuxNum, "muxNum", 4, "multiplexer Num")
 	flag.IntVar(&paramParam.LocalDns, "localDns", 0, "use local dns")
 	flag.IntVar(&paramParam.SmartDns, "smartDns", 1, "use smart dns")
+	flag.IntVar(&paramParam.UdpProxy,"udpProxy",1,"use udpProxy ")
 	flag.IntVar(&paramParam.Mtu, "mtu", 4500, "mtu")
 	flag.BoolVar(&paramParam.TunSmartProxy,"tunSmartProxy",false,"tun Smart Proxy ")
 

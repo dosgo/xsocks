@@ -90,7 +90,7 @@ func (c *Client) Start() error{
 	//windows + linux +mac
 	if param.Args.TunType==3 {
 		c.fakeDns=&FakeDnsTun{}
-		c.fakeDns.Start(3,"",tunAddr,"",tunGw,"");
+		c.fakeDns.Start(3,param.Args.UdpProxy==1,"",tunAddr,"",tunGw,"");
 	}
 
 	//only windows  (system proxy)
@@ -108,7 +108,7 @@ func (c *Client) Start() error{
 			return errors.New("-tuntype 5 -serverAddr socks5://127.0.0.1:1080");
 		}
 		c.fakeDns=&FakeDnsTun{}
-		c.fakeDns.Start(5,"",tunAddr,"",tunGw,"");
+		c.fakeDns.Start(5,param.Args.UdpProxy==1,"",tunAddr,"",tunGw,"");
 	}
 
 	if param.Args.TunType!=5 {

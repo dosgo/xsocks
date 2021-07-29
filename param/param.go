@@ -36,6 +36,7 @@ type ClientParam struct{
 	 TunType int;
 	 UnixSockTun string;
 	 DnsPort string;
+	 UdpProxy int;
 	 MuxNum int;
 	 LocalDns int;  //use local dns
 	 SmartDns int;  //use Smart dns
