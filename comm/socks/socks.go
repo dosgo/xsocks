@@ -3,7 +3,6 @@ package socks
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/dosgo/xsocks/param"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"io"
 	"log"
@@ -100,8 +99,8 @@ func UdpProxyRes(clientConn net.Conn,udpAddr *net.UDPAddr)  error{
 
 
 /*socks5  udp gate 这里必须保持socks5兼容 */
-func SocksUdpGate(conn *gonet.UDPConn,dstAddr *net.UDPAddr) error{
-	gateConn, err := net.DialTimeout("udp", "127.0.0.1:"+param.Args.Sock5UdpPort,time.Second*15);
+func SocksUdpGate(conn *gonet.UDPConn,gateAddr string,dstAddr *net.UDPAddr) error{
+	gateConn, err := net.DialTimeout("udp", gateAddr,time.Second*15);
 	if err != nil {
 		fmt.Println(err.Error())
 		return err;
@@ -138,6 +137,7 @@ func SocksUdpGate(conn *gonet.UDPConn,dstAddr *net.UDPAddr) error{
 		_, _ = conn.Write(b2[dataStart:n])
 	}
 }
+
 
 /*socks5协议动态获取udp端口映射*/
 func GetUdpGate(socksConn net.Conn,remoteAddr string) (string,error){

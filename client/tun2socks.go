@@ -102,7 +102,7 @@ func rawUdpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)error{
 	}else{
 		defer ep.Close();
 		dstAddr,_:=net.ResolveUDPAddr("udp",conn.LocalAddr().String())
-		socks.SocksUdpGate(conn,dstAddr);
+		socks.SocksUdpGate(conn,"127.0.0.1:"+param.Args.Sock5UdpPort,dstAddr);
 	}
 	return nil;
 }

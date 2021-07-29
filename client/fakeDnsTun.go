@@ -231,28 +231,48 @@ func (fakeDns *FakeDnsTun) udpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint)e
 		defer ep.Close();
 		dstAddr,_:=net.ResolveUDPAddr("udp",remoteAddr)
 		fmt.Printf("udp-remoteAddr:%s\r\n",remoteAddr)
-		socks.SocksUdpGate(conn,dstAddr);
+		socks.SocksUdpGate(conn,"127.0.0.1:"+param.Args.Sock5UdpPort,dstAddr);
 	}
 	//tuntype 直连
 	if fakeDns.tunType==5 {
-		var limit *comm.UdpLimit;
-		_limit,ok:=fakeDns.udpLimit.Load(remoteAddr)
-		if !ok{
-			limit=&comm.UdpLimit{Limit: rate.NewLimiter(rate.Every(1 * time.Second), 50),Expired: time.Now().Unix()+5}
+		socksConn, err := net.DialTimeout("tcp", fakeDns.localSocks, time.Second*15)
+		if err == nil {
+			defer socksConn.Close();
+			gateWay,err:=socks.GetUdpGate(socksConn,remoteAddr);
+			fmt.Printf("gateWay:%s %v\r\n",gateWay,err)
+			if err==nil {
+				defer ep.Close();
+				dstAddr,_:=net.ResolveUDPAddr("udp",remoteAddr)
+				fmt.Printf("udp-remoteAddr:%s\r\n",remoteAddr)
+				socks.SocksUdpGate(conn,gateWay,dstAddr);
+			}else{
+				fakeDns.UdpDirect(remoteAddr,conn,ep);
+			}
 		}else{
-			limit=_limit.(*comm.UdpLimit);
-		}
-		//限流
-		if limit.Limit.Allow(){
-			limit.Expired=time.Now().Unix()+5;
-			//本地直连交换
-			comm.TunNatSawp(&fakeUdpNat, conn,ep, remoteAddr, 65*time.Second);
-			fakeDns.udpLimit.Store(remoteAddr,limit);
+			fakeDns.UdpDirect(remoteAddr,conn,ep);
 		}
 	}
 	return nil;
 }
 
+/*直连*/
+func (fakeDns *FakeDnsTun) UdpDirect(remoteAddr string,conn *gonet.UDPConn, ep tcpip.Endpoint ){
+	//tuntype 直连
+	var limit *comm.UdpLimit;
+	_limit,ok:=fakeDns.udpLimit.Load(remoteAddr)
+	if !ok{
+		limit=&comm.UdpLimit{Limit: rate.NewLimiter(rate.Every(1 * time.Second), 50),Expired: time.Now().Unix()+5}
+	}else{
+		limit=_limit.(*comm.UdpLimit);
+	}
+	//限流
+	if limit.Limit.Allow(){
+		limit.Expired=time.Now().Unix()+5;
+		//本地直连交换
+		comm.TunNatSawp(&fakeUdpNat, conn,ep, remoteAddr, 65*time.Second);
+		fakeDns.udpLimit.Store(remoteAddr,limit);
+	}
+}
 
 /*dns addr swap*/
 func (fakeDns *FakeDnsTun) dnsToAddr(remoteAddr string) string{
