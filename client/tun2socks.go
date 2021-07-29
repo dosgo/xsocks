@@ -89,7 +89,7 @@ func rawTcpForwarder(conn *gonet.TCPConn)error{
 		return nil
 	}
 	defer socksConn.Close();
-	if socks.SocksCmd(socksConn,1,1,remoteAddr)==nil {
+	if socks.SocksCmd(socksConn,1,1,remoteAddr,true)==nil {
 		comm.TcpPipe(conn,socksConn,time.Minute*5)
 	}
 	return nil

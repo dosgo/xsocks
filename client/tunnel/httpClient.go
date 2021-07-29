@@ -35,7 +35,7 @@ func newHttpClient() *http.Client{
 	return  &http.Client{Transport: t}
 }
 
-func (qd *httpConn) Dial(_url string) (comm.CommConn, error) {
+func (qd *httpConn) Dial(_url string,remoteAddr string) (comm.CommConn, error) {
 	qd.Lock()
 	defer qd.Unlock()
 	tslClientConf:= GetTlsConf();

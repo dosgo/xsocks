@@ -3,6 +3,7 @@ package socks
 import (
 	"bytes"
 	"encoding/binary"
+	"github.com/dosgo/xsocks/comm"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"io"
 	"log"
@@ -184,8 +185,9 @@ func GetUdpGate(socksConn net.Conn,remoteAddr string) (string,error){
 to socks5
 cmd socks cmd
 addrtype socks type  0x01  0x03  0x04
+read Back
 */
-func SocksCmd(socksConn net.Conn,cmd uint8,addrType uint8,host string) error{
+func SocksCmd(socksConn comm.CommConn,cmd uint8,addrType uint8,host string,readBack bool) error{
 	//socks5 auth
 	socksConn.Write([]byte{0x05, 0x01,0x00});
 	//connect head
@@ -214,6 +216,7 @@ func SocksCmd(socksConn net.Conn,cmd uint8,addrType uint8,host string) error{
 	binary.Write(buffer, binary.BigEndian, uint16(_port))
 	socksConn.Write(buffer.Bytes());
 
+
 	//recv auth back
 	authBack := make([]byte, 2)
 	_, err:= io.ReadFull(socksConn, authBack)
@@ -226,12 +229,14 @@ func SocksCmd(socksConn net.Conn,cmd uint8,addrType uint8,host string) error{
 		return errors.New("auth error");
 	}
 
-	//recv connectBack
-	connectBack := make([]byte, 10)
-	_, err = io.ReadFull(socksConn, connectBack)
-	if err!= nil {
-		log.Println(err)
-		return err
+	if readBack {
+		//recv connectBack
+		connectBack := make([]byte, 10)
+		_, err = io.ReadFull(socksConn, connectBack)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
 	}
 	return nil;
 }

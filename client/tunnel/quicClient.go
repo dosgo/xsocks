@@ -103,7 +103,7 @@ func isActive(s quic.Session) bool {
 
 
 
-func (qd *QuicDialer) Dial(quicAddr string) (comm.CommConn, error) {
+func (qd *QuicDialer) Dial(quicAddr string,remoteAddr string) (comm.CommConn, error) {
 	atomic.AddInt64(&num,1)
 	var retryNum=0;
 	fmt.Printf("num:%d\r\n", num);

@@ -214,7 +214,7 @@ func (fakeDns *FakeDnsTun) tcpForwarder(conn *gonet.TCPConn)error{
 			return nil
 		}
 		defer socksConn.Close();
-		if socks.SocksCmd(socksConn, 1, uint8(addrType), remoteAddr) == nil {
+		if socks.SocksCmd(socksConn, 1, uint8(addrType), remoteAddr,true) == nil {
 			comm.TcpPipe(conn, socksConn, time.Minute*5)
 		}
 	}

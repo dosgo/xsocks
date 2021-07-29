@@ -48,7 +48,7 @@ func (rd *DoT)Connect() error {
 		return  err;
 	}
 	if rd.LSocks!="" {
-		if socks.SocksCmd(srcConn, 1, uint8(0x01), rd.Addr) != nil {
+		if socks.SocksCmd(srcConn, 1, uint8(0x01), rd.Addr,true) != nil {
 			return errors.New("local socks error")
 		}
 	}

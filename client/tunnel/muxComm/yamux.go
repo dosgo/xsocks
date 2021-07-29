@@ -23,7 +23,7 @@ func NewYamuxDialer(conn DialConn) *YamuxComm {
 	return  _yamux
 }
 
-func (qd *YamuxComm) Dial(url string) (comm.CommConn, error) {
+func (qd *YamuxComm) Dial(url string,remoteAddr string) (comm.CommConn, error) {
 	qd.Lock()
 	defer qd.Unlock()
 	if qd.sess==nil {

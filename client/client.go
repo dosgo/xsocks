@@ -140,6 +140,7 @@ func setDefaultDNS(addrs string) {
 }
 
 func initTunnel(){
+	var isSocks=true;
 	//初始化连接通道
 	var tunnelDialer tunnelcomm.CallerTunnel;
 	var tunnelUrl string;
@@ -162,5 +163,5 @@ func initTunnel(){
 		return ;
 	}
 	//init tunnel
-	tunnelcomm.SetTunnel(tunnelDialer,tunnelUrl,param.Args.Password)
+	tunnelcomm.SetTunnel(tunnelDialer,tunnelUrl,param.Args.Password,isSocks)
 }

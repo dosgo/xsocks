@@ -131,7 +131,7 @@ func (rd *TunConn) PutPacket(tunnel *udpHeader.UdpConn){
 func  connectTun(uniqueId string,mtu int)(comm.CommConn,error){
 	var err error;
 	tunnelcomm.ResetTunnel();
-	tunnel,err:= tunnelcomm.NewTunnel();
+	tunnel,_,err:= tunnelcomm.NewTunnel("");
 	if err != nil {
 		fmt.Printf("connect tunnel err:%v\r\n",err)
 		return nil,err;

@@ -24,7 +24,7 @@ func NewWsSmuxDialer(conn DialConn) *SmuxComm {
 
 
 
-func (qd *SmuxComm) Dial(url string) (comm.CommConn, error) {
+func (qd *SmuxComm) Dial(url string,remoteAddr string) (comm.CommConn, error) {
 	qd.Lock()
 	defer qd.Unlock()
 

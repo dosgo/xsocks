@@ -118,7 +118,7 @@ func (ut *UdpTunnel)Connect() (comm.CommConn,error){
 	//cmd
 	sendBuf =append(sendBuf,0x04);//dns
 	var err error;
-	tunnel, err:= tunnelcomm.NewTunnel();
+	tunnel,_, err:= tunnelcomm.NewTunnel("");
 	if err!=nil {
 		return nil,err;
 	}
@@ -368,43 +368,34 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 			} else {
 				//保存記錄
 				PolluteDomainName.Store(string(hostBuf), 1)
-				var stream,err= tunnelcomm.NewTunnel();
+				var remoteHost="";
+				//使用host
+				if connectHead[3] == 0x03 {
+					remoteHost=string(hostBuf);
+				}else if connectHead[3] == 0x01 {
+					remoteHost=ipAddr.To4().String();
+				} else if connectHead[3] == 0x04 {
+					remoteHost=ipAddr.To16().String();
+				}
+				remoteHost=remoteHost+":"+port
+
+				var stream,isProxy,err= tunnelcomm.NewTunnel(remoteHost);
 				if err != nil || stream == nil {
 					log.Printf("err:%v\r\n",err);
 					return err
 				}
-				var buffer bytes.Buffer
 				defer stream.Close()
-				buffer.Reset()
-				buffer.WriteByte(0x02)//cmd 0x02 to socks5
-				buffer.Write(auth)//写入sock5认证头
-				buffer.Write(connectHead)//写入sock5请求head
-
-
-				//使用host
-				if connectHead[3] == 0x03 {
-					buffer.Write(hostBufLen)
-					buffer.Write(hostBuf)
-				}else if connectHead[3] == 0x01 {
-					buffer.Write(ipv4)
-				} else if connectHead[3] == 0x04 {
-					buffer.Write(ipv6)
+				//stream.SetDeadline(time.Now().Add(time.Second*45))
+				//如果通道使用了socks5协议
+				if isProxy {
+					//cmd 0x02 to socks5
+					stream.Write([]byte{0x02})
+					//处理socks5协议
+					err = socks.SocksCmd(stream, 1, connectHead[3], remoteHost,false);
+				}else {
+					//远程不是socks协议必须模拟响应
+					clientConn.Write([]byte{0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}) //响应客户端连接成功
 				}
-				//写入端口
-				buffer.Write(portBuf)
-				stream.SetDeadline(time.Now().Add(time.Second*45))
-				_, err =stream.Write(buffer.Bytes());
-				if err != nil {
-					if strings.Contains(err.Error(),"deadline"){
-						tunnelcomm.ResetTunnel();
-					}
-					fmt.Printf("read remote error err:%v errStr:%s\r\n ",err)
-					return err
-				}
-				//read auth back
-				socks5AuthBack := make([]byte, 2)
-				stream.SetDeadline(time.Now().Add(time.Second*45))
-				_, err = io.ReadFull(stream, socks5AuthBack)
 				if err != nil {
 					if strings.Contains(err.Error(),"deadline"){
 						tunnelcomm.ResetTunnel()
@@ -423,4 +414,5 @@ func handleLocalRequest(clientConn net.Conn,udpAddr *net.UDPAddr ) error {
 	}
 	return nil;
 }
+
 

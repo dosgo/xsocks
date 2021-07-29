@@ -34,7 +34,7 @@ func newHttp2Client() *http.Client{
 	return  &http.Client{Transport: t}
 }
 
-func (qd *http2Conn) Dial(url string) (comm.CommConn, error) {
+func (qd *http2Conn) Dial(url string,remoteAddr string) (comm.CommConn, error) {
 	qd.Lock()
 	defer qd.Unlock()
 	reader, writer := io.Pipe()
