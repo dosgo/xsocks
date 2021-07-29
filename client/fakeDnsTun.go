@@ -463,6 +463,8 @@ func  (tunDns *TunDns)localResolve(r *dns.Msg) (net.IP,uint32, error) {
 				}
 			}
 		}
+	}else{
+		return nil,0,err;
 	}
 	return nil,0,errors.New("Not found addr")
 }
