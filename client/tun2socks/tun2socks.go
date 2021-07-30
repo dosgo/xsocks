@@ -30,11 +30,16 @@ func ForwardTransportFromIo(dev io.ReadWriteCloser,mtu int,tcpCallback comm.Forw
 				log.Printf("channelLinkID exit \r\n")
 				break;
 			}
+			info.Pkt.Data().AsRange().AsView()
 			sendBuffer.Reset()
 			//buffer.Write(pkt.Pkt.LinkHeader().View())
 			sendBuffer.Write(info.Pkt.NetworkHeader().View())
 			sendBuffer.Write(info.Pkt.TransportHeader().View())
-			sendBuffer.Write(info.Pkt.Data.ToView())
+			//info.Pkt.Data().AsRange().AsView()
+			//pk.Data().AsRange().ToOwnedView()
+			//vv := info.Pkt.Data().ExtractVV()
+			//vv.ToView()
+			sendBuffer.Write(info.Pkt.Data().AsRange().ToOwnedView())
 			if sendBuffer.Len()>0 {
 				dev.Write(sendBuffer.Bytes())
 			}

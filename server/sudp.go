@@ -100,7 +100,7 @@ func newTun(_stack *stack.Stack, channelLinkID *channel.Endpoint,addr net.Addr,u
 			buffer.Reset()
 			buffer.Write(pkt.Pkt.NetworkHeader().View())
 			buffer.Write(pkt.Pkt.TransportHeader().View())
-			buffer.Write(pkt.Pkt.Data.ToView())
+			buffer.Write(pkt.Pkt.Data().AsRange().ToOwnedView())
 			if buffer.Len()>0 {
 				ciphertext,err:=aesGcm.AesGcm(buffer.Bytes(),true);
 				if err==nil {

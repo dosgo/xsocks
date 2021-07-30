@@ -180,8 +180,8 @@ func tcpToTun(conn comm.CommConn){
 			buffer.Reset()
 			buffer.Write(pkt.Pkt.NetworkHeader().View())
 			buffer.Write(pkt.Pkt.TransportHeader().View())
-			buffer.Write(pkt.Pkt.Data.ToView())
-			if(buffer.Len()>0) {
+			buffer.Write(pkt.Pkt.Data().AsRange().ToOwnedView())
+			if buffer.Len()>0 {
 				binary.LittleEndian.PutUint16(packLenByte,uint16(buffer.Len()))
 				sendBuffer.Reset()
 				sendBuffer.Write(packLenByte)

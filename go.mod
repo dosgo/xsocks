@@ -17,10 +17,10 @@ require (
 	github.com/xtaci/smux v1.5.15
 	github.com/yijunjun/route-table v0.0.0-20160321072918-9608fc1e2e44
 	github.com/yl2chen/cidranger v1.0.2
-	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
+	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
 	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20210616094352-59db8d763f22
 	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324
-	gvisor.dev/gvisor v0.0.0-20201230043330-9c3ca53ebf28
+	gvisor.dev/gvisor v0.0.0-20210716193733-566c23a60eea
 )
