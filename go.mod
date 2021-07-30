@@ -22,5 +22,5 @@ require (
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20210616094352-59db8d763f22
 	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324
-	gvisor.dev/gvisor v0.0.0-20201215175918-b0f23fb7e0cf
+	gvisor.dev/gvisor v0.0.0-20201230043330-9c3ca53ebf28
 )

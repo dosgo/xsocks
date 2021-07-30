@@ -577,8 +577,8 @@ gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c h1:dUUwHk2QECo/6vqA44rthZ8ie
 gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 gotest.tools v2.2.0+incompatible/go.mod h1:DsYFclhRJ6vuDpmuTbkuFWG+y2sxOXAzmJt81HFBacw=
 grpc.go4.org v0.0.0-20170609214715-11d0a25b4919/go.mod h1:77eQGdRu53HpSqPFJFmuJdjuHRquDANNeA4x7B8WQ9o=
-gvisor.dev/gvisor v0.0.0-20201215175918-b0f23fb7e0cf h1:75Emwl7jWYyB4+NMVFRe5a5v6Cto3vw7vRL90jw2HHM=
-gvisor.dev/gvisor v0.0.0-20201215175918-b0f23fb7e0cf/go.mod h1:5DEMKRjYDiM24fvDUWPjBpABm9ROMcv/kEcox3fHtm0=
+gvisor.dev/gvisor v0.0.0-20201230043330-9c3ca53ebf28 h1:DrhPZF9x0DXydKzoMf4gg4EzgdkD1vA3mBsOrsImvm0=
+gvisor.dev/gvisor v0.0.0-20201230043330-9c3ca53ebf28/go.mod h1:5DEMKRjYDiM24fvDUWPjBpABm9ROMcv/kEcox3fHtm0=
 honnef.co/go/tools v0.0.0-20180728063816-88497007e858/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.0-20190106161140-3f1c8253044a/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
