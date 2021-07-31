@@ -80,7 +80,7 @@ func init() {
 /*windows use wintun*/
 func RegTunDev(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS string)(*DevReadWriteCloser,error){
 	if len(tunDevice)==0 {
-		tunDevice="tun0";
+		tunDevice="socksTun0";
 	}
 	if len(tunAddr)==0 {
 		tunAddr="10.0.0.2";
