@@ -34,6 +34,9 @@ func (conn DevReadWriteCloser) Write(buf []byte) (int, error) {
 
 
 func (conn DevReadWriteCloser) Close() ( error) {
+	if conn.tunDev==nil {
+		return nil;
+	}
 	return conn.tunDev.Close();
 }
 
@@ -103,7 +106,6 @@ func RegTunDev(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDN
 }
 func  setInterfaceAddress4(tunDev *tun.NativeTun,addr, mask, gateway,tunDNS string) error {
 	luid := winipcfg.LUID(tunDev.LUID())
-
 	addresses := append([]net.IPNet{}, net.IPNet{
 		IP:   net.ParseIP(addr).To4(),
 		Mask: net.IPMask(net.ParseIP(mask).To4()),

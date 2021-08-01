@@ -102,6 +102,34 @@ func GetGateway()string {
 	return gwIp;
 }
 
+func GetGatewayIndex()uint32 {
+	table, err := routetable.NewRouteTable()
+	if err != nil {
+		return 0;
+	}
+	defer table.Close()
+	rows, err := table.Routes()
+	if err != nil {
+		return 0;
+	}
+	var minMetric uint32=0;
+	var ifIndex uint32=0;
+	for _, row := range rows {
+		if routetable.Inet_ntoa(row.ForwardDest, false)=="0.0.0.0" {
+			if minMetric==0 {
+				minMetric=row.ForwardMetric1;
+				ifIndex= row.ForwardIfIndex;
+			}else{
+				if row.ForwardMetric1<minMetric {
+					minMetric=row.ForwardMetric1;
+					ifIndex=row.ForwardIfIndex;
+				}
+			}
+		}
+	}
+	return ifIndex;
+}
+
 func getAdapterList() (*syscall.IpAdapterInfo, error) {
 	b := make([]byte, 1000)
 	l := uint32(len(b))
@@ -154,8 +182,8 @@ func GetLocalAddresses() ([]lAddr ,error) {
 
 /*获取旧的dns,内网解析用*/
 func GetOldDns(dnsAddr string,tunGW string,_tunGW string) string{
-	gwIp:=GetGateway();
-	dnsServers,_,_:=GetDnsServerByGateWay(gwIp);
+	ifIndex:=GetGatewayIndex();
+	dnsServers,_,_:=GetDnsServerByIfIndex(ifIndex);
 	for _,v:=range dnsServers{
 		if v!=dnsAddr&&v!=tunGW && v!=_tunGW  {
 			oldDns=v;
@@ -243,6 +271,28 @@ func GetDnsServerByGateWay(gwIp string)([]string,bool,bool){
 }
 
 
+func GetDnsServerByIfIndex(ifIndex uint32)([]string,bool,bool){
+	//DNSServerSearchOrder
+	adapters,err:=GetNetworkAdapter()
+	var isIpv6=false;
+	if err!=nil {
+		return nil,false,isIpv6;
+	}
+	for _,v:=range adapters{
+		if v.InterfaceIndex==ifIndex {
+			for _,v2:=range v.IPAddress{
+				if len(v2)>16{
+					isIpv6=true;
+					break;
+				}
+			}
+			return v.DNSServerSearchOrder,v.DHCPEnabled,isIpv6;
+		}
+	}
+	return nil,false,isIpv6;
+}
+
+
 type NetworkAdapter struct {
 	DNSServerSearchOrder   []string
 	DefaultIPGateway []string
@@ -251,6 +301,7 @@ type NetworkAdapter struct {
 	DHCPEnabled  bool
 	ServiceName  string
 	IPSubnet   []string
+	InterfaceIndex uint32
 	SettingID string
 }
 
@@ -269,7 +320,7 @@ func GetWaterConf(tunAddr string,tunMask string)water.Config{
 
 func GetNetworkAdapter() ([]NetworkAdapter,error){
 	var s = []NetworkAdapter{}
-	err := wmi.Query("SELECT Caption,SettingID,DNSServerSearchOrder,DefaultIPGateway,ServiceName,IPAddress,IPSubnet,DHCPEnabled       FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled=True", &s) // WHERE (BIOSVersion IS NOT NULL)
+	err := wmi.Query("SELECT Caption,SettingID,InterfaceIndex,DNSServerSearchOrder,DefaultIPGateway,ServiceName,IPAddress,IPSubnet,DHCPEnabled       FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled=True", &s) // WHERE (BIOSVersion IS NOT NULL)
 	if err != nil {
 		log.Printf("err:%v\r\n",err)
 		return nil,err

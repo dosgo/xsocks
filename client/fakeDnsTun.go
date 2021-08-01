@@ -407,8 +407,8 @@ func (tunDns *TunDns)ipv4Res(domain string,r *dns.Msg) ([]dns.RR,error)  {
 			if err == nil {
 				_ip=m1;
 			}else if err.Error()!="Not found addr"{
-				fmt.Printf("local dns error:%v\r\n",err)
 				oldDns:=comm.GetOldDns(tunDns.dnsAddr,tunGW,"");
+				fmt.Printf("local dns error:%v oldDns:%s\r\n",err,oldDns)
 				//检测网关DNS是否改变
 				if strings.Index(tunDns.dnsClientConn.RemoteAddr().String(),oldDns)==-1 {
 					tunDns.dnsClientConn.Close();
