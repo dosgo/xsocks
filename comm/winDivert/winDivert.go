@@ -22,7 +22,8 @@ var divertSys="WinDivert32.sys";
 
 
 
-func dllInit() {
+func dllInit(_divertDll string) {
+	divertDll=_divertDll;
 	_,err:=os.Stat(divertDll)
 	if err==nil {
 		godivert.LoadDLL("WinDivert64.dll", "WinDivert32.dll")
