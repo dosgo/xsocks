@@ -27,7 +27,7 @@ func dllInit() {
 	if err==nil {
 		godivert.LoadDLL("WinDivert64.dll", "WinDivert32.dll")
 	}else{
-		fmt.Printf("not found WinDivert.dll WinDivert32.dll\r\n")
+		fmt.Printf("not found :%s\r\n",divertDll)
 	}
 }
 
@@ -37,7 +37,7 @@ func RedirectDNS(dnsAddr string,_port string,sendPort string) {
 	var err error;
 	_,err=os.Stat(divertDll)
 	if err!=nil {
-		fmt.Printf("not found WinDivert.dll WinDivert32.dll\r\n")
+		fmt.Printf("not found :%s\r\n",divertDll)
 		return
 	}
 	winDivertRun=true;
