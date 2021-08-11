@@ -3,53 +3,34 @@
 package winDivert
 
 import (
+	_ "embed"
 	"encoding/binary"
+	"fmt"
 	"github.com/macronut/godivert"
 	"log"
 	"net"
 	"os"
-	"runtime"
-	_"embed"
-	"fmt"
 	"time"
 )
 
 var winDivert *godivert.WinDivertHandle;
 var winDivertRun=false;
-//go:embed WinDivert32.dll
-var winDivert32Bin []byte;
-//go:embed WinDivert64.dll
-var winDivert64Bin []byte;
-//go:embed WinDivert32.sys
-var winDivert32Sys []byte;
-//go:embed WinDivert64.sys
-var winDivert64Sys []byte;
+
 
 var divertDll="WinDivert32.dll";
 var divertSys="WinDivert32.sys";
 
-func init() {
-	if runtime.GOARCH == "amd64" {
-		divertDll="WinDivert64.dll"
-		divertSys="WinDivert64.sys";
-	}
+
+
+func dllInit() {
 	_,err:=os.Stat(divertDll)
-	if err!=nil {
-		if runtime.GOARCH == "amd64" {
-			os.WriteFile(divertDll,winDivert64Bin,os.ModePerm)
-			os.WriteFile(divertSys,winDivert64Sys,os.ModePerm)
-		}else{
-			os.WriteFile(divertDll,winDivert32Bin,os.ModePerm)
-			os.WriteFile(divertSys,winDivert32Sys,os.ModePerm)
-		}
-	}
-	_,err=os.Stat(divertDll)
 	if err==nil {
 		godivert.LoadDLL("WinDivert64.dll", "WinDivert32.dll")
 	}else{
 		fmt.Printf("not found WinDivert.dll WinDivert32.dll\r\n")
 	}
 }
+
 
 /*windows转发*/
 func RedirectDNS(dnsAddr string,_port string,sendPort string) {
