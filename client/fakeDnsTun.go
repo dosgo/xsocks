@@ -73,14 +73,15 @@ func (fakeDns *FakeDnsTun) Start(tunType int, udpProxy bool, tunDevice string, _
 	fakeDns.tunDns = &TunDns{dnsPort: "53", dnsAddr: "127.0.0.1", dnsAddrV6: "0:0:0:0:0:0:0:1"}
 	if fakeDns.tunType == 3 {
 		fakeDns.localSocks = param.Args.Sock5Addr
-		fakeDns.safeDns = &dot.DoT{ServerName: "dns.google", Addr: "8.8.8.8:853", LSocks: fakeDns.localSocks}
 	}
 	if fakeDns.tunType == 5 {
 		fakeDns.localSocks = param.Args.ServerAddr[9:]
-		fakeDns.safeDns = &dot.DoT{ServerName: "dns.google", Addr: "8.8.8.8:853", LSocks: fakeDns.localSocks}
 		if runtime.GOOS == "windows" {
 			fakeDns.autoFilter = true
 		}
+	}
+	if fakeDns.tunType == 5 || fakeDns.tunType == 3 {
+		fakeDns.safeDns = dot.NewDot("dns.google", "8.8.8.8:853", fakeDns.localSocks)
 	}
 
 	fakeDns.tunDns.ip2Domain = bimap.NewBiMap()
