@@ -320,7 +320,7 @@ func (tunDns *TunDns) _startSmartDns(clientPort string) {
 		Net:            "udp",
 		UDPSize:        4096,
 		Dialer:         _dialer,
-		SingleInflight: true,
+		SingleInflight: false,
 		ReadTimeout:    time.Duration(10) * time.Second,
 		WriteTimeout:   time.Duration(10) * time.Second,
 	}
@@ -365,7 +365,7 @@ func (tunDns *TunDns) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	default:
 		var rtt time.Duration
 		msg, rtt, err = tunDns.dnsClient.ExchangeWithConn(r, tunDns.dnsClientConn)
-		fmt.Printf("ServeDNS default rtt:%d err:%+v\r\n", rtt, err)
+		fmt.Printf("ServeDNS default rtt:%+v err:%+v\r\n", rtt, err)
 		break
 	}
 	if err != nil {
@@ -415,18 +415,7 @@ func (tunDns *TunDns) ipv4Res(domain string, r *dns.Msg) ([]dns.RR, error) {
 			}
 		} else if !comm.ArrMatch(domain, tunDns.excludeDomains) && !dnsErr {
 			//外国随机分配一个代理ip
-			for i := 0; i <= 2; i++ {
-				ip = comm.GetCidrRandIpByNet(tunAddr, tunMask)
-				_, ok := tunDns.ip2Domain.Get(ip)
-				if !ok && ip != tunAddr {
-					ipTtl = 1
-					tunDns.ip2Domain.Insert(ip, domain)
-					break
-				} else {
-					fmt.Println("ip used up")
-					ip = ""
-				}
-			}
+			ip = allocIpByDomain(domain, tunDns)
 		}
 	}
 	fmt.Printf("domain:%s ip:%s\r\n", domain, ip)
@@ -441,11 +430,37 @@ func (tunDns *TunDns) resolve(r *dns.Msg) (*dns.Msg, error) {
 	m.SetReply(r)
 	m.Authoritative = false
 	domain := r.Question[0].Name
+
+	ipLog, ok := tunDns.ip2Domain.GetInverse(domain)
+	if ok && !comm.ArrMatch(domain, tunDns.excludeDomains) && strings.HasPrefix(ipLog.(string), tunAddr[0:4]) {
+		m.Answer = []dns.RR{&dns.A{
+			Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 1},
+			A:   net.ParseIP(ipLog.(string)),
+		}}
+		return m, errors.New("error")
+	}
+
 	//ipv6
 	m1, rtt, err := tunDns.dnsClient.ExchangeWithConn(r, tunDns.dnsClientConn)
-	fmt.Printf("ipv6:%s rtt:%d err:%+v\r\n", domain, rtt, err)
+	fmt.Printf("ipv6:%s  rtt:%+v err:%+v\r\n", domain, rtt, err)
 	if err == nil {
-		return m1, nil
+		for _, v := range m1.Answer {
+			record, isType := v.(*dns.AAAA)
+			if isType {
+				if strings.HasPrefix(record.AAAA.String(), "2001::") {
+
+					//外国随机分配一个代理ip
+					ip := allocIpByDomain(domain, tunDns)
+					m.Answer = []dns.RR{&dns.A{
+						Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 1},
+						A:   net.ParseIP(ip),
+					}}
+					return m, nil
+				} else {
+					return m1, nil
+				}
+			}
+		}
 	}
 	return m, err
 }
@@ -459,7 +474,7 @@ func (tunDns *TunDns) localResolve(r *dns.Msg) (net.IP, uint32, error) {
 	}
 
 	m1, rtt, err := tunDns.dnsClient.ExchangeWithConn(r, tunDns.dnsClientConn)
-	fmt.Printf("localResolve:%s rtt:%d err:%+v\r\n", domain, rtt, err)
+	fmt.Printf("localResolve:%s rtt:%+v err:%+v\r\n", domain, rtt, err)
 	if err == nil {
 		for _, v := range m1.Answer {
 			record, isType := v.(*dns.A)
@@ -475,4 +490,21 @@ func (tunDns *TunDns) localResolve(r *dns.Msg) (net.IP, uint32, error) {
 		return nil, 0, err
 	}
 	return nil, 0, errors.New("Not found addr")
+}
+
+func allocIpByDomain(domain string, tunDns *TunDns) string {
+	var ip = ""
+	for i := 0; i <= 2; i++ {
+		ip = comm.GetCidrRandIpByNet(tunAddr, tunMask)
+		_, ok := tunDns.ip2Domain.Get(ip)
+		if !ok && ip != tunAddr {
+			tunDns.ip2Domain.Insert(ip, domain)
+			break
+		} else {
+			fmt.Println("ip used up")
+			ip = ""
+		}
+
+	}
+	return ip
 }
