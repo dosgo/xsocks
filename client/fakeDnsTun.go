@@ -65,6 +65,7 @@ var tunAddr = "10.0.0.2"
 var tunGW = "10.0.0.1"
 var tunMask = "255.255.0.0"
 var fakeUdpNat sync.Map
+var ipv6xx sync.Map
 
 func (fakeDns *FakeDnsTun) Start(tunType int, udpProxy bool, tunDevice string, _tunAddr string, _tunMask string, _tunGW string, tunDNS string) {
 	fakeDns.tunType = tunType
@@ -430,15 +431,16 @@ func (tunDns *TunDns) resolve(r *dns.Msg) (*dns.Msg, error) {
 	m.SetReply(r)
 	m.Authoritative = false
 	domain := r.Question[0].Name
-	/*
-		ipLog, ok := tunDns.ip2Domain.GetInverse(domain)
-		if ok && !comm.ArrMatch(domain, tunDns.excludeDomains) && strings.HasPrefix(ipLog.(string), tunAddr[0:4]) {
-			m.Answer = []dns.RR{&dns.A{
-				Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 1},
-				A:   net.ParseIP(ipLog.(string)),
-			}}
-			return m, errors.New("error")
-		}*/
+
+	ipLog, ok := tunDns.ip2Domain.GetInverse(domain)
+	_, ok1 := ipv6xx.Load(domain)
+	if ok && ok1 && !comm.ArrMatch(domain, tunDns.excludeDomains) && strings.HasPrefix(ipLog.(string), tunAddr[0:4]) {
+		m.Answer = []dns.RR{&dns.A{
+			Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 1},
+			A:   net.ParseIP(ipLog.(string)),
+		}}
+		return m, errors.New("error")
+	}
 
 	//ipv6
 	m1, rtt, err := tunDns.dnsClient.ExchangeWithConn(r, tunDns.dnsClientConn)
@@ -455,6 +457,7 @@ func (tunDns *TunDns) resolve(r *dns.Msg) (*dns.Msg, error) {
 						Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 1},
 						A:   net.ParseIP(ip),
 					}}
+					ipv6xx.Store(domain, 0)
 					return m, nil
 				} else {
 					return m1, nil
