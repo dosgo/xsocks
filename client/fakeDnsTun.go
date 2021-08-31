@@ -320,7 +320,7 @@ func (tunDns *TunDns) _startSmartDns(clientPort string) {
 		Net:            "udp",
 		UDPSize:        4096,
 		Dialer:         _dialer,
-		SingleInflight: false,
+		SingleInflight: true,
 		ReadTimeout:    time.Duration(10) * time.Second,
 		WriteTimeout:   time.Duration(10) * time.Second,
 	}
@@ -430,15 +430,15 @@ func (tunDns *TunDns) resolve(r *dns.Msg) (*dns.Msg, error) {
 	m.SetReply(r)
 	m.Authoritative = false
 	domain := r.Question[0].Name
-
-	ipLog, ok := tunDns.ip2Domain.GetInverse(domain)
-	if ok && !comm.ArrMatch(domain, tunDns.excludeDomains) && strings.HasPrefix(ipLog.(string), tunAddr[0:4]) {
-		m.Answer = []dns.RR{&dns.A{
-			Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 1},
-			A:   net.ParseIP(ipLog.(string)),
-		}}
-		return m, errors.New("error")
-	}
+	/*
+		ipLog, ok := tunDns.ip2Domain.GetInverse(domain)
+		if ok && !comm.ArrMatch(domain, tunDns.excludeDomains) && strings.HasPrefix(ipLog.(string), tunAddr[0:4]) {
+			m.Answer = []dns.RR{&dns.A{
+				Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 1},
+				A:   net.ParseIP(ipLog.(string)),
+			}}
+			return m, errors.New("error")
+		}*/
 
 	//ipv6
 	m1, rtt, err := tunDns.dnsClient.ExchangeWithConn(r, tunDns.dnsClientConn)
