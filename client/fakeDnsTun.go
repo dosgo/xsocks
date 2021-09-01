@@ -342,12 +342,12 @@ func (tunDns *TunDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	m.SetReply(r)
 	m.Authoritative = false
 	domain := r.Question[0].Name
-	v, _, _ := tunDns.singleflight.Do(domain, func() (interface{}, error) {
+	v, err, _ := tunDns.singleflight.Do(domain+":4", func() (interface{}, error) {
 		return tunDns.ipv4Res(domain)
 	})
 	m.Answer = []dns.RR{v.(*dns.A)}
 	// final
-	return m, nil
+	return m, err
 }
 
 /*ipv6查询代理*/
@@ -356,7 +356,7 @@ func (tunDns *TunDns) doIPv6Query(r *dns.Msg) (*dns.Msg, error) {
 	m.SetReply(r)
 	m.Authoritative = false
 	domain := r.Question[0].Name
-	v, _, _ := tunDns.singleflight.Do(domain, func() (interface{}, error) {
+	v, err, _ := tunDns.singleflight.Do(domain+":6", func() (interface{}, error) {
 		return tunDns.ipv6Res(domain)
 	})
 	_, isA := v.(*dns.A)
@@ -368,7 +368,7 @@ func (tunDns *TunDns) doIPv6Query(r *dns.Msg) (*dns.Msg, error) {
 		m.Answer = []dns.RR{v.(*dns.AAAA)}
 	}
 	// final
-	return m, nil
+	return m, err
 }
 
 func (tunDns *TunDns) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
@@ -389,10 +389,9 @@ func (tunDns *TunDns) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 		break
 	}
 	if err != nil {
-		dns.HandleFailed(w, r)
-	} else {
-		w.WriteMsg(msg)
+		msg.SetRcode(r, dns.RcodeServerFailure)
 	}
+	w.WriteMsg(msg)
 }
 
 /*ipv4智能响应*/
@@ -401,6 +400,7 @@ func (tunDns *TunDns) ipv4Res(domain string) (*dns.A, error) {
 	var _ip net.IP
 	var ipTtl uint32 = 60
 	var dnsErr = false
+	var backErr error = nil
 	ipLog, ok := tunDns.ip2Domain.GetInverse(domain)
 	if ok && !comm.ArrMatch(domain, tunDns.excludeDomains) && strings.HasPrefix(ipLog.(string), tunAddr[0:4]) {
 		ip = ipLog.(string)
@@ -408,9 +408,10 @@ func (tunDns *TunDns) ipv4Res(domain string) (*dns.A, error) {
 	} else {
 		if _ip == nil && len(domain) > 0 {
 			//为空的话智能dns的话先解析一遍
-			m1, _, err := tunDns.localResolve(domain, 4)
+			var backIp net.IP
+			backIp, _, err := tunDns.localResolve(domain, 4)
 			if err == nil {
-				_ip = m1
+				_ip = backIp
 			} else if err.Error() != "Not found addr" {
 				oldDns := comm.GetOldDns(tunDns.dnsAddr, tunGW, "")
 				fmt.Printf("local dns error:%v oldDns:%s\r\n", err, oldDns)
@@ -425,6 +426,11 @@ func (tunDns *TunDns) ipv4Res(domain string) (*dns.A, error) {
 				//解析错误说明无网络,否则就算不存在也会回复的
 				dnsErr = true //标记为错误
 			}
+			//如果只是找不到地址没有任何错误可能只有ipv6地址,标记为空
+			if err != nil && err.Error() == "Not found addr" {
+				//backErr = errors.New("only ipv6")
+				dnsErr = true
+			}
 		}
 
 		//不为空判断是不是中国ip
@@ -436,13 +442,14 @@ func (tunDns *TunDns) ipv4Res(domain string) (*dns.A, error) {
 		} else if !comm.ArrMatch(domain, tunDns.excludeDomains) && !dnsErr {
 			//外国随机分配一个代理ip
 			ip = allocIpByDomain(domain, tunDns)
+			ipTtl = 1
 		}
 	}
 	fmt.Printf("domain:%s ip:%s\r\n", domain, ip)
 	return &dns.A{
 		Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: ipTtl},
 		A:   net.ParseIP(ip),
-	}, nil
+	}, backErr
 }
 
 /*ipv6智能判断*/
@@ -450,11 +457,8 @@ func (tunDns *TunDns) ipv6Res(domain string) (interface{}, error) {
 	ipLog, ok := tunDns.ip2Domain.GetInverse(domain)
 	_, ok1 := ipv6To4.Load(domain)
 	if ok && ok1 && !comm.ArrMatch(domain, tunDns.excludeDomains) && strings.HasPrefix(ipLog.(string), tunAddr[0:4]) {
-		//返回ipv4地址
-		return &dns.A{
-			Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 1},
-			A:   net.ParseIP(ipLog.(string)),
-		}, nil
+		//ipv6返回错误迫使使用ipv4地址
+		return nil, errors.New("use ipv4")
 	}
 
 	//ipv6
@@ -471,14 +475,9 @@ func (tunDns *TunDns) ipv6Res(domain string) (interface{}, error) {
 		ipv6Addr := net.ParseIP(ipStr.String())
 		//私有地址或者环路地址或者Teredo地址说明被污染了...返回ipv4的代理ip
 		if ipv6Addr.IsPrivate() || ipv6Addr.IsLoopback() || isTeredo(ipv6Addr) {
-			//返回ipv4地址
-			//外国随机分配一个代理ip
-			ip := allocIpByDomain(domain, tunDns)
 			ipv6To4.Store(domain, 1)
-			return &dns.A{
-				Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 1},
-				A:   net.ParseIP(ip),
-			}, nil
+			//ipv6返回错误迫使使用ipv4地址
+			return nil, errors.New("use ipv4")
 		} else {
 			//返回ipv6地址
 			return &dns.AAAA{
@@ -515,7 +514,7 @@ func (tunDns *TunDns) localResolve(domain string, ipType int) (net.IP, uint32, e
 		return net.ParseIP(cache), ttl, nil
 	}
 	m1, rtt, err := tunDns.dnsClient.ExchangeWithConn(query, tunDns.dnsClientConn)
-	fmt.Printf("localResolve:%s rtt:%+v err:%+v\r\n", domain, rtt, err)
+	fmt.Printf("localResolve:%s  ipType:%d  rtt:%+v err:%+v\r\n", domain, ipType, rtt, err)
 	if err == nil {
 		for _, v := range m1.Answer {
 			if ipType == 4 {
@@ -527,12 +526,12 @@ func (tunDns *TunDns) localResolve(domain string, ipType int) (net.IP, uint32, e
 						return record.A, record.Hdr.Ttl, nil
 					}
 				}
-				if ipType == 6 {
-					record, isType := v.(*dns.AAAA)
-					if isType {
-						fakeDnsCache.WriteDnsCache(domain+":"+strconv.Itoa(ipType), record.Hdr.Ttl, record.AAAA.String())
-						return record.AAAA, record.Hdr.Ttl, nil
-					}
+			}
+			if ipType == 6 {
+				record, isType := v.(*dns.AAAA)
+				if isType {
+					fakeDnsCache.WriteDnsCache(domain+":"+strconv.Itoa(ipType), record.Hdr.Ttl, record.AAAA.String())
+					return record.AAAA, record.Hdr.Ttl, nil
 				}
 			}
 		}
