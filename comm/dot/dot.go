@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"net"
+	"strconv"
 	"time"
 
 	"github.com/dosgo/xsocks/comm"
@@ -63,17 +64,22 @@ func (rd *DoT) Connect() error {
 
 	rd.dnsClientConn = new(dns.Conn)
 	rd.dnsClientConn.Conn = tls.Client(srcConn, cfg)
-	rd.dnsClientConn.UDPSize = 4094
+	rd.dnsClientConn.UDPSize = 4096
 	rd.connect = true
 	return nil
 }
 
-func (rd *DoT) Resolve(remoteHost string) (string, error) {
+func (rd *DoT) Resolve(remoteHost string, ipType int) (string, error) {
 	query := &dns.Msg{}
-	query.SetQuestion(remoteHost+".", dns.TypeA)
+	if ipType == 4 {
+		query.SetQuestion(remoteHost+".", dns.TypeA)
+	}
+	if ipType == 6 {
+		query.SetQuestion(remoteHost+".", dns.TypeAAAA)
+	}
 	var ip = ""
 	var err error
-	cache, _ := dnsCache.ReadDnsCache(remoteHost)
+	cache, _ := dnsCache.ReadDnsCache(remoteHost + ":" + strconv.Itoa(ipType))
 	if cache != "" {
 		return cache, nil
 	}
@@ -90,11 +96,21 @@ func (rd *DoT) Resolve(remoteHost string) (string, error) {
 		response, _, err := rd.dnsClient.ExchangeWithConn(query, rd.dnsClientConn)
 		if err == nil {
 			for _, v := range response.Answer {
-				record, isType := v.(*dns.A)
-				if isType {
-					ip = record.A.String()
-					dnsCache.WriteDnsCache(remoteHost, record.Hdr.Ttl, ip)
-					return ip, nil
+				if ipType == 4 {
+					record, isType := v.(*dns.A)
+					if isType {
+						ip = record.A.String()
+						dnsCache.WriteDnsCache(remoteHost+":"+strconv.Itoa(ipType), record.Hdr.Ttl, ip)
+						return ip, nil
+					}
+				}
+				if ipType == 6 {
+					record, isType := v.(*dns.AAAA)
+					if isType {
+						ip = record.AAAA.String()
+						dnsCache.WriteDnsCache(remoteHost+":"+strconv.Itoa(ipType), record.Hdr.Ttl, ip)
+						return ip, nil
+					}
 				}
 			}
 		} else {

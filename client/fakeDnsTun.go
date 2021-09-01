@@ -65,7 +65,7 @@ var tunAddr = "10.0.0.2"
 var tunGW = "10.0.0.1"
 var tunMask = "255.255.0.0"
 var fakeUdpNat sync.Map
-var ipv6xx sync.Map
+var ipv6To4 sync.Map
 
 func (fakeDns *FakeDnsTun) Start(tunType int, udpProxy bool, tunDevice string, _tunAddr string, _tunMask string, _tunGW string, tunDNS string) {
 	fakeDns.tunType = tunType
@@ -177,16 +177,13 @@ func (fakeDns *FakeDnsTun) tcpForwarder(conn *gonet.TCPConn) error {
 	if fakeDns.autoFilter && netstat.IsSocksServerAddr(fakeDns.socksServerPid, srcAddrs[0]) {
 		domain := fakeDns.dnsToDomain(srcAddr)
 		domains := strings.Split(domain, ":")
-		fmt.Printf("IsSocksServerAddr:%d  addr:%s domain:%s\r\n", fakeDns.socksServerPid, srcAddrs[0], domains[0])
 		if domain == "" {
 			fmt.Printf("dnsToDomain domain:%s srcAddr:%s\r\n", domain, srcAddr)
 			return nil
 		}
 		//add exclude  domain
 		fakeDns.tunDns.excludeDomains = append(fakeDns.tunDns.excludeDomains, domains[0])
-		query := &dns.Msg{}
-		query.SetQuestion(domains[0], dns.TypeA)
-		ip, _, err := fakeDns.tunDns.localResolve(query)
+		ip, _, err := fakeDns.tunDns.localResolve(domains[0], 4)
 		if err != nil {
 			fmt.Printf("domain:%s  srcAddr:%s localResolve err:%s\r\n", domains[0], srcAddr, err)
 			return nil
@@ -277,7 +274,7 @@ func (fakeDns *FakeDnsTun) dnsToAddr(remoteAddr string) string {
 	}
 	remoteAddrs := strings.Split(remoteAddr, ":")
 	domain := remoteAddrs[0]
-	ip, err := fakeDns.safeDns.Resolve(domain[0 : len(domain)-1])
+	ip, err := fakeDns.safeDns.Resolve(domain[0:len(domain)-1], 4)
 	if err != nil {
 		return ""
 	}
@@ -339,15 +336,37 @@ func (tunDns *TunDns) Shutdown() {
 	}
 }
 
+/*ipv4查询代理*/
 func (tunDns *TunDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	m := &dns.Msg{}
 	m.SetReply(r)
 	m.Authoritative = false
 	domain := r.Question[0].Name
 	v, _, _ := tunDns.singleflight.Do(domain, func() (interface{}, error) {
-		return tunDns.ipv4Res(domain, r)
+		return tunDns.ipv4Res(domain)
 	})
-	m.Answer = v.([]dns.RR)
+	m.Answer = []dns.RR{v.(*dns.A)}
+	// final
+	return m, nil
+}
+
+/*ipv6查询代理*/
+func (tunDns *TunDns) doIPv6Query(r *dns.Msg) (*dns.Msg, error) {
+	m := &dns.Msg{}
+	m.SetReply(r)
+	m.Authoritative = false
+	domain := r.Question[0].Name
+	v, _, _ := tunDns.singleflight.Do(domain, func() (interface{}, error) {
+		return tunDns.ipv6Res(domain)
+	})
+	_, isA := v.(*dns.A)
+	if isA {
+		m.Answer = []dns.RR{v.(*dns.A)}
+	}
+	_, isAAAA := v.(*dns.AAAA)
+	if isAAAA {
+		m.Answer = []dns.RR{v.(*dns.AAAA)}
+	}
 	// final
 	return m, nil
 }
@@ -361,7 +380,7 @@ func (tunDns *TunDns) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 		break
 	case dns.TypeAAAA:
 		//ipv6
-		msg, err = tunDns.resolve(r)
+		msg, err = tunDns.doIPv6Query(r)
 		break
 	default:
 		var rtt time.Duration
@@ -377,7 +396,7 @@ func (tunDns *TunDns) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 }
 
 /*ipv4智能响应*/
-func (tunDns *TunDns) ipv4Res(domain string, r *dns.Msg) ([]dns.RR, error) {
+func (tunDns *TunDns) ipv4Res(domain string) (*dns.A, error) {
 	var ip = ""
 	var _ip net.IP
 	var ipTtl uint32 = 60
@@ -387,9 +406,9 @@ func (tunDns *TunDns) ipv4Res(domain string, r *dns.Msg) ([]dns.RR, error) {
 		ip = ipLog.(string)
 		ipTtl = 1
 	} else {
-		if _ip == nil && r != nil {
+		if _ip == nil && len(domain) > 0 {
 			//为空的话智能dns的话先解析一遍
-			m1, _, err := tunDns.localResolve(r)
+			m1, _, err := tunDns.localResolve(domain, 4)
 			if err == nil {
 				_ip = m1
 			} else if err.Error() != "Not found addr" {
@@ -420,72 +439,100 @@ func (tunDns *TunDns) ipv4Res(domain string, r *dns.Msg) ([]dns.RR, error) {
 		}
 	}
 	fmt.Printf("domain:%s ip:%s\r\n", domain, ip)
-	return []dns.RR{&dns.A{
+	return &dns.A{
 		Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: ipTtl},
 		A:   net.ParseIP(ip),
-	}}, nil
+	}, nil
 }
 
-func (tunDns *TunDns) resolve(r *dns.Msg) (*dns.Msg, error) {
-	m := &dns.Msg{}
-	m.SetReply(r)
-	m.Authoritative = false
-	domain := r.Question[0].Name
-
+/*ipv6智能判断*/
+func (tunDns *TunDns) ipv6Res(domain string) (interface{}, error) {
 	ipLog, ok := tunDns.ip2Domain.GetInverse(domain)
-	_, ok1 := ipv6xx.Load(domain)
+	_, ok1 := ipv6To4.Load(domain)
 	if ok && ok1 && !comm.ArrMatch(domain, tunDns.excludeDomains) && strings.HasPrefix(ipLog.(string), tunAddr[0:4]) {
-		m.Answer = []dns.RR{&dns.A{
+		//返回ipv4地址
+		return &dns.A{
 			Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 1},
 			A:   net.ParseIP(ipLog.(string)),
-		}}
-		return m, errors.New("error")
+		}, nil
 	}
 
 	//ipv6
-	m1, rtt, err := tunDns.dnsClient.ExchangeWithConn(r, tunDns.dnsClientConn)
+	ipStr, rtt, err := tunDns.localResolve(domain, 6)
 	fmt.Printf("ipv6:%s  rtt:%+v err:%+v\r\n", domain, rtt, err)
 	if err == nil {
-		for _, v := range m1.Answer {
-			record, isType := v.(*dns.AAAA)
-			if isType {
-				if strings.HasPrefix(record.AAAA.String(), "2001::") {
-
-					//外国随机分配一个代理ip
-					ip := allocIpByDomain(domain, tunDns)
-					m.Answer = []dns.RR{&dns.A{
-						Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 1},
-						A:   net.ParseIP(ip),
-					}}
-					ipv6xx.Store(domain, 0)
-					return m, nil
-				} else {
-					return m1, nil
-				}
-			}
+		if ipStr.String() == "" {
+			//返回ipv6地址
+			return &dns.AAAA{
+				Hdr:  dns.RR_Header{Name: domain, Rrtype: dns.TypeAAAA, Class: dns.ClassINET, Ttl: 1},
+				AAAA: net.ParseIP(""),
+			}, nil
+		}
+		ipv6Addr := net.ParseIP(ipStr.String())
+		//私有地址或者环路地址或者Teredo地址说明被污染了...返回ipv4的代理ip
+		if ipv6Addr.IsPrivate() || ipv6Addr.IsLoopback() || isTeredo(ipv6Addr) {
+			//返回ipv4地址
+			//外国随机分配一个代理ip
+			ip := allocIpByDomain(domain, tunDns)
+			ipv6To4.Store(domain, 1)
+			return &dns.A{
+				Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 1},
+				A:   net.ParseIP(ip),
+			}, nil
+		} else {
+			//返回ipv6地址
+			return &dns.AAAA{
+				Hdr:  dns.RR_Header{Name: domain, Rrtype: dns.TypeAAAA, Class: dns.ClassINET, Ttl: 1},
+				AAAA: net.ParseIP(ipStr.String()),
+			}, nil
 		}
 	}
-	return m, err
+	return nil, err
 }
 
-/*本地dns解析有缓存*/
-func (tunDns *TunDns) localResolve(r *dns.Msg) (net.IP, uint32, error) {
-	domain := r.Question[0].Name
-	cache, ttl := fakeDnsCache.ReadDnsCache(domain)
+/*ipv6 teredo addr (4to6)*/
+func isTeredo(addr net.IP) bool {
+	if len(addr) != 16 {
+		return false
+	}
+	return addr[0] == 0x20 && addr[1] == 0x01 && addr[2] == 0x00 && addr[3] == 0x00
+}
+
+/*
+本地dns解析有缓存
+domain 域名有最后一个"."
+*/
+func (tunDns *TunDns) localResolve(domain string, ipType int) (net.IP, uint32, error) {
+	query := &dns.Msg{}
+	if ipType == 4 {
+		query.SetQuestion(domain, dns.TypeA)
+	}
+	if ipType == 6 {
+		query.SetQuestion(domain, dns.TypeAAAA)
+	}
+	cache, ttl := fakeDnsCache.ReadDnsCache(domain + ":" + strconv.Itoa(ipType))
 	if cache != "" {
 		return net.ParseIP(cache), ttl, nil
 	}
-
-	m1, rtt, err := tunDns.dnsClient.ExchangeWithConn(r, tunDns.dnsClientConn)
+	m1, rtt, err := tunDns.dnsClient.ExchangeWithConn(query, tunDns.dnsClientConn)
 	fmt.Printf("localResolve:%s rtt:%+v err:%+v\r\n", domain, rtt, err)
 	if err == nil {
 		for _, v := range m1.Answer {
-			record, isType := v.(*dns.A)
-			if isType {
-				//有些dns会返回127.0.0.1
-				if record.A.String() != "127.0.0.1" {
-					fakeDnsCache.WriteDnsCache(domain, record.Hdr.Ttl, record.A.String())
-					return record.A, record.Hdr.Ttl, nil
+			if ipType == 4 {
+				record, isType := v.(*dns.A)
+				if isType {
+					//有些dns会返回127.0.0.1
+					if record.A.String() != "127.0.0.1" {
+						fakeDnsCache.WriteDnsCache(domain+":"+strconv.Itoa(ipType), record.Hdr.Ttl, record.A.String())
+						return record.A, record.Hdr.Ttl, nil
+					}
+				}
+				if ipType == 6 {
+					record, isType := v.(*dns.AAAA)
+					if isType {
+						fakeDnsCache.WriteDnsCache(domain+":"+strconv.Itoa(ipType), record.Hdr.Ttl, record.AAAA.String())
+						return record.AAAA, record.Hdr.Ttl, nil
+					}
 				}
 			}
 		}
@@ -495,6 +542,7 @@ func (tunDns *TunDns) localResolve(r *dns.Msg) (net.IP, uint32, error) {
 	return nil, 0, errors.New("Not found addr")
 }
 
+/*给域名分配私有地址*/
 func allocIpByDomain(domain string, tunDns *TunDns) string {
 	var ip = ""
 	for i := 0; i <= 2; i++ {
@@ -507,7 +555,6 @@ func allocIpByDomain(domain string, tunDns *TunDns) string {
 			fmt.Println("ip used up")
 			ip = ""
 		}
-
 	}
 	return ip
 }
