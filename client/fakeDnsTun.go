@@ -345,7 +345,10 @@ func (tunDns *TunDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	v, err, _ := tunDns.singleflight.Do(domain+":4", func() (interface{}, error) {
 		return tunDns.ipv4Res(domain)
 	})
-	m.Answer = []dns.RR{v.(*dns.A)}
+	_, isA := v.(*dns.A)
+	if isA {
+		m.Answer = []dns.RR{v.(*dns.A)}
+	}
 	// final
 	return m, err
 }
@@ -389,6 +392,7 @@ func (tunDns *TunDns) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 		break
 	}
 	if err != nil {
+		msg = &dns.Msg{}
 		msg.SetRcode(r, dns.RcodeServerFailure)
 	}
 	w.WriteMsg(msg)
