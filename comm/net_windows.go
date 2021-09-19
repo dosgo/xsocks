@@ -1,14 +1,10 @@
+//go:build windows
 // +build windows
 
 package comm
 
 import (
 	"fmt"
-	"github.com/StackExchange/wmi"
-	"github.com/songgao/water"
-	routetable "github.com/yijunjun/route-table"
-	"golang.org/x/sys/windows"
-	"golang.org/x/sys/windows/registry"
 	"log"
 	"net"
 	"os"
@@ -16,118 +12,119 @@ import (
 	"strings"
 	"syscall"
 	"unsafe"
+
+	"github.com/StackExchange/wmi"
+	"github.com/songgao/water"
+	routetable "github.com/yijunjun/route-table"
+	"golang.org/x/sys/windows"
+	"golang.org/x/sys/windows/registry"
 )
 
-
-var oldDns="114.114.114.114";
-var defaultDns="114.114.114.114";
-
-
+var oldDns = "114.114.114.114"
+var defaultDns = "114.114.114.114"
 
 /*set system proxy*/
-func SetSystenProxy(proxyServer string,whiteList string,open bool) bool{
-	key,  err := registry.OpenKey(registry.CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", registry.ALL_ACCESS)
+func SetSystenProxy(proxyServer string, whiteList string, open bool) bool {
+	key, err := registry.OpenKey(registry.CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", registry.ALL_ACCESS)
 	if err != nil {
-		fmt.Printf("err:%s",err.Error());
-		return false;
+		fmt.Printf("err:%s", err.Error())
+		return false
 	}
 	defer key.Close()
 	if open {
-		err=key.SetDWordValue("ProxyEnable", 0x01)
+		err = key.SetDWordValue("ProxyEnable", 0x01)
 		if err != nil {
-			fmt.Printf("err:%s",err.Error());
-			return false;
+			fmt.Printf("err:%s", err.Error())
+			return false
 		}
-	}else{
-		err=key.SetDWordValue("ProxyEnable", 0x00);
+	} else {
+		err = key.SetDWordValue("ProxyEnable", 0x00)
 		if err != nil {
-			fmt.Printf("err:%s",err.Error());
-			return false;
+			fmt.Printf("err:%s", err.Error())
+			return false
 		}
 	}
 
-	err=key.SetStringValue("ProxyServer",proxyServer);
+	err = key.SetStringValue("ProxyServer", proxyServer)
 	if err != nil {
-		fmt.Printf("err:%s",err.Error());
-		return false;
+		fmt.Printf("err:%s", err.Error())
+		return false
 	}
-	if len(whiteList)>0{
-		err=key.SetStringValue("ProxyOverride",whiteList)
+	if len(whiteList) > 0 {
+		err = key.SetStringValue("ProxyOverride", whiteList)
 		if err != nil {
-			fmt.Printf("err:%s",err.Error());
-			return false;
+			fmt.Printf("err:%s", err.Error())
+			return false
 		}
 	}
-	return true;
+	return true
 }
 
-func CloseSystenProxy() bool{
-	key,  err := registry.OpenKey(registry.CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", registry.ALL_ACCESS)
+func CloseSystenProxy() bool {
+	key, err := registry.OpenKey(registry.CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", registry.ALL_ACCESS)
 	if err != nil {
-		return false;
+		return false
 	}
 	defer key.Close()
-	key.SetDWordValue("ProxyEnable", 0x00);
-	return true;
+	key.SetDWordValue("ProxyEnable", 0x00)
+	return true
 }
 
-
-
-func GetGateway()string {
+func GetGateway() string {
 	table, err := routetable.NewRouteTable()
 	if err != nil {
-		return "";
+		return ""
 	}
 	defer table.Close()
 	rows, err := table.Routes()
 	if err != nil {
-		return "";
+		return ""
 	}
-	var minMetric uint32=0;
-	var gwIp="";
+	var minMetric uint32 = 0
+	var gwIp = ""
 	for _, row := range rows {
-		if routetable.Inet_ntoa(row.ForwardDest, false)=="0.0.0.0" {
+		if routetable.Inet_ntoa(row.ForwardDest, false) == "0.0.0.0" {
 
-			if minMetric==0 {
-				minMetric=row.ForwardMetric1;
-				gwIp=routetable.Inet_ntoa(row.ForwardNextHop, false);
-			}else{
-				if row.ForwardMetric1<minMetric {
-					minMetric=row.ForwardMetric1;
-					gwIp=routetable.Inet_ntoa(row.ForwardNextHop, false);
+			if minMetric == 0 {
+				minMetric = row.ForwardMetric1
+				gwIp = routetable.Inet_ntoa(row.ForwardNextHop, false)
+			} else {
+				if row.ForwardMetric1 < minMetric {
+					minMetric = row.ForwardMetric1
+					gwIp = routetable.Inet_ntoa(row.ForwardNextHop, false)
 				}
 			}
 		}
 	}
-	return gwIp;
+	return gwIp
 }
 
-func GetGatewayIndex()uint32 {
+func GetGatewayIndex() uint32 {
 	table, err := routetable.NewRouteTable()
 	if err != nil {
-		return 0;
+		return 0
 	}
 	defer table.Close()
 	rows, err := table.Routes()
 	if err != nil {
-		return 0;
+		return 0
 	}
-	var minMetric uint32=0;
-	var ifIndex uint32=0;
+	var minMetric uint32 = 0
+	var ifIndex uint32 = 0
 	for _, row := range rows {
-		if routetable.Inet_ntoa(row.ForwardDest, false)=="0.0.0.0" {
-			if minMetric==0 {
-				minMetric=row.ForwardMetric1;
-				ifIndex= row.ForwardIfIndex;
-			}else{
-				if row.ForwardMetric1<minMetric {
-					minMetric=row.ForwardMetric1;
-					ifIndex=row.ForwardIfIndex;
+		if routetable.Inet_ntoa(row.ForwardDest, false) == "0.0.0.0" {
+			if minMetric == 0 {
+				minMetric = row.ForwardMetric1
+				ifIndex = row.ForwardIfIndex
+			} else {
+				if row.ForwardMetric1 < minMetric {
+					minMetric = row.ForwardMetric1
+					ifIndex = row.ForwardIfIndex
 				}
 			}
 		}
 	}
-	return ifIndex;
+	return ifIndex
 }
 
 func getAdapterList() (*syscall.IpAdapterInfo, error) {
@@ -146,19 +143,17 @@ func getAdapterList() (*syscall.IpAdapterInfo, error) {
 	return a, nil
 }
 
-
-func GetLocalAddresses() ([]lAddr ,error) {
+func GetLocalAddresses() ([]lAddr, error) {
 	lAddrs := []lAddr{}
 	ifaces, err := net.Interfaces()
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	aList, err := getAdapterList()
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
-
 
 	for _, ifi := range ifaces {
 		for ai := aList; ai != nil; ai = ai.Next {
@@ -166,35 +161,34 @@ func GetLocalAddresses() ([]lAddr ,error) {
 			if ifi.Index == int(index) {
 				ipl := &ai.IpAddressList
 				gwl := &ai.GatewayList
-				for ; ipl != nil; ipl = ipl.Next  {
+				for ; ipl != nil; ipl = ipl.Next {
 					itemAddr := lAddr{}
-					itemAddr.Name=ifi.Name
-					itemAddr.IpAddress=fmt.Sprintf("%s",ipl.IpAddress.String)
-					itemAddr.IpMask=fmt.Sprintf("%s",ipl.IpMask.String)
-					itemAddr.GateWay=fmt.Sprintf("%s",gwl.IpAddress.String)
-					lAddrs=append(lAddrs,itemAddr)
+					itemAddr.Name = ifi.Name
+					itemAddr.IpAddress = fmt.Sprintf("%s", ipl.IpAddress.String)
+					itemAddr.IpMask = fmt.Sprintf("%s", ipl.IpMask.String)
+					itemAddr.GateWay = fmt.Sprintf("%s", gwl.IpAddress.String)
+					lAddrs = append(lAddrs, itemAddr)
 				}
 			}
 		}
 	}
-	return lAddrs,err
+	return lAddrs, err
 }
 
 /*获取旧的dns,内网解析用*/
-func GetOldDns(dnsAddr string,tunGW string,_tunGW string) string{
-	ifIndex:=GetGatewayIndex();
-	dnsServers,_,_:=GetDnsServerByIfIndex(ifIndex);
-	for _,v:=range dnsServers{
-		if v!=dnsAddr&&v!=tunGW && v!=_tunGW  {
-			oldDns=v;
-			break;
+func GetOldDns(dnsAddr string, tunGW string, _tunGW string) string {
+	ifIndex := GetGatewayIndex()
+	dnsServers, _, _ := GetDnsServerByIfIndex(ifIndex)
+	for _, v := range dnsServers {
+		if v != dnsAddr && v != tunGW && v != _tunGW {
+			oldDns = v
+			break
 		}
 	}
-	return oldDns;
+	return oldDns
 }
 
 //dns
-
 const (
 	DnsConfigDnsServerList int32 = 6
 )
@@ -247,138 +241,128 @@ loop:
 	return dns
 }
 
-
-
-func GetDnsServerByGateWay(gwIp string)([]string,bool,bool){
+func GetDnsServerByGateWay(gwIp string) ([]string, bool, bool) {
 	//DNSServerSearchOrder
-	adapters,err:=GetNetworkAdapter()
-	var isIpv6=false;
-	if err!=nil {
-		return nil,false,isIpv6;
+	adapters, err := GetNetworkAdapter()
+	var isIpv6 = false
+	if err != nil {
+		return nil, false, isIpv6
 	}
-	for _,v:=range adapters{
-		if len(v.DefaultIPGateway)>0&&v.DefaultIPGateway[0]==gwIp {
-			for _,v2:=range v.IPAddress{
-				if len(v2)>16{
-					isIpv6=true;
-					break;
+	for _, v := range adapters {
+		if len(v.DefaultIPGateway) > 0 && v.DefaultIPGateway[0] == gwIp {
+			for _, v2 := range v.IPAddress {
+				if len(v2) > 16 {
+					isIpv6 = true
+					break
 				}
 			}
-			return v.DNSServerSearchOrder,v.DHCPEnabled,isIpv6;
+			return v.DNSServerSearchOrder, v.DHCPEnabled, isIpv6
 		}
 	}
-	return nil,false,isIpv6;
+	return nil, false, isIpv6
 }
 
-
-func GetDnsServerByIfIndex(ifIndex uint32)([]string,bool,bool){
+func GetDnsServerByIfIndex(ifIndex uint32) ([]string, bool, bool) {
 	//DNSServerSearchOrder
-	adapters,err:=GetNetworkAdapter()
-	var isIpv6=false;
-	if err!=nil {
-		return nil,false,isIpv6;
+	adapters, err := GetNetworkAdapter()
+	var isIpv6 = false
+	if err != nil {
+		return nil, false, isIpv6
 	}
-	for _,v:=range adapters{
-		if v.InterfaceIndex==ifIndex {
-			for _,v2:=range v.IPAddress{
-				if len(v2)>16{
-					isIpv6=true;
-					break;
+	for _, v := range adapters {
+		if v.InterfaceIndex == ifIndex {
+			for _, v2 := range v.IPAddress {
+				if len(v2) > 16 {
+					isIpv6 = true
+					break
 				}
 			}
-			return v.DNSServerSearchOrder,v.DHCPEnabled,isIpv6;
+			return v.DNSServerSearchOrder, v.DHCPEnabled, isIpv6
 		}
 	}
-	return nil,false,isIpv6;
+	return nil, false, isIpv6
 }
-
 
 type NetworkAdapter struct {
-	DNSServerSearchOrder   []string
-	DefaultIPGateway []string
-	IPAddress []string
-	Caption    string
-	DHCPEnabled  bool
-	ServiceName  string
-	IPSubnet   []string
-	InterfaceIndex uint32
-	SettingID string
+	DNSServerSearchOrder []string
+	DefaultIPGateway     []string
+	IPAddress            []string
+	Caption              string
+	DHCPEnabled          bool
+	ServiceName          string
+	IPSubnet             []string
+	InterfaceIndex       uint32
+	SettingID            string
 }
 
-func GetWaterConf(tunAddr string,tunMask string)water.Config{
-	masks:=net.ParseIP(tunMask).To4();
-	maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}
-	return  water.Config{
+func GetWaterConf(tunAddr string, tunMask string) water.Config {
+	masks := net.ParseIP(tunMask).To4()
+	maskAddr := net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3])}
+	return water.Config{
 		DeviceType: water.TUN,
 		PlatformSpecificParams: water.PlatformSpecificParams{
-			ComponentID:   "tap0901",
+			ComponentID: "tap0901",
 			//InterfaceName: "xSocks Tun",
-			Network:       maskAddr.String(),
+			Network: maskAddr.String(),
 		},
 	}
 }
 
-func GetNetworkAdapter() ([]NetworkAdapter,error){
+func GetNetworkAdapter() ([]NetworkAdapter, error) {
 	var s = []NetworkAdapter{}
 	err := wmi.Query("SELECT Caption,SettingID,InterfaceIndex,DNSServerSearchOrder,DefaultIPGateway,ServiceName,IPAddress,IPSubnet,DHCPEnabled       FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled=True", &s) // WHERE (BIOSVersion IS NOT NULL)
 	if err != nil {
-		log.Printf("err:%v\r\n",err)
-		return nil,err
+		log.Printf("err:%v\r\n", err)
+		return nil, err
 	}
-	return s,nil;
+	return s, nil
 }
-func SetNetConf(dnsIpv4 string,dnsIpv6 string){
+func SetNetConf(dnsIpv4 string, dnsIpv6 string) {
 
 }
 
-func ResetNetConf(ip string){
+func ResetNetConf(ip string) {
 
 }
 
 func AddRoute(tunAddr string, tunGw string, tunMask string) error {
-	var netNat =make([]string,4);
+	var netNat = make([]string, 4)
 	//masks:=strings.Split(tunMask,".")
-	masks:=net.ParseIP(tunMask).To4();
-	Addrs:=strings.Split(tunAddr,".")
+	masks := net.ParseIP(tunMask).To4()
+	Addrs := strings.Split(tunAddr, ".")
 	for i := 0; i <= 3; i++ {
-		if masks[i]==255 {
-			netNat[i]=Addrs[i];
-		}else{
-			netNat[i]="0";
+		if masks[i] == 255 {
+			netNat[i] = Addrs[i]
+		} else {
+			netNat[i] = "0"
 		}
 	}
-	maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}
-	maskAddrs:=strings.Split(maskAddr.String(),"/")
-	lAdds,err:=GetLocalAddresses();
-	var iName="";
-	if err==nil {
+	maskAddr := net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3])}
+	maskAddrs := strings.Split(maskAddr.String(), "/")
+	lAdds, err := GetLocalAddresses()
+	var iName = ""
+	if err == nil {
 		for _, v := range lAdds {
-			if strings.Index(v.IpAddress,tunAddr)!=-1 {
-				iName=v.Name;
-				break;
+			if strings.Index(v.IpAddress, tunAddr) != -1 {
+				iName = v.Name
+				break
 			}
 		}
 	}
 
 	//clear old
-	CmdHide("route", "delete",strings.Join(netNat,".")).Output()
-	cmd:=CmdHide("netsh", "interface","ipv4","add","route",strings.Join(netNat,".")+"/"+maskAddrs[1],iName,tunGw,"metric=6","store=active")
-	fmt.Printf("cmd:%s\r\n",cmd.Args)
-	cmd.Run();
+	CmdHide("route", "delete", strings.Join(netNat, ".")).Output()
+	cmd := CmdHide("netsh", "interface", "ipv4", "add", "route", strings.Join(netNat, ".")+"/"+maskAddrs[1], iName, tunGw, "metric=6", "store=active")
+	fmt.Printf("cmd:%s\r\n", cmd.Args)
+	cmd.Run()
 
-
-	fmt.Printf("cmd:%s\r\n",strings.Join(cmd.Args," "))
+	fmt.Printf("cmd:%s\r\n", strings.Join(cmd.Args, " "))
 	CmdHide("ipconfig", "/flushdns").Run()
-	return nil;
+	return nil
 }
 
-
-
-func CmdHide(name string, arg ...string) *exec.Cmd{
-	cmd:=exec.Command(name, arg...)
+func CmdHide(name string, arg ...string) *exec.Cmd {
+	cmd := exec.Command(name, arg...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	return cmd;
+	return cmd
 }
-
-
-

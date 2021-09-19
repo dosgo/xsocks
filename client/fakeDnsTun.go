@@ -53,6 +53,7 @@ type TunDns struct {
 	dnsClientConn  *dns.Conn
 	udpServer      *dns.Server
 	tcpServer      *dns.Server
+	run            bool
 	excludeDomains []string
 	dnsAddr        string
 	dnsAddrV6      string
@@ -295,6 +296,7 @@ func (fakeDns *FakeDnsTun) dnsToDomain(remoteAddr string) string {
 }
 
 func (tunDns *TunDns) _startSmartDns(clientPort string) {
+	tunDns.run = true
 	tunDns.udpServer = &dns.Server{
 		Net:          "udp",
 		Addr:         ":" + tunDns.dnsPort,
@@ -323,11 +325,14 @@ func (tunDns *TunDns) _startSmartDns(clientPort string) {
 		WriteTimeout:   time.Duration(10) * time.Second,
 	}
 	tunDns.dnsClientConn, _ = tunDns.dnsClient.Dial(comm.GetOldDns(tunDns.dnsAddr, tunGW, "") + ":53")
+	fmt.Printf("dnsClientConn:%s\r\n", tunDns.dnsClientConn.RemoteAddr().String())
 	go tunDns.udpServer.ListenAndServe()
 	go tunDns.tcpServer.ListenAndServe()
+	go tunDns.checkDnsChange()
 }
 
 func (tunDns *TunDns) Shutdown() {
+	tunDns.run = false
 	if tunDns.tcpServer != nil {
 		tunDns.tcpServer.Shutdown()
 	}
@@ -417,16 +422,7 @@ func (tunDns *TunDns) ipv4Res(domain string) (*dns.A, error) {
 			if err == nil {
 				_ip = backIp
 			} else if err.Error() != "Not found addr" {
-				oldDns := comm.GetOldDns(tunDns.dnsAddr, tunGW, "")
-				fmt.Printf("local dns error:%v oldDns:%s\r\n", err, oldDns)
-				//检测网关DNS是否改变
-				if strings.Index(tunDns.dnsClientConn.RemoteAddr().String(), oldDns) == -1 {
-					tunDns.dnsClientConn.Close()
-					dnsClientConn, err := tunDns.dnsClient.Dial(oldDns + ":53")
-					if err == nil {
-						tunDns.dnsClientConn = dnsClientConn
-					}
-				}
+				fmt.Printf("local dns error:%v\r\n", err)
 				//解析错误说明无网络,否则就算不存在也会回复的
 				dnsErr = true //标记为错误
 			}
@@ -454,6 +450,32 @@ func (tunDns *TunDns) ipv4Res(domain string) (*dns.A, error) {
 		Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: ipTtl},
 		A:   net.ParseIP(ip),
 	}, backErr
+}
+
+/*检测旧dns改变*/
+func (tunDns *TunDns) checkDnsChange() {
+	for tunDns.run {
+		if tunDns.dnsClientConn == nil || tunDns.dnsClientConn.RemoteAddr().String() == "" {
+			time.Sleep(time.Second * 10)
+			continue
+		}
+		conn, err := net.DialTimeout("tcp", tunDns.dnsClientConn.RemoteAddr().String(), 1)
+		//可能dns变了，
+		if err != nil {
+			oldDns := comm.GetOldDns(tunDns.dnsAddr, tunGW, "")
+			//检测网关DNS是否改变
+			if strings.Index(tunDns.dnsClientConn.RemoteAddr().String(), oldDns) == -1 {
+				tunDns.dnsClientConn.Close()
+				dnsClientConn, err := tunDns.dnsClient.Dial(oldDns + ":53")
+				if err == nil {
+					tunDns.dnsClientConn = dnsClientConn
+				}
+			}
+		} else {
+			conn.Close()
+		}
+		time.Sleep(time.Second * 10)
+	}
 }
 
 /*ipv6智能判断*/
