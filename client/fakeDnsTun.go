@@ -489,7 +489,6 @@ func (tunDns *TunDns) ipv6Res(domain string) (interface{}, error) {
 
 	//ipv6
 	ipStr, rtt, err := tunDns.localResolve(domain, 6)
-	fmt.Printf("ipv6:%s  rtt:%+v err:%+v\r\n", domain, rtt, err)
 	if err == nil {
 		if ipStr.String() == "" {
 			//返回ipv6地址
@@ -511,6 +510,8 @@ func (tunDns *TunDns) ipv6Res(domain string) (interface{}, error) {
 				AAAA: net.ParseIP(ipStr.String()),
 			}, nil
 		}
+	} else {
+		fmt.Printf("ipv6:%s  rtt:%+v err:%+v\r\n", domain, rtt, err)
 	}
 	return nil, err
 }
@@ -540,7 +541,6 @@ func (tunDns *TunDns) localResolve(domain string, ipType int) (net.IP, uint32, e
 		return net.ParseIP(cache), ttl, nil
 	}
 	m1, rtt, err := tunDns.dnsClient.ExchangeWithConn(query, tunDns.dnsClientConn)
-	fmt.Printf("localResolve:%s  ipType:%d  rtt:%+v err:%+v\r\n", domain, ipType, rtt, err)
 	if err == nil {
 		for _, v := range m1.Answer {
 			if ipType == 4 {
@@ -562,6 +562,7 @@ func (tunDns *TunDns) localResolve(domain string, ipType int) (net.IP, uint32, e
 			}
 		}
 	} else {
+		fmt.Printf("localResolve:%s  ipType:%d  rtt:%+v err:%+v\r\n", domain, ipType, rtt, err)
 		return nil, 0, err
 	}
 	return nil, 0, errors.New("Not found addr")
