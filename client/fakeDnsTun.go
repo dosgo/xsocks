@@ -320,7 +320,7 @@ func (tunDns *TunDns) _startSmartDns(clientPort string) {
 		Net:            "udp",
 		UDPSize:        4096,
 		Dialer:         _dialer,
-		SingleInflight: true,
+		SingleInflight: false,
 		ReadTimeout:    time.Duration(10) * time.Second,
 		WriteTimeout:   time.Duration(10) * time.Second,
 	}
