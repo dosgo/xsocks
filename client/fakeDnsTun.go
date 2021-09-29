@@ -23,7 +23,6 @@ import (
 	"github.com/dosgo/xsocks/param"
 	"github.com/miekg/dns"
 	"github.com/vishalkuo/bimap"
-	"golang.org/x/sync/singleflight"
 	"golang.org/x/time/rate"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
@@ -59,7 +58,6 @@ type TunDns struct {
 	dnsAddrV6      string
 	dnsPort        string
 	ip2Domain      *bimap.BiMap
-	singleflight   *singleflight.Group
 }
 
 var tunAddr = "10.0.0.2"
@@ -87,7 +85,6 @@ func (fakeDns *FakeDnsTun) Start(tunType int, udpProxy bool, tunDevice string, _
 	}
 
 	fakeDns.tunDns.ip2Domain = bimap.NewBiMap()
-	fakeDns.tunDns.singleflight = &singleflight.Group{}
 	fakeDns.tunDns.excludeDomains = make([]string, 0)
 	if fakeDns.tunType == 3 {
 		urlInfo, _ := url.Parse(param.Args.ServerAddr)
@@ -347,12 +344,9 @@ func (tunDns *TunDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	m.SetReply(r)
 	m.Authoritative = false
 	domain := r.Question[0].Name
-	v, err, _ := tunDns.singleflight.Do(domain+":4", func() (interface{}, error) {
-		return tunDns.ipv4Res(domain)
-	})
-	_, isA := v.(*dns.A)
-	if isA {
-		m.Answer = []dns.RR{v.(*dns.A)}
+	v, err := tunDns.ipv4Res(domain)
+	if err == nil {
+		m.Answer = []dns.RR{v}
 	}
 	// final
 	return m, err
@@ -364,9 +358,7 @@ func (tunDns *TunDns) doIPv6Query(r *dns.Msg) (*dns.Msg, error) {
 	m.SetReply(r)
 	m.Authoritative = false
 	domain := r.Question[0].Name
-	v, err, _ := tunDns.singleflight.Do(domain+":6", func() (interface{}, error) {
-		return tunDns.ipv6Res(domain)
-	})
+	v, err := tunDns.ipv6Res(domain)
 	_, isA := v.(*dns.A)
 	if isA {
 		m.Answer = []dns.RR{v.(*dns.A)}
@@ -483,12 +475,14 @@ func (tunDns *TunDns) ipv6Res(domain string) (interface{}, error) {
 	ipLog, ok := tunDns.ip2Domain.GetInverse(domain)
 	_, ok1 := ipv6To4.Load(domain)
 	if ok && ok1 && !comm.ArrMatch(domain, tunDns.excludeDomains) && strings.HasPrefix(ipLog.(string), tunAddr[0:4]) {
+		fmt.Printf("use ipv4 domain:%s \r\n", domain)
 		//ipv6返回错误迫使使用ipv4地址
 		return nil, errors.New("use ipv4")
 	}
 
 	//ipv6
 	ipStr, rtt, err := tunDns.localResolve(domain, 6)
+	fmt.Printf(" ipv6 addr:%s domain:%s\r\n", ipStr, domain)
 	if err == nil {
 		if ipStr.String() == "" {
 			//返回ipv6地址
@@ -506,7 +500,7 @@ func (tunDns *TunDns) ipv6Res(domain string) (interface{}, error) {
 		} else {
 			//返回ipv6地址
 			return &dns.AAAA{
-				Hdr:  dns.RR_Header{Name: domain, Rrtype: dns.TypeAAAA, Class: dns.ClassINET, Ttl: 1},
+				Hdr:  dns.RR_Header{Name: domain, Rrtype: dns.TypeAAAA, Class: dns.ClassINET, Ttl: 60},
 				AAAA: net.ParseIP(ipStr.String()),
 			}, nil
 		}
