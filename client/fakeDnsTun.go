@@ -475,14 +475,12 @@ func (tunDns *TunDns) ipv6Res(domain string) (interface{}, error) {
 	ipLog, ok := tunDns.ip2Domain.GetInverse(domain)
 	_, ok1 := ipv6To4.Load(domain)
 	if ok && ok1 && !comm.ArrMatch(domain, tunDns.excludeDomains) && strings.HasPrefix(ipLog.(string), tunAddr[0:4]) {
-		fmt.Printf("use ipv4 domain:%s \r\n", domain)
 		//ipv6返回错误迫使使用ipv4地址
 		return nil, errors.New("use ipv4")
 	}
 
 	//ipv6
 	ipStr, rtt, err := tunDns.localResolve(domain, 6)
-	fmt.Printf(" ipv6 addr:%s domain:%s\r\n", ipStr, domain)
 	if err == nil {
 		if ipStr.String() == "" {
 			//返回ipv6地址
