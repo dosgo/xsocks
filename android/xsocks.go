@@ -36,9 +36,7 @@ func Start(sock5Addr string, serverAddr string, password string, caFile string, 
 	}
 
 	paramParam.SkipVerify = skipVerify
-
 	paramParam.TunType = tunType
-
 	paramParam.UnixSockTun = unixSockTun
 
 	if muxNum != 0 {
@@ -56,9 +54,7 @@ func Start(sock5Addr string, serverAddr string, password string, caFile string, 
 	} else {
 		paramParam.Mtu = 4500
 	}
-
 	paramParam.TunSmartProxy = tunSmartProxy
-
 	flag.Parse()
 	c = &client.Client{}
 	c.Start()
