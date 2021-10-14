@@ -3,24 +3,29 @@ package comm
 import (
 	"bufio"
 	"fmt"
-	"github.com/yl2chen/cidranger"
 	"io"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
+
+	"github.com/dosgo/xsocks/param"
+	"github.com/yl2chen/cidranger"
 )
 
 var (
 	gChinaMainlandRange cidranger.Ranger
 )
 
-func Init(){
+func Init() {
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	name := "iptable.txt"
-	if err==nil&&runtime.GOOS!="windows" {
-		name=dir+"/"+name
+	if param.Args.IpFile != "" {
+		name = param.Args.IpFile
+	}
+	if err == nil && runtime.GOOS != "windows" {
+		name = dir + "/" + name
 	}
 	if !exists(name) {
 		downloadIPTable(name)
@@ -63,8 +68,6 @@ func IsChinaMainlandIP(IP string) bool {
 	return false
 }
 
-
-
 func downloadIPTable(name string) error {
 	uri := "https://raw.githubusercontent.com/17mon/china_ip_list/master/china_ip_list.txt"
 	resp, err := http.Get(uri)
@@ -77,9 +80,8 @@ func downloadIPTable(name string) error {
 	if len(nowResp) > 0 {
 		os.WriteFile(name, nowResp, 0644)
 	}
-	return nil;
+	return nil
 }
-
 
 //Exists file exist
 func exists(path string) bool {

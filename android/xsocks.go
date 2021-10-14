@@ -4,12 +4,13 @@ import (
 	"time"
 
 	"github.com/dosgo/xsocks/client"
+	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/param"
 )
 
 var c *client.Client
 
-func Start(sock5Addr string, serverAddr string, password string, caFile string, skipVerify bool, tunType int, unixSockTun string, muxNum int, localDns int, smartDns int, udpProxy int, mtu int, tunSmartProxy bool) {
+func Start(sock5Addr string, serverAddr string, password string, caFile string, skipVerify bool, tunType int, unixSockTun string, muxNum int, localDns int, smartDns int, udpProxy int, mtu int, tunSmartProxy bool, ipFile string) {
 	paramParam := param.Args
 	if sock5Addr != "" {
 		paramParam.Sock5Addr = sock5Addr
@@ -54,6 +55,12 @@ func Start(sock5Addr string, serverAddr string, password string, caFile string, 
 	} else {
 		paramParam.Mtu = 4500
 	}
+	if ipFile != "" {
+		param.Args.IpFile = ipFile
+	} else {
+		param.Args.IpFile = ""
+	}
+
 	paramParam.TunSmartProxy = tunSmartProxy
 	time.Sleep(time.Second * 1)
 	c = &client.Client{}
@@ -65,4 +72,8 @@ func Shutdown() {
 		c.Shutdown()
 		time.Sleep(time.Second * 1)
 	}
+}
+
+func Init() {
+	comm.Init()
 }

@@ -1,10 +1,8 @@
 package client
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"net"
 	"os"
 	"runtime"
 	"strings"
@@ -120,22 +118,9 @@ func (c *Client) Start() error {
 	}
 	return nil
 }
-
 func init() {
-	//android
-	if os.Getenv("ANDROID_DATA") != "" {
-		fmt.Printf("setDefaultDNS\r\n ")
-		setDefaultDNS("114.114.114.114:53")
-	}
-	comm.Init()
-}
-func setDefaultDNS(addrs string) {
-	net.DefaultResolver = &net.Resolver{
-		PreferGo: true,
-		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-			d := net.Dialer{}
-			return d.DialContext(ctx, "udp", addrs)
-		},
+	if runtime.GOOS != "android" {
+		comm.Init()
 	}
 }
 
