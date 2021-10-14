@@ -1,7 +1,7 @@
 package xsocks
 
 import (
-	"flag"
+	"time"
 
 	"github.com/dosgo/xsocks/client"
 	"github.com/dosgo/xsocks/param"
@@ -55,7 +55,7 @@ func Start(sock5Addr string, serverAddr string, password string, caFile string, 
 		paramParam.Mtu = 4500
 	}
 	paramParam.TunSmartProxy = tunSmartProxy
-	flag.Parse()
+	time.Sleep(time.Second * 1)
 	c = &client.Client{}
 	c.Start()
 }
@@ -63,5 +63,6 @@ func Start(sock5Addr string, serverAddr string, password string, caFile string, 
 func Shutdown() {
 	if c != nil {
 		c.Shutdown()
+		time.Sleep(time.Second * 1)
 	}
 }
