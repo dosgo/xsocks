@@ -38,7 +38,6 @@ func (remoteTun *RemoteTun) Start(tunDevice string, tunAddr string, tunMask stri
 		go tunRecv(remoteTun.tunDev, param.Args.Mtu)
 		return nil
 	} else {
-
 		//old gw
 		remoteTun.dnsServers = strings.Split(tunDNS, ",")
 		remoteTun.tunDev, err = tun.RegTunDev(tunDevice, tunAddr, tunMask, tunGW, tunDNS)

@@ -40,7 +40,6 @@ func (_tun2socks *Tun2Socks) Start(tunDevice string, tunAddr string, tunMask str
 			return err
 		}
 	} else {
-
 		_tun2socks.tunDev, err = tun.RegTunDev(tunDevice, tunAddr, tunMask, tunGW, tunDNS)
 		if err != nil {
 			fmt.Println("start tun err:", err)

@@ -2,7 +2,6 @@ package client
 
 import (
 	"log"
-	"runtime"
 	"sync"
 
 	"github.com/dosgo/xsocks/comm"
@@ -39,16 +38,6 @@ func unRegRoute(tunAddr string, remoteAddr string, dnsServers []string, oldGw st
 	for _, v := range dnsServers {
 		// delete dns
 		comm.CmdHide("route", "delete", v).Output()
-	}
-}
-
-func routeEdit(tunGW string, remoteAddr string, dnsServers []string, oldGw string) {
-	if oldGw == "" {
-		oldGw = "192.168.1.1"
-	}
-	//windows
-	if runtime.GOOS == "windows" {
-		regRoute(tunGW, remoteAddr, dnsServers, oldGw)
 	}
 }
 
