@@ -72,7 +72,10 @@ func (c *Client) Start() error {
 	if os.Getenv("ANDROID_DATA") == "" {
 		tunAddr, tunGw = comm.GetUnusedTunAddr()
 	}
-	//1==tun2sock  (android+linux(use iptable))
+	//1==tun2sock  (android)
+	//windows use IP_UNICAST_IF   Unrealized
+	//linux use  SO_BINDTODEVICE or SO_MARK +rule   Unrealized
+	//mac use  SO_BINDTODEVICE  Unrealized
 	if param.Args.TunType == 1 {
 		if runtime.GOOS == "windows" {
 			fmt.Printf("Windows does not support the TUNTYPE 1 parameter, use TUNTYPE 3\r\n")
@@ -83,8 +86,12 @@ func (c *Client) Start() error {
 	}
 	//2==tun2remote tun (android)
 	if param.Args.TunType == 2 {
-		c.remoteTun = &RemoteTun{}
-		c.remoteTun.Start("", "", "", "", "")
+		if runtime.GOOS == "windows" {
+			fmt.Printf("Windows does not support the TUNTYPE 2 parameter, use TUNTYPE 3\r\n")
+		} else {
+			c.remoteTun = &RemoteTun{}
+			c.remoteTun.Start("", "", "", "", "")
+		}
 	}
 	//windows + linux +mac
 	if param.Args.TunType == 3 {
@@ -100,7 +107,7 @@ func (c *Client) Start() error {
 			comm.SetSystenProxy("socks://"+param.Args.Sock5Addr, "", true)
 		}
 	}
-	//to local safe socks5(udp support)
+	//to local safe socks5(udp support) windows + linux +mac
 	if param.Args.TunType == 5 {
 		if !strings.HasPrefix(param.Args.ServerAddr, "socks5") {
 			fmt.Printf("-serverAddr socks5://127.0.0.1:1080 \r\n")
