@@ -83,8 +83,12 @@ func (c *Client) Start() error {
 	}
 	//2==tun2remote tun (android)
 	if param.Args.TunType == 2 {
-		c.remoteTun = &RemoteTun{}
-		c.remoteTun.Start("", "", "", "", "")
+		if runtime.GOOS == "windows" {
+			fmt.Printf("Windows does not support the TUNTYPE 2 parameter, use TUNTYPE 3\r\n")
+		} else {
+			c.remoteTun = &RemoteTun{}
+			c.remoteTun.Start("", "", "", "", "")
+		}
 	}
 	//windows + linux +mac
 	if param.Args.TunType == 3 {

@@ -1,110 +1,106 @@
+//go:build windows
 // +build windows
 
 package tun
 
 import (
 	"crypto/md5"
+	_ "embed"
+	"errors"
+	"io"
+	"net"
+	"os"
+	"runtime"
+	"unsafe"
+
 	"golang.org/x/crypto/hkdf"
 	"golang.org/x/sys/windows"
 	"golang.zx2c4.com/wireguard/tun"
-	_"golang.zx2c4.com/wireguard/windows/tunnel"
+	_ "golang.zx2c4.com/wireguard/windows/tunnel"
 	"golang.zx2c4.com/wireguard/windows/tunnel/winipcfg"
-	"io"
-	_"embed"
-	"errors"
-	"runtime"
-	"net"
-	"os"
-	"unsafe"
 )
-
-
 
 type DevReadWriteCloser struct {
 	tunDev *tun.NativeTun
 }
 
 func (conn DevReadWriteCloser) Read(buf []byte) (int, error) {
-	return conn.tunDev.Read(buf,0);
+	return conn.tunDev.Read(buf, 0)
 }
 
 func (conn DevReadWriteCloser) Write(buf []byte) (int, error) {
-	return conn.tunDev.Write(buf,0)
+	return conn.tunDev.Write(buf, 0)
 }
 
-
-func (conn DevReadWriteCloser) Close() ( error) {
-	if conn.tunDev==nil {
-		return nil;
+func (conn DevReadWriteCloser) Close() error {
+	if conn.tunDev == nil {
+		return nil
 	}
-	return conn.tunDev.Close();
+	return conn.tunDev.Close()
 }
-
-
 
 //go:embed wintun/amd64/wintun.dll
-var winAmd64Bin []byte;
+var winAmd64Bin []byte
 
 //go:embed wintun/x86/wintun.dll
-var winX86Bin []byte;
+var winX86Bin []byte
 
 //go:embed wintun/arm/wintun.dll
-var winArmBin []byte;
+var winArmBin []byte
 
 //go:embed wintun/arm64/wintun.dll
-var winArm64Bin []byte;
+var winArm64Bin []byte
 
 func init() {
-	var dllBin []byte;
-	var dllPath="C:\\Windows\\System32\\wintun.dll"
+	var dllBin []byte
+	var dllPath = "C:\\Windows\\System32\\wintun.dll"
 
 	switch runtime.GOARCH {
-		case "amd64":
-			dllBin=	winAmd64Bin
-		break;
+	case "amd64":
+		dllBin = winAmd64Bin
+		break
 	case "x86":
-		dllBin=	winX86Bin
-		break;
+		dllBin = winX86Bin
+		break
 	case "arm":
-		dllBin=	winArmBin
-		break;
+		dllBin = winArmBin
+		break
 	case "arm64":
-		dllBin=	winArm64Bin
-		break;
+		dllBin = winArm64Bin
+		break
 	}
 
-	_,err:=os.Stat(dllPath)
-	if err!=nil && len(dllBin)>0{
-		os.WriteFile(dllPath,dllBin,os.ModePerm)
+	_, err := os.Stat(dllPath)
+	if err != nil && len(dllBin) > 0 {
+		os.WriteFile(dllPath, dllBin, os.ModePerm)
 	}
 }
-
 
 /*windows use wintun*/
-func RegTunDev(tunDevice string,tunAddr string,tunMask string,tunGW string,tunDNS string)(*DevReadWriteCloser,error){
-	if len(tunDevice)==0 {
-		tunDevice="socksTun0";
+func RegTunDev(tunDevice string, tunAddr string, tunMask string, tunGW string, tunDNS string) (*DevReadWriteCloser, error) {
+	if len(tunDevice) == 0 {
+		tunDevice = "socksTun0"
 	}
-	if len(tunAddr)==0 {
-		tunAddr="10.0.0.2";
+	if len(tunAddr) == 0 {
+		tunAddr = "10.0.0.2"
 	}
-	if len(tunMask)==0 {
-		tunMask="255.255.255.0";
+	if len(tunMask) == 0 {
+		tunMask = "255.255.255.0"
 	}
-	if len(tunGW)==0 {
-		tunGW="10.0.0.1";
+	if len(tunGW) == 0 {
+		tunGW = "10.0.0.1"
 	}
-	if len(tunDNS)==0 {
-		tunDNS="114.114.114.114";
+	if len(tunDNS) == 0 {
+		tunDNS = "114.114.114.114"
 	}
-	tunDev,err:=  tun.CreateTUNWithRequestedGUID(tunDevice, determineGUID(tunDevice), 1500)
-	if err!=nil{
-		return nil,err;
+	tunDev, err := tun.CreateTUNWithRequestedGUID(tunDevice, determineGUID(tunDevice), 1500)
+	if err != nil {
+		return nil, err
 	}
-	setInterfaceAddress4(tunDev.(*tun.NativeTun),tunAddr,tunMask,tunGW,tunDNS);
-	return &DevReadWriteCloser{tunDev.(*tun.NativeTun)},nil;
+	setInterfaceAddress4(tunDev.(*tun.NativeTun), tunAddr, tunMask, tunGW, tunDNS)
+	return &DevReadWriteCloser{tunDev.(*tun.NativeTun)}, nil
 }
-func  setInterfaceAddress4(tunDev *tun.NativeTun,addr, mask, gateway,tunDNS string) error {
+func setInterfaceAddress4(tunDev *tun.NativeTun, addr, mask, gateway, tunDNS string) error {
 	luid := winipcfg.LUID(tunDev.LUID())
 	addresses := append([]net.IPNet{}, net.IPNet{
 		IP:   net.ParseIP(addr).To4(),
@@ -125,7 +121,7 @@ func  setInterfaceAddress4(tunDev *tun.NativeTun,addr, mask, gateway,tunDNS stri
 }
 
 // setInterfaceAddress6 is ...
-func  setInterfaceAddress6(tunDev *tun.NativeTun,addr, mask, gateway ,tunDNS string) error {
+func setInterfaceAddress6(tunDev *tun.NativeTun, addr, mask, gateway, tunDNS string) error {
 	luid := winipcfg.LUID(tunDev.LUID())
 
 	addresses := append([]net.IPNet{}, net.IPNet{
@@ -145,7 +141,6 @@ func  setInterfaceAddress6(tunDev *tun.NativeTun,addr, mask, gateway ,tunDNS str
 	err = luid.SetDNS(windows.AF_INET6, []net.IP{net.ParseIP(tunDNS).To16()}, []string{})
 	return err
 }
-
 
 func determineGUID(name string) *windows.GUID {
 	b := make([]byte, unsafe.Sizeof(windows.GUID{}))

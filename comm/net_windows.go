@@ -14,9 +14,7 @@ import (
 	"unsafe"
 
 	"github.com/StackExchange/wmi"
-	"github.com/songgao/water"
 	routetable "github.com/yijunjun/route-table"
-	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 )
 
@@ -188,59 +186,6 @@ func GetOldDns(dnsAddr string, tunGW string, _tunGW string) string {
 	return oldDns
 }
 
-//dns
-const (
-	DnsConfigDnsServerList int32 = 6
-)
-
-type char byte
-type IpAddressString struct {
-	DNS [4 * 10]char
-}
-
-type Ip4Array struct {
-	AddrCount  uint32
-	Ip4Address [1]IpAddressString
-}
-
-func GetDnsServer() []string {
-	dns := []string{}
-	dnsapi := windows.NewLazyDLL("Dnsapi.dll")
-	dnsQuery := dnsapi.NewProc("DnsQueryConfig")
-	bufferBytes := make([]byte, 60)
-loop:
-	buffer := (*Ip4Array)(unsafe.Pointer(&bufferBytes[0]))
-	blen := len(bufferBytes)
-	r1, _, _ := dnsQuery.Call(uintptr(DnsConfigDnsServerList), uintptr(0), uintptr(0), uintptr(0), uintptr(unsafe.Pointer(&bufferBytes[0])), uintptr(unsafe.Pointer(&blen)))
-	if r1 == 234 {
-		bufferBytes = make([]byte, blen)
-		goto loop
-	} else if r1 == 0 {
-
-	} else {
-		return dns
-	}
-	for i := uint32(1); i <= buffer.AddrCount; i++ {
-		right := i * 4
-		left := right - 4
-		tmpChars := buffer.Ip4Address[0].DNS[left:right]
-		tmpStr := []string{}
-		for j := 0; j < len(tmpChars); j++ {
-			tmpStr = append(tmpStr, fmt.Sprint(tmpChars[j]))
-		}
-		tmpDNS := strings.Join(tmpStr, ".")
-		pDns := net.ParseIP(tmpDNS)
-		if pDns == nil {
-			continue
-		}
-		if !pDns.IsGlobalUnicast() {
-			continue
-		}
-		dns = append(dns, tmpDNS)
-	}
-	return dns
-}
-
 func GetDnsServerByGateWay(gwIp string) ([]string, bool, bool) {
 	//DNSServerSearchOrder
 	adapters, err := GetNetworkAdapter()
@@ -293,19 +238,6 @@ type NetworkAdapter struct {
 	IPSubnet             []string
 	InterfaceIndex       uint32
 	SettingID            string
-}
-
-func GetWaterConf(tunAddr string, tunMask string) water.Config {
-	masks := net.ParseIP(tunMask).To4()
-	maskAddr := net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3])}
-	return water.Config{
-		DeviceType: water.TUN,
-		PlatformSpecificParams: water.PlatformSpecificParams{
-			ComponentID: "tap0901",
-			//InterfaceName: "xSocks Tun",
-			Network: maskAddr.String(),
-		},
-	}
 }
 
 func GetNetworkAdapter() ([]NetworkAdapter, error) {
