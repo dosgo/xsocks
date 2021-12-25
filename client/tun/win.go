@@ -7,6 +7,7 @@ import (
 	"crypto/md5"
 	_ "embed"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -69,10 +70,21 @@ func init() {
 		dllBin = winArm64Bin
 		break
 	}
-
 	_, err := os.Stat(dllPath)
 	if err != nil && len(dllBin) > 0 {
 		os.WriteFile(dllPath, dllBin, os.ModePerm)
+	} else {
+		//
+		oldBin, err := os.ReadFile(dllPath)
+		if err != nil {
+			return
+		}
+		oldMd5 := fmt.Sprintf("%x", md5.Sum(oldBin))
+		newMd5 := fmt.Sprintf("%x", md5.Sum(dllBin))
+		//update
+		if oldMd5 != newMd5 {
+			os.WriteFile(dllPath, dllBin, os.ModePerm)
+		}
 	}
 }
 
