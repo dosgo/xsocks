@@ -186,27 +186,6 @@ func GetOldDns(dnsAddr string, tunGW string, _tunGW string) string {
 	return oldDns
 }
 
-func GetDnsServerByGateWay(gwIp string) ([]string, bool, bool) {
-	//DNSServerSearchOrder
-	adapters, err := GetNetworkAdapter()
-	var isIpv6 = false
-	if err != nil {
-		return nil, false, isIpv6
-	}
-	for _, v := range adapters {
-		if len(v.DefaultIPGateway) > 0 && v.DefaultIPGateway[0] == gwIp {
-			for _, v2 := range v.IPAddress {
-				if len(v2) > 16 {
-					isIpv6 = true
-					break
-				}
-			}
-			return v.DNSServerSearchOrder, v.DHCPEnabled, isIpv6
-		}
-	}
-	return nil, false, isIpv6
-}
-
 func GetDnsServerByIfIndex(ifIndex uint32) ([]string, bool, bool) {
 	//DNSServerSearchOrder
 	adapters, err := GetNetworkAdapter()
