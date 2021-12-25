@@ -14,9 +14,7 @@ import (
 
 func main() {
 	//debug server
-	go func() {
-		http.ListenAndServe(":8000", nil)
-	}()
+	go http.ListenAndServe(":8000", nil)
 
 	paramParam := param.Args
 	flag.StringVar(&paramParam.Sock5Addr, "sock5Addr", "127.0.0.1:6000", "remote socks5 addr ")

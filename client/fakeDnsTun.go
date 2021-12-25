@@ -191,7 +191,7 @@ func (fakeDns *FakeDnsTun) tcpForwarder(conn *gonet.TCPConn) error {
 			return nil
 		}
 		defer socksConn.Close()
-		comm.TcpPipe(conn, socksConn, time.Minute*5)
+		comm.TcpPipe(conn, socksConn, time.Minute*3)
 	} else {
 		remoteAddr = fakeDns.dnsToAddr(srcAddr)
 		if remoteAddr == "" {
@@ -205,7 +205,7 @@ func (fakeDns *FakeDnsTun) tcpForwarder(conn *gonet.TCPConn) error {
 		}
 		defer socksConn.Close()
 		if socks.SocksCmd(socksConn, 1, uint8(addrType), remoteAddr, true) == nil {
-			comm.TcpPipe(conn, socksConn, time.Minute*5)
+			comm.TcpPipe(conn, socksConn, time.Minute*3)
 		}
 	}
 	return nil
@@ -226,6 +226,7 @@ func (fakeDns *FakeDnsTun) udpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint) 
 	}
 	//tuntype 直连
 	if fakeDns.tunType == 5 {
+		defer ep.Close()
 		if fakeDns.udpProxy {
 			socksConn, err := net.DialTimeout("tcp", fakeDns.localSocks, time.Second*15)
 			if err == nil {
@@ -233,7 +234,6 @@ func (fakeDns *FakeDnsTun) udpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint) 
 				gateWay, err := socks.GetUdpGate(socksConn, remoteAddr)
 				fmt.Printf("gateWay:%s %v\r\n", gateWay, err)
 				if err == nil {
-					defer ep.Close()
 					dstAddr, _ := net.ResolveUDPAddr("udp", remoteAddr)
 					fmt.Printf("udp-remoteAddr:%s\r\n", remoteAddr)
 					return socks.SocksUdpGate(conn, gateWay, dstAddr)
