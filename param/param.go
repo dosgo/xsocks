@@ -2,7 +2,7 @@ package param
 
 import "time"
 
-var version = "1.8.7-(20220131)"
+var version = "1.8.8-(20220131)"
 
 var Args *ArgsParam
 
@@ -42,6 +42,7 @@ type ClientParam struct {
 	TunSmartProxy bool
 	Sock5UdpPort  string
 	IpFile        string
+	AutoStart     bool
 }
 
 type ServerParam struct {

@@ -5,13 +5,13 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 )
 
-
 /*根据子网掩码返回一个IP段*/
-func GetCidrRandIpByNet(tunAddr string,tunMask string)string{
-	masks:=net.ParseIP(tunMask).To4();
-	maskAddr:=net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}
+func GetCidrRandIpByNet(tunAddr string, tunMask string) string {
+	masks := net.ParseIP(tunMask).To4()
+	maskAddr := net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3])}
 	return GetCidrRandIp(maskAddr.String())
 }
 
@@ -22,10 +22,10 @@ func GetCidrRandIp(cidr string) string {
 	seg3MinIp, seg3MaxIp := getIpSeg3Range(ipSegs, maskLen)
 	seg4MinIp, seg4MaxIp := getIpSeg4Range(ipSegs, maskLen)
 	ipPrefix := ipSegs[0] + "." + ipSegs[1] + "."
-	return ipPrefix+strconv.Itoa(IntnRange(seg3MinIp,seg3MaxIp))+"."+strconv.Itoa(IntnRange(seg4MinIp,seg4MaxIp));
+	return ipPrefix + strconv.Itoa(IntnRange(seg3MinIp, seg3MaxIp)) + "." + strconv.Itoa(IntnRange(seg4MinIp, seg4MaxIp))
 }
 
-func IntnRange(min, max int) int{
+func IntnRange(min, max int) int {
 	return rand.Intn(max-min) + min
 }
 
@@ -41,8 +41,6 @@ func GetCidrIpRange(cidr string) (string, string) {
 		ipPrefix + strconv.Itoa(seg3MaxIp) + "." + strconv.Itoa(seg4MaxIp)
 }
 
-
-
 //得到第三段IP的区间（第一片段.第二片段.第三片段.第四片段）
 func getIpSeg3Range(ipSegs []string, maskLen int) (int, int) {
 	if maskLen > 24 {
@@ -50,13 +48,13 @@ func getIpSeg3Range(ipSegs []string, maskLen int) (int, int) {
 		return segIp, segIp
 	}
 	ipSeg, _ := strconv.Atoi(ipSegs[2])
-	return getIpSegRange(uint8(ipSeg), uint8(24 - maskLen))
+	return getIpSegRange(uint8(ipSeg), uint8(24-maskLen))
 }
 
 //得到第四段IP的区间（第一片段.第二片段.第三片段.第四片段）
 func getIpSeg4Range(ipSegs []string, maskLen int) (int, int) {
 	ipSeg, _ := strconv.Atoi(ipSegs[3])
-	segMinIp, segMaxIp := getIpSegRange(uint8(ipSeg), uint8(32 - maskLen))
+	segMinIp, segMaxIp := getIpSegRange(uint8(ipSeg), uint8(32-maskLen))
 	return segMinIp + 1, segMaxIp
 }
 
@@ -65,16 +63,27 @@ func getIpSegRange(userSegIp, offset uint8) (int, int) {
 	var ipSegMax uint8 = 255
 	netSegIp := ipSegMax << offset
 	segMinIp := netSegIp & userSegIp
-	segMaxIp := userSegIp & (255 << offset) | ^(255 << offset)
+	segMaxIp := userSegIp&(255<<offset) | ^(255 << offset)
 	return int(segMinIp), int(segMaxIp)
 }
 
-func IpIsCidr(addr string,mask string,ip string)bool{
-	masks:=net.ParseIP(mask).To4();
-	cidr:=net.IPNet{IP: net.ParseIP(addr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3] )}
+func IpIsCidr(addr string, mask string, ip string) bool {
+	masks := net.ParseIP(mask).To4()
+	cidr := net.IPNet{IP: net.ParseIP(addr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3])}
 	_, n, err := net.ParseCIDR(cidr.String())
-	if err!=nil {
-		return false;
+	if err != nil {
+		return false
 	}
 	return n.Contains(net.ParseIP(ip))
+}
+
+func CheckTcp(host string, port string) bool {
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), time.Second*1)
+	if err == nil {
+		if conn != nil {
+			defer conn.Close()
+			return true
+		}
+	}
+	return false
 }
