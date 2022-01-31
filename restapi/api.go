@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -105,6 +106,7 @@ func ReadConf() ([]byte, error) {
 			paramParam.SkipVerify = confParam.SkipVerify
 			paramParam.TunType = confParam.TunType
 			paramParam.UdpProxy = confParam.UdpProxy
+			paramParam.AutoStart = isAutoStart(paramParam.ServerAddr)
 		}
 	} else {
 		fp, err := os.OpenFile(configFile, os.O_CREATE|os.O_RDWR, os.ModePerm)
@@ -120,4 +122,22 @@ func jsonBack(w http.ResponseWriter, data map[string]interface{}) {
 	if err == nil {
 		w.Write(buf)
 	}
+}
+
+/*是否自动启动*/
+func isAutoStart(serverAddr string) bool {
+	_, err := os.Stat(configFile)
+	if err == nil {
+		urlInfo, err := url.Parse(serverAddr)
+		if err == nil {
+			if urlInfo.Scheme == "wss" || urlInfo.Scheme == "http2" || urlInfo.Scheme == "socks5" {
+				if comm.CheckTcp(urlInfo.Hostname(), urlInfo.Port()) {
+					return true
+				}
+			} else {
+				return true
+			}
+		}
+	}
+	return false
 }
