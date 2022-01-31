@@ -3,11 +3,8 @@ package restapi
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
-	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -55,7 +52,7 @@ func apiAction(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func init() {
-	logOutFun = logOutput("")
+	logOutFun = comm.LogOutput("")
 }
 
 func Start() {
@@ -66,47 +63,6 @@ func Start() {
 	defer socksX_cli.Shutdown()
 	http.HandleFunc("/api", apiAction)
 	log.Fatal(http.ListenAndServe(":10000", nil))
-}
-func logOutput(_logfile string) func() {
-	logfile := _logfile
-	if _logfile == "" {
-		logfile = "out.log"
-	}
-	// open file read/write | create if not exist | clear file at open if exists
-	f, err := os.OpenFile(logfile, os.O_WRONLY|os.O_CREATE|os.O_SYNC|os.O_APPEND, 0755)
-	if err != nil {
-		fmt.Printf("ddd:%+v", err)
-	}
-	// save existing stdout | MultiWriter writes to saved stdout and file
-	out := os.Stdout
-	mw := io.MultiWriter(out, f)
-
-	// get pipe reader and writer | writes to pipe writer come out pipe reader
-	r, w, _ := os.Pipe()
-
-	// replace stdout,stderr with pipe writer | all writes to stdout, stderr will go through pipe instead (fmt.print, log)
-	os.Stdout = w
-	os.Stderr = w
-
-	// writes with log.Print should also write to mw
-	log.SetOutput(mw)
-	//create channel to control exit | will block until all copies are finished
-	exit := make(chan bool)
-	go func() {
-		// copy all reads from pipe to multiwriter, which writes to stdout and file
-		_, _ = io.Copy(mw, r)
-		// when r or w is closed copy will finish and true will be sent to channel
-		exit <- true
-	}()
-
-	// function to be deferred in main until program exits
-	return func() {
-		// close writer then block on exit channel | this will let mw finish writing before the program exits
-		_ = w.Close()
-		<-exit
-		// close file after all writes have finished
-		_ = f.Close()
-	}
 }
 
 var configFile = "config.json"
@@ -149,7 +105,6 @@ func ReadConf() ([]byte, error) {
 			paramParam.SkipVerify = confParam.SkipVerify
 			paramParam.TunType = confParam.TunType
 			paramParam.UdpProxy = confParam.UdpProxy
-			paramParam.AutoStart = isAutoStart(paramParam.ServerAddr)
 		}
 	} else {
 		fp, err := os.OpenFile(configFile, os.O_CREATE|os.O_RDWR, os.ModePerm)
@@ -165,22 +120,4 @@ func jsonBack(w http.ResponseWriter, data map[string]interface{}) {
 	if err == nil {
 		w.Write(buf)
 	}
-}
-
-/*是否自动启动*/
-func isAutoStart(serverAddr string) bool {
-	_, err := os.Stat(configFile)
-	if err == nil {
-		urlInfo, err := url.Parse(serverAddr)
-		if err == nil {
-			if urlInfo.Scheme == "wss" || urlInfo.Scheme == "http2" || urlInfo.Scheme == "socks5" {
-				if comm.CheckTcp(urlInfo.Hostname(), urlInfo.Port()) {
-					return true
-				}
-			} else {
-				return true
-			}
-		}
-	}
-	return false
 }

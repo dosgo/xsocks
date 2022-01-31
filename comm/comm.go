@@ -6,20 +6,21 @@ import (
 	crand "crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"golang.org/x/time/rate"
-	"gvisor.dev/gvisor/pkg/tcpip"
-	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"io"
 	"log"
-	"sort"
 	"math/rand"
 	"net"
+	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-)
 
+	"golang.org/x/time/rate"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
+)
 
 var poolNatBuf = &sync.Pool{
 	New: func() interface{} {
@@ -27,16 +28,14 @@ var poolNatBuf = &sync.Pool{
 	},
 }
 
-
 type CommConn interface {
 	SetDeadline(t time.Time) error
 	io.ReadWriteCloser
 }
 
-
 type TimeoutConn struct {
-	Conn CommConn
-	TimeOut time.Duration;
+	Conn    CommConn
+	TimeOut time.Duration
 }
 
 func (conn TimeoutConn) Read(buf []byte) (int, error) {
@@ -49,14 +48,12 @@ func (conn TimeoutConn) Write(buf []byte) (int, error) {
 	return conn.Conn.Write(buf)
 }
 
-
-func GenPasswordHead(password string)string{
+func GenPasswordHead(password string) string {
 	h := md5.New()
 	h.Write([]byte(password))
-	md5Str:=hex.EncodeToString(h.Sum(nil))
-	return md5Str[:16];
+	md5Str := hex.EncodeToString(h.Sum(nil))
+	return md5Str[:16]
 }
-
 
 func GetFreePort() (string, error) {
 	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:0")
@@ -72,7 +69,6 @@ func GetFreePort() (string, error) {
 	return fmt.Sprintf("%d", l.Addr().(*net.TCPAddr).Port), nil
 }
 
-
 func GetFreeUdpPort() (string, error) {
 	addr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
 	l, err := net.ListenUDP("udp", addr)
@@ -82,8 +78,6 @@ func GetFreeUdpPort() (string, error) {
 	defer l.Close()
 	return fmt.Sprintf("%d", l.LocalAddr().(*net.UDPAddr).Port), nil
 }
-
-
 
 func IsPublicIP(ip net.IP) bool {
 	if ip.IsLoopback() || ip.IsLinkLocalMulticast() || ip.IsLinkLocalUnicast() {
@@ -126,7 +120,6 @@ func GetRandomString(n int) string {
 	return string(result)
 }
 
-
 //生成32位md5字串
 func GetMd5String(s string) string {
 	h := md5.New()
@@ -145,143 +138,133 @@ func UniqueId(_len int) string {
 	return hex.EncodeToString(h.Sum(nil))[:_len]
 }
 
-
-
 /*udp nat sawp*/
-func TunNatSawp(_udpNat *sync.Map,conn *gonet.UDPConn,ep tcpip.Endpoint,dstAddr string,duration time.Duration){
-	natKey:=conn.RemoteAddr().String()+"_"+dstAddr;
+func TunNatSawp(_udpNat *sync.Map, conn *gonet.UDPConn, ep tcpip.Endpoint, dstAddr string, duration time.Duration) {
+	natKey := conn.RemoteAddr().String() + "_" + dstAddr
 	var remoteConn net.Conn
-	var err error;
-	_remoteConn,ok:=_udpNat.Load(natKey)
-	if !ok{
-		remoteConn, err = net.DialTimeout("udp", dstAddr,time.Second*15);
+	var err error
+	_remoteConn, ok := _udpNat.Load(natKey)
+	if !ok {
+		remoteConn, err = net.DialTimeout("udp", dstAddr, time.Second*15)
 		if err != nil {
 			return
 		}
 		var buffer bytes.Buffer
-		_udpNat.Store(natKey,remoteConn)
-		go func(_remoteConn net.Conn,_conn *gonet.UDPConn) {
-			defer ep.Close();
-			defer _udpNat.Delete(natKey);
+		_udpNat.Store(natKey, remoteConn)
+		go func(_remoteConn net.Conn, _conn *gonet.UDPConn) {
+			defer ep.Close()
+			defer _udpNat.Delete(natKey)
 			defer _remoteConn.Close()
-			defer _conn.Close();
+			defer _conn.Close()
 			//buf:= make([]byte, 1024*5);
 			for {
 				_remoteConn.SetReadDeadline(time.Now().Add(duration))
 				buf := poolNatBuf.Get().([]byte)
-				n, err:= _remoteConn.Read(buf);
-				if err!=nil {
-					log.Printf("err:%v\r\n",err);
-					return ;
+				n, err := _remoteConn.Read(buf)
+				if err != nil {
+					log.Printf("err:%v\r\n", err)
+					return
 				}
-				buffer.Reset();
+				buffer.Reset()
 				buffer.Write(buf[:n])
-				_,err=_conn.Write(buffer.Bytes())
-				if err!=nil {
-					log.Printf("err:%v\r\n",err);
+				_, err = _conn.Write(buffer.Bytes())
+				if err != nil {
+					log.Printf("err:%v\r\n", err)
 				}
 				poolNatBuf.Put(buf)
 			}
-		}(remoteConn,conn)
-	}else{
-		remoteConn=_remoteConn.(net.Conn)
+		}(remoteConn, conn)
+	} else {
+		remoteConn = _remoteConn.(net.Conn)
 	}
 	buf := poolNatBuf.Get().([]byte)
-	udpSize,err:=conn.Read(buf);
-	if err==nil {
-		_,err=remoteConn.Write(buf[:udpSize])
-		if err!=nil {
-			log.Printf("err:%v\r\n",err);
+	udpSize, err := conn.Read(buf)
+	if err == nil {
+		_, err = remoteConn.Write(buf[:udpSize])
+		if err != nil {
+			log.Printf("err:%v\r\n", err)
 		}
 	}
 	poolNatBuf.Put(buf)
 }
 
-
-
-
-
 /*tcp swap*/
-func TcpPipe(src CommConn, dst CommConn,duration time.Duration) {
+func TcpPipe(src CommConn, dst CommConn, duration time.Duration) {
 	defer src.Close()
 	defer dst.Close()
-	srcT:=TimeoutConn{src,duration}
-	dstT:=TimeoutConn{dst,duration}
+	srcT := TimeoutConn{src, duration}
+	dstT := TimeoutConn{dst, duration}
 	go io.Copy(srcT, dstT)
 	io.Copy(dstT, srcT)
 }
 
-
 type lAddr struct {
-	Name  string
+	Name       string
 	IpAddress  string
-	IpMask  string
-	GateWay  string
+	IpMask     string
+	GateWay    string
 	MACAddress string
 }
 
-
-
-
-func GetNetworkInfo() ([]lAddr,error) {
+func GetNetworkInfo() ([]lAddr, error) {
 	intf, err := net.Interfaces()
 	lAddrs := []lAddr{}
 	if err != nil {
 		log.Fatal("get network info failed: %v", err)
-		return nil,err
+		return nil, err
 	}
 	for _, v := range intf {
 		ips, err := v.Addrs()
 		if err != nil {
 			log.Fatal("get network addr failed: %v", err)
-			return nil,err
+			return nil, err
 		}
 		//此处过滤loopback（本地回环）和isatap（isatap隧道）
 		if !strings.Contains(v.Name, "Loopback") && !strings.Contains(v.Name, "isatap") {
 			itemAddr := lAddr{}
-			itemAddr.Name=v.Name;
-			itemAddr.MACAddress=v.HardwareAddr.String()
+			itemAddr.Name = v.Name
+			itemAddr.MACAddress = v.HardwareAddr.String()
 			for _, ip := range ips {
 				if strings.Contains(ip.String(), ".") {
-					_,ipNet,err1:=net.ParseCIDR(ip.String())
-					if err1==nil {
-						itemAddr.IpAddress=ipNet.IP.String()
-						itemAddr.IpMask=net.IP(ipNet.Mask).String()
+					_, ipNet, err1 := net.ParseCIDR(ip.String())
+					if err1 == nil {
+						itemAddr.IpAddress = ipNet.IP.String()
+						itemAddr.IpMask = net.IP(ipNet.Mask).String()
 					}
 				}
 			}
-			lAddrs=append(lAddrs,itemAddr)
+			lAddrs = append(lAddrs, itemAddr)
 		}
 	}
-	return lAddrs,nil
+	return lAddrs, nil
 }
+
 /*
 get Unused B
 return tunaddr tungw
 */
-func GetUnusedTunAddr()(string,string){
-	laddrs,err:=GetNetworkInfo();
-	if err!=nil {
-		return "","";
+func GetUnusedTunAddr() (string, string) {
+	laddrs, err := GetNetworkInfo()
+	if err != nil {
+		return "", ""
 	}
-	var laddrInfo="";
+	var laddrInfo = ""
 	for _, _laddr := range laddrs {
-		laddrInfo=laddrInfo+"net:"+_laddr.IpAddress;
+		laddrInfo = laddrInfo + "net:" + _laddr.IpAddress
 	}
 	//tunAddr string,tunMask string,tunGW
-	for i:=19;i<254;i++{
-		if strings.Index(laddrInfo,"net:172."+strconv.Itoa(i))==-1 {
-			return "172."+strconv.Itoa(i)+".0.2","172."+strconv.Itoa(i)+".0.1"
+	for i := 19; i < 254; i++ {
+		if strings.Index(laddrInfo, "net:172."+strconv.Itoa(i)) == -1 {
+			return "172." + strconv.Itoa(i) + ".0.2", "172." + strconv.Itoa(i) + ".0.1"
 		}
 	}
-	return "","";
+	return "", ""
 }
 
-type UdpLimit struct{
-	Limit *rate.Limiter
-	Expired int64;
+type UdpLimit struct {
+	Limit   *rate.Limiter
+	Expired int64
 }
-
 
 func ArrMatch(target string, str_array []string) bool {
 	sort.Strings(str_array)
@@ -290,4 +273,49 @@ func ArrMatch(target string, str_array []string) bool {
 		return true
 	}
 	return false
+}
+
+func LogOutput(_logfile string) func() {
+	logfile := _logfile
+	if _logfile == "" {
+		logfile = "out.log"
+	}
+	// open file read/write | create if not exist | clear file at open if exists
+	f, err := os.OpenFile(logfile, os.O_WRONLY|os.O_CREATE|os.O_SYNC|os.O_APPEND, 0755)
+	if err != nil {
+		fmt.Printf("ddd:%+v", err)
+	}
+	// save existing stdout | MultiWriter writes to saved stdout and file
+	mw := io.MultiWriter(f)
+	if len(os.Args) > 1 {
+		out := os.Stdout
+		mw = io.MultiWriter(f, out)
+	}
+
+	// get pipe reader and writer | writes to pipe writer come out pipe reader
+	r, w, _ := os.Pipe()
+
+	// replace stdout,stderr with pipe writer | all writes to stdout, stderr will go through pipe instead (fmt.print, log)
+	os.Stdout = w
+	os.Stderr = w
+
+	// writes with log.Print should also write to mw
+	log.SetOutput(mw)
+	//create channel to control exit | will block until all copies are finished
+	exit := make(chan bool)
+	go func() {
+		// copy all reads from pipe to multiwriter, which writes to stdout and file
+		_, _ = io.Copy(mw, r)
+		// when r or w is closed copy will finish and true will be sent to channel
+		exit <- true
+	}()
+
+	// function to be deferred in main until program exits
+	return func() {
+		// close writer then block on exit channel | this will let mw finish writing before the program exits
+		_ = w.Close()
+		<-exit
+		// close file after all writes have finished
+		_ = f.Close()
+	}
 }
