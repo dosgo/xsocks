@@ -17,9 +17,17 @@ import (
 
 var socksX_cli *client.Client
 var logOutFun func()
+var token = ""
 
 func apiAction(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
+	if token != "" && r.Form.Get("token") != token {
+		back := make(map[string]interface{})
+		back["code"] = -1
+		back["msg"] = "token error"
+		jsonBack(w, back)
+		return
+	}
 	if r.Form.Get("cmd") == "save" {
 		err := SaveConf(r.Form.Get("jsonStr"))
 		if err != nil {
@@ -56,14 +64,18 @@ func init() {
 	logOutFun = comm.LogOutput("")
 }
 
-func Start() {
+func Start(port string, _token string) {
+	token = _token
 	if logOutFun != nil {
 		defer logOutFun()
 	}
 	socksX_cli = &client.Client{}
 	defer socksX_cli.Shutdown()
 	http.HandleFunc("/api", apiAction)
-	log.Fatal(http.ListenAndServe(":10000", nil))
+	if port == "" {
+		port, _ = comm.GetFreePort()
+	}
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
 
 var configFile = "config.json"
