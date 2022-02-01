@@ -109,3 +109,7 @@ func AddRoute(tunAddr string, tunGw string, tunMask string) {
 func CmdHide(name string, arg ...string) *exec.Cmd {
 	return exec.Command(name, arg...)
 }
+
+func ExistStdOutput() bool {
+	return true
+}

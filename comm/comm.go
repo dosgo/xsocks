@@ -287,7 +287,7 @@ func LogOutput(_logfile string) func() {
 	}
 	// save existing stdout | MultiWriter writes to saved stdout and file
 	mw := io.MultiWriter(f)
-	if len(os.Args) > 1 {
+	if ExistStdOutput() {
 		out := os.Stdout
 		mw = io.MultiWriter(f, out)
 	}
