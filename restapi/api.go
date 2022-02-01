@@ -3,6 +3,7 @@ package restapi
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -58,6 +59,10 @@ func apiAction(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.Form.Get("cmd") == "clearConsole" {
 		os.WriteFile("out.log", []byte(""), os.ModePerm)
+	}
+	//写日志
+	if r.Form.Get("cmd") != "console" {
+		fmt.Printf(r.URL.String() + "cmd:" + r.Form.Get("cmd") + "\r\n")
 	}
 }
 func init() {
