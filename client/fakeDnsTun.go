@@ -97,7 +97,7 @@ func (fakeDns *FakeDnsTun) Start(tunType int, udpProxy bool, tunDevice string, _
 
 	//edit DNS
 	if runtime.GOOS == "windows" {
-		go winDivert.RedirectDNSv1(fakeDns.tunDns.dnsAddr, fakeDns.tunDns.dnsPort, clientPort)
+		go winDivert.RedirectDNS(fakeDns.tunDns.dnsAddr, fakeDns.tunDns.dnsPort, clientPort)
 	} else {
 		comm.SetNetConf(fakeDns.tunDns.dnsAddr, fakeDns.tunDns.dnsAddrV6)
 	}
