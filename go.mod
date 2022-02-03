@@ -6,12 +6,11 @@ require (
 	github.com/StackExchange/wmi v1.2.1
 	github.com/cakturk/go-netstat v0.0.0-20200220111822-e5b49efee7a5
 	github.com/hashicorp/yamux v0.0.0-20211028200310-0bc27b27de87
+	github.com/imgk/divert-go v0.0.0-20210905033325-fe4a90f8b340
 	github.com/lucas-clemente/quic-go v0.24.0
-	github.com/macronut/godivert v0.0.0-20200223163208-e0ee08361ab9
 	github.com/miekg/dns v1.1.43
 	github.com/songgao/water v0.0.0-20200317203138-2b4b6d7c09d8
 	github.com/vishalkuo/bimap v0.0.0-20180703190407-09cff2814645
-	github.com/williamfhe/godivert v0.0.0-20181229124620-a48c5b872c73 // indirect
 	github.com/xtaci/kcp-go/v5 v5.6.1
 	github.com/xtaci/smux v1.5.16
 	github.com/yijunjun/route-table v0.0.0-20160321072918-9608fc1e2e44
@@ -25,3 +24,5 @@ require (
 	golang.zx2c4.com/wireguard/windows v0.5.1
 	gvisor.dev/gvisor v0.0.0-20211214081032-dfdf7092cf0e
 )
+
+replace github.com/imgk/divert-go => github.com/dosgo/divert-go v0.0.5 // indirect

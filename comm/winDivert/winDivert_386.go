@@ -17,7 +17,7 @@ var winDivert32Sys []byte;
 
 
 func init() {
-	divertDll="WinDivert32.dll"
+	divertDll="WinDivert.dll"
 	divertSys="WinDivert32.sys";
 	_,err:=os.Stat(divertDll)
 	if err!=nil {
