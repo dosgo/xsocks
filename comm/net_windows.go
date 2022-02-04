@@ -280,6 +280,6 @@ func CmdHide(name string, arg ...string) *exec.Cmd {
 }
 
 func ExistStdOutput() bool {
-	_, err := windows.GetStdHandle(windows.STD_OUTPUT_HANDLE)
-	return err == nil
+	handle, err := windows.GetStdHandle(windows.STD_OUTPUT_HANDLE)
+	return err == nil && handle > 0
 }
