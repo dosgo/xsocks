@@ -95,8 +95,7 @@ func RedirectDNS(dnsAddr string, _port string, sendPort string) {
 			binary.BigEndian.PutUint16(rawbuf[ipheadlen+4:], uint16(udpsize))
 			copy(rawbuf[ipheadlen+8:], response)
 			packet := rawbuf[:packetsize]
-			packetLen := uint(packetsize)
-			divert.HelperCalcChecksum(packet, packetLen, &addr)
+			divert.CalcChecksums(packet, &addr, 0)
 			_, err = winDivert.Send(packet, &addr)
 			if err != nil {
 				log.Println(1, err)

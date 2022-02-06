@@ -6,7 +6,7 @@ require (
 	github.com/StackExchange/wmi v1.2.1
 	github.com/cakturk/go-netstat v0.0.0-20200220111822-e5b49efee7a5
 	github.com/hashicorp/yamux v0.0.0-20211028200310-0bc27b27de87
-	github.com/imgk/divert-go v0.0.0-20210905033325-fe4a90f8b340
+	github.com/imgk/divert-go v0.0.0-20220205193416-faaa83c2c10a
 	github.com/lucas-clemente/quic-go v0.24.0
 	github.com/miekg/dns v1.1.43
 	github.com/songgao/water v0.0.0-20200317203138-2b4b6d7c09d8
@@ -18,11 +18,9 @@ require (
 	golang.org/x/crypto v0.0.0-20211108221036-ceb1ce70b4fa
 	golang.org/x/net v0.0.0-20211111083644-e5c967477495
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20211110154304-99a53858aa08
+	golang.org/x/sys v0.0.0-20220128215802-99c3d69c2c27
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
 	golang.zx2c4.com/wireguard v0.0.0-20211209221555-9c9e7e272434
 	golang.zx2c4.com/wireguard/windows v0.5.1
 	gvisor.dev/gvisor v0.0.0-20211214081032-dfdf7092cf0e
 )
-
-replace github.com/imgk/divert-go => github.com/dosgo/divert-go v0.0.5 // indirect
