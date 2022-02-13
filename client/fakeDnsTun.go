@@ -191,7 +191,7 @@ func (fakeDns *FakeDnsTun) tcpForwarder(conn *gonet.TCPConn) error {
 			return nil
 		}
 		defer socksConn.Close()
-		comm.TcpPipe(conn, socksConn, time.Minute*3)
+		comm.TcpPipe(conn, socksConn, time.Minute*2)
 	} else {
 		remoteAddr = fakeDns.dnsToAddr(srcAddr)
 		if remoteAddr == "" {
@@ -205,7 +205,7 @@ func (fakeDns *FakeDnsTun) tcpForwarder(conn *gonet.TCPConn) error {
 		}
 		defer socksConn.Close()
 		if socks.SocksCmd(socksConn, 1, uint8(addrType), remoteAddr, true) == nil {
-			comm.TcpPipe(conn, socksConn, time.Minute*3)
+			comm.TcpPipe(conn, socksConn, time.Minute*2)
 		}
 	}
 	return nil
