@@ -118,8 +118,8 @@ func SocksUdpGate(conn *gonet.UDPConn, gateAddr string, dstAddr *net.UDPAddr) er
 			_, _ = gateConn.Write(buffer.Bytes())
 		}
 	}()
+	var b2 = make([]byte, 1024*5)
 	for {
-		var b2 = make([]byte, 1024*5)
 		gateConn.SetReadDeadline(time.Now().Add(2 * time.Minute))
 		n, err := gateConn.Read(b2)
 		if err != nil {
