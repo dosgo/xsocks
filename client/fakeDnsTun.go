@@ -28,12 +28,6 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 )
 
-var fakeDnsCache *comm.DnsCache
-
-func init() {
-	fakeDnsCache = &comm.DnsCache{Cache: make(map[string]string, 128)}
-}
-
 type FakeDnsTun struct {
 	tunType        int // 3 or 5
 	localSocks     string
@@ -58,6 +52,7 @@ type TunDns struct {
 	dnsAddrV6      string
 	dnsPort        string
 	ip2Domain      *bimap.BiMap
+	fakeDnsCache   *comm.DnsCache
 }
 
 var tunAddr = "10.0.0.2"
@@ -85,6 +80,7 @@ func (fakeDns *FakeDnsTun) Start(tunType int, udpProxy bool, tunDevice string, _
 	}
 
 	fakeDns.tunDns.ip2Domain = bimap.NewBiMap()
+	fakeDns.tunDns.fakeDnsCache = &comm.DnsCache{Cache: make(map[string]string, 128)}
 	fakeDns.tunDns.excludeDomains = make([]string, 0)
 	if fakeDns.tunType == 3 {
 		urlInfo, _ := url.Parse(param.Args.ServerAddr)
@@ -326,6 +322,7 @@ func (tunDns *TunDns) _startSmartDns(clientPort string) {
 	go tunDns.udpServer.ListenAndServe()
 	go tunDns.tcpServer.ListenAndServe()
 	go tunDns.checkDnsChange()
+	go tunDns.clearDnsCache()
 }
 
 func (tunDns *TunDns) Shutdown() {
@@ -444,6 +441,14 @@ func (tunDns *TunDns) ipv4Res(domain string) (*dns.A, error) {
 	}, backErr
 }
 
+/*dns缓存自动清理*/
+func (tunDns *TunDns) clearDnsCache() {
+	for tunDns.run {
+		tunDns.fakeDnsCache.Free()
+		time.Sleep(time.Second * 60)
+	}
+}
+
 /*检测旧dns改变*/
 func (tunDns *TunDns) checkDnsChange() {
 	for tunDns.run {
@@ -528,7 +533,7 @@ func (tunDns *TunDns) localResolve(domain string, ipType int) (net.IP, uint32, e
 	if ipType == 6 {
 		query.SetQuestion(domain, dns.TypeAAAA)
 	}
-	cache, ttl := fakeDnsCache.ReadDnsCache(domain + ":" + strconv.Itoa(ipType))
+	cache, ttl := tunDns.fakeDnsCache.ReadDnsCache(domain + ":" + strconv.Itoa(ipType))
 	if cache != "" {
 		return net.ParseIP(cache), ttl, nil
 	}
@@ -540,7 +545,7 @@ func (tunDns *TunDns) localResolve(domain string, ipType int) (net.IP, uint32, e
 				if isType {
 					//有些dns会返回127.0.0.1
 					if record.A.String() != "127.0.0.1" {
-						fakeDnsCache.WriteDnsCache(domain+":"+strconv.Itoa(ipType), record.Hdr.Ttl, record.A.String())
+						tunDns.fakeDnsCache.WriteDnsCache(domain+":"+strconv.Itoa(ipType), record.Hdr.Ttl, record.A.String())
 						return record.A, record.Hdr.Ttl, nil
 					}
 				}
@@ -548,7 +553,7 @@ func (tunDns *TunDns) localResolve(domain string, ipType int) (net.IP, uint32, e
 			if ipType == 6 {
 				record, isType := v.(*dns.AAAA)
 				if isType {
-					fakeDnsCache.WriteDnsCache(domain+":"+strconv.Itoa(ipType), record.Hdr.Ttl, record.AAAA.String())
+					tunDns.fakeDnsCache.WriteDnsCache(domain+":"+strconv.Itoa(ipType), record.Hdr.Ttl, record.AAAA.String())
 					return record.AAAA, record.Hdr.Ttl, nil
 				}
 			}
