@@ -98,6 +98,6 @@ func tcpForward(conn *gonet.TCPConn) error {
 		fmt.Println("tcpForward" + conn.LocalAddr().String() + err.Error())
 		return err
 	}
-	comm.TcpPipe(conn, conn2, time.Minute*5)
+	comm.TcpPipe(conn, conn2, time.Minute*2)
 	return nil
 }

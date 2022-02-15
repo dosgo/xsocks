@@ -170,7 +170,7 @@ func handleRemoteRequest(clientConn net.Conn, udpAddr *net.UDPAddr) {
 			defer server.Close()
 			clientConn.Write([]byte{0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}) //响应客户端连接成功
 			//进行转发
-			comm.TcpPipe(server, clientConn, time.Minute*5)
+			comm.TcpPipe(server, clientConn, time.Minute*2)
 		}
 		//udp
 		if connectHead[1] == 0x03 {
