@@ -26,16 +26,16 @@ func ForwardTransportFromIo(dev io.ReadWriteCloser, mtu int, tcpCallback comm.Fo
 	go func(_ctx context.Context) {
 		var sendBuffer = new(bytes.Buffer)
 		for {
-			info, res := channelLinkID.ReadContext(_ctx)
-			if !res {
+			info := channelLinkID.ReadContext(_ctx)
+			if info == nil {
 				log.Printf("channelLinkID exit \r\n")
 				break
 			}
-			info.Pkt.Data().AsRange().AsView()
+			info.Data().AsRange().AsView()
 			sendBuffer.Reset()
-			sendBuffer.Write(info.Pkt.NetworkHeader().View())
-			sendBuffer.Write(info.Pkt.TransportHeader().View())
-			sendBuffer.Write(info.Pkt.Data().AsRange().ToOwnedView())
+			sendBuffer.Write(info.NetworkHeader().View())
+			sendBuffer.Write(info.TransportHeader().View())
+			sendBuffer.Write(info.Data().AsRange().ToOwnedView())
 			if sendBuffer.Len() > 0 {
 				dev.Write(sendBuffer.Bytes())
 			}
@@ -50,8 +50,11 @@ func ForwardTransportFromIo(dev io.ReadWriteCloser, mtu int, tcpCallback comm.Fo
 			log.Printf("err:%v", err)
 			break
 		}
+		tmpView := buffer.NewVectorisedView(n, []buffer.View{
+			buffer.NewViewFromBytes(buf[:n]),
+		})
 		channelLinkID.InjectInbound(header.IPv4ProtocolNumber, stack.NewPacketBuffer(stack.PacketBufferOptions{
-			Data: buffer.View(buf[:n]).ToVectorisedView(),
+			Data: tmpView,
 		}))
 	}
 	return nil
