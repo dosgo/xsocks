@@ -210,13 +210,13 @@ func GetNetworkInfo() ([]lAddr, error) {
 	intf, err := net.Interfaces()
 	lAddrs := []lAddr{}
 	if err != nil {
-		log.Fatal("get network info failed: %v", err)
+		log.Printf("get network info failed: %v", err)
 		return nil, err
 	}
 	for _, v := range intf {
 		ips, err := v.Addrs()
 		if err != nil {
-			log.Fatal("get network addr failed: %v", err)
+			log.Printf("get network addr failed: %v", err)
 			return nil, err
 		}
 		//此处过滤loopback（本地回环）和isatap（isatap隧道）

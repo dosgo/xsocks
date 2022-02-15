@@ -50,11 +50,8 @@ func ForwardTransportFromIo(dev io.ReadWriteCloser, mtu int, tcpCallback comm.Fo
 			log.Printf("err:%v", err)
 			break
 		}
-		tmpView := buffer.NewVectorisedView(n, []buffer.View{
-			buffer.NewViewFromBytes(buf[:n]),
-		})
 		channelLinkID.InjectInbound(header.IPv4ProtocolNumber, stack.NewPacketBuffer(stack.PacketBufferOptions{
-			Data: tmpView,
+			Data: buffer.View(buf[:n]).ToVectorisedView(),
 		}))
 	}
 	return nil
