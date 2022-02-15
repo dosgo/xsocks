@@ -424,7 +424,7 @@ func handleLocalRequest(clientConn net.Conn, udpAddr *net.UDPAddr) error {
 					fmt.Printf("read remote error err:%v\r\n ", err)
 					return err
 				}
-				comm.TcpPipe(stream, clientConn, time.Minute*3)
+				comm.StreamPipe(stream, clientConn, time.Minute*3)
 			}
 		}
 		//UDP  代理

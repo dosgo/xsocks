@@ -33,18 +33,33 @@ type CommConn interface {
 	io.ReadWriteCloser
 }
 
-type TimeoutConn struct {
+type CommConnTimeout struct {
 	Conn    CommConn
 	TimeOut time.Duration
 }
 
-func (conn TimeoutConn) Read(buf []byte) (int, error) {
+func (conn CommConnTimeout) Read(buf []byte) (int, error) {
 	conn.Conn.SetDeadline(time.Now().Add(conn.TimeOut))
 	return conn.Conn.Read(buf)
 }
 
-func (conn TimeoutConn) Write(buf []byte) (int, error) {
+func (conn CommConnTimeout) Write(buf []byte) (int, error) {
 	conn.Conn.SetDeadline(time.Now().Add(conn.TimeOut))
+	return conn.Conn.Write(buf)
+}
+
+type NetConnTimeout struct {
+	Conn    net.Conn
+	TimeOut time.Duration
+}
+
+func (conn NetConnTimeout) Read(buf []byte) (int, error) {
+	conn.Conn.SetReadDeadline(time.Now().Add(conn.TimeOut))
+	return conn.Conn.Read(buf)
+}
+
+func (conn NetConnTimeout) Write(buf []byte) (int, error) {
+	conn.Conn.SetWriteDeadline(time.Now().Add(conn.TimeOut))
 	return conn.Conn.Write(buf)
 }
 
@@ -188,12 +203,22 @@ func TunNatSawp(_udpNat *sync.Map, conn *gonet.UDPConn, ep tcpip.Endpoint, dstAd
 	poolNatBuf.Put(buf)
 }
 
-/*tcp swap*/
-func TcpPipe(src CommConn, dst CommConn, duration time.Duration) {
+/*stream swap*/
+func StreamPipe(src CommConn, dst CommConn, duration time.Duration) {
 	defer src.Close()
 	defer dst.Close()
-	srcT := TimeoutConn{src, duration}
-	dstT := TimeoutConn{dst, duration}
+	srcT := CommConnTimeout{src, duration}
+	dstT := CommConnTimeout{dst, duration}
+	go io.Copy(srcT, dstT)
+	io.Copy(dstT, srcT)
+}
+
+/*tcp swap*/
+func TcpPipe(src net.Conn, dst net.Conn, duration time.Duration) {
+	defer src.Close()
+	defer dst.Close()
+	srcT := NetConnTimeout{src, duration}
+	dstT := NetConnTimeout{dst, duration}
 	go io.Copy(srcT, dstT)
 	io.Copy(dstT, srcT)
 }
