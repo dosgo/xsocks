@@ -72,7 +72,7 @@ func Proxy(conn comm.CommConn) {
 		}
 		defer sConn.Close()
 		//交换数据
-		comm.StreamPipe(sConn, conn, time.Minute*10)
+		comm.TcpPipe(sConn, conn, time.Minute*5)
 		break
 	//to tun
 	case 0x03:

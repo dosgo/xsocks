@@ -48,21 +48,6 @@ func (conn CommConnTimeout) Write(buf []byte) (int, error) {
 	return conn.Conn.Write(buf)
 }
 
-type NetConnTimeout struct {
-	Conn    net.Conn
-	TimeOut time.Duration
-}
-
-func (conn NetConnTimeout) Read(buf []byte) (int, error) {
-	conn.Conn.SetReadDeadline(time.Now().Add(conn.TimeOut))
-	return conn.Conn.Read(buf)
-}
-
-func (conn NetConnTimeout) Write(buf []byte) (int, error) {
-	conn.Conn.SetWriteDeadline(time.Now().Add(conn.TimeOut))
-	return conn.Conn.Write(buf)
-}
-
 func GenPasswordHead(password string) string {
 	h := md5.New()
 	h.Write([]byte(password))
@@ -204,21 +189,11 @@ func TunNatSawp(_udpNat *sync.Map, conn *gonet.UDPConn, ep tcpip.Endpoint, dstAd
 }
 
 /*stream swap*/
-func StreamPipe(src CommConn, dst CommConn, duration time.Duration) {
+func TcpPipe(src CommConn, dst CommConn, duration time.Duration) {
 	defer src.Close()
 	defer dst.Close()
 	srcT := CommConnTimeout{src, duration}
 	dstT := CommConnTimeout{dst, duration}
-	go io.Copy(srcT, dstT)
-	io.Copy(dstT, srcT)
-}
-
-/*tcp swap*/
-func TcpPipe(src net.Conn, dst net.Conn, duration time.Duration) {
-	defer src.Close()
-	defer dst.Close()
-	srcT := NetConnTimeout{src, duration}
-	dstT := NetConnTimeout{dst, duration}
 	go io.Copy(srcT, dstT)
 	io.Copy(dstT, srcT)
 }
