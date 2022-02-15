@@ -115,6 +115,7 @@ func SocksUdpGate(conn *gonet.UDPConn, gateAddr string, dstAddr *net.UDPAddr) er
 			buffer.Reset()
 			buffer.Write(UdpHeadEncode(dstAddr))
 			buffer.Write(b1[:n])
+			gateConn.SetWriteDeadline(time.Now().Add(1 * time.Minute))
 			_, _ = gateConn.Write(buffer.Bytes())
 		}
 	}()
@@ -129,7 +130,11 @@ func SocksUdpGate(conn *gonet.UDPConn, gateAddr string, dstAddr *net.UDPAddr) er
 		if err != nil {
 			return nil
 		}
-		_, _ = conn.Write(b2[dataStart:n])
+		conn.SetWriteDeadline(time.Now().Add(1 * time.Minute))
+		_, err = conn.Write(b2[dataStart:n])
+		if err != nil {
+			return err
+		}
 	}
 }
 

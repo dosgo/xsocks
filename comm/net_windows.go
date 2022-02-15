@@ -188,8 +188,9 @@ func GetOldDns(dnsAddr string, tunGW string, _tunGW string) string {
 }
 
 func GetDnsServerByIfIndex(ifIndex uint32) ([]string, bool, bool) {
+	var adapters = []NetworkAdapter{}
 	//DNSServerSearchOrder
-	adapters, err := GetNetworkAdapter()
+	err := GetNetworkAdapter(adapters)
 	var isIpv6 = false
 	if err != nil {
 		return nil, false, isIpv6
@@ -220,14 +221,14 @@ type NetworkAdapter struct {
 	SettingID            string
 }
 
-func GetNetworkAdapter() ([]NetworkAdapter, error) {
-	var s = []NetworkAdapter{}
+func GetNetworkAdapter(s []NetworkAdapter) error {
+	//var s = []NetworkAdapter{}
 	err := wmi.Query("SELECT Caption,SettingID,InterfaceIndex,DNSServerSearchOrder,DefaultIPGateway,ServiceName,IPAddress,IPSubnet,DHCPEnabled       FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled=True", &s) // WHERE (BIOSVersion IS NOT NULL)
 	if err != nil {
 		log.Printf("err:%v\r\n", err)
-		return nil, err
+		return err
 	}
-	return s, nil
+	return nil
 }
 func SetNetConf(dnsIpv4 string, dnsIpv6 string) {
 

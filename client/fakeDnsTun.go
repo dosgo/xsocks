@@ -456,7 +456,7 @@ func (tunDns *TunDns) checkDnsChange() {
 			time.Sleep(time.Second * 10)
 			continue
 		}
-		conn, err := net.DialTimeout("tcp", tunDns.dnsClientConn.RemoteAddr().String(), 1)
+		conn, err := net.DialTimeout("tcp", tunDns.dnsClientConn.RemoteAddr().String(), time.Second*1)
 		//可能dns变了，
 		if err != nil {
 			oldDns := comm.GetOldDns(tunDns.dnsAddr, tunGW, "")
