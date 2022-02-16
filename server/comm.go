@@ -173,14 +173,14 @@ func tcpToTun(conn comm.CommConn) {
 		var sendBuffer = new(bytes.Buffer)
 		var packLenByte []byte = make([]byte, 2)
 		for {
-			pkt, res := channelLinkID.ReadContext(ctx)
-			if !res {
+			pkt := channelLinkID.ReadContext(ctx)
+			if pkt==nil {
 				break
 			}
 			buffer.Reset()
-			buffer.Write(pkt.Pkt.NetworkHeader().View())
-			buffer.Write(pkt.Pkt.TransportHeader().View())
-			buffer.Write(pkt.Pkt.Data().AsRange().ToOwnedView())
+			buffer.Write(pkt.NetworkHeader().View())
+			buffer.Write(pkt.TransportHeader().View())
+			buffer.Write(pkt.Data().AsRange().ToOwnedView())
 			if buffer.Len() > 0 {
 				binary.LittleEndian.PutUint16(packLenByte, uint16(buffer.Len()))
 				sendBuffer.Reset()
