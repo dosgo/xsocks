@@ -51,9 +51,7 @@ func ForwardTransportFromIo(dev io.ReadWriteCloser, mtu int, tcpCallback comm.Fo
 			break
 		}
 		pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
-			Data: buffer.NewVectorisedView(n, []buffer.View{
-				buffer.NewViewFromBytes(buf[:n]),
-			}),
+			Data: buffer.NewViewFromBytes(buf[:n]).ToVectorisedView(),
 		})
 		channelLinkID.InjectInbound(header.IPv4ProtocolNumber, pkt)
 		pkt.DecRef()
