@@ -9,6 +9,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/link/channel"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
@@ -31,13 +32,13 @@ type UdpForwarderCall func(conn *gonet.UDPConn, ep tcpip.Endpoint) error
 func NewDefaultStack(mtu int, tcpCallback ForwarderCall, udpCallback UdpForwarderCall) (*stack.Stack, *channel.Endpoint, error) {
 
 	_netStack := stack.New(stack.Options{
-		NetworkProtocols:   []stack.NetworkProtocolFactory{ipv4.NewProtocol},
+		NetworkProtocols:   []stack.NetworkProtocolFactory{ipv4.NewProtocol,ipv6.NewProtocol},
 		TransportProtocols: []stack.TransportProtocolFactory{tcp.NewProtocol, udp.NewProtocol}})
 
 	//转发开关,必须
 	//_netStack.SetForwarding(ipv4.ProtocolNumber,true);
 	_netStack.SetForwardingDefaultAndAllNICs(ipv4.ProtocolNumber, true)
-	//_netStack.SetForwardingDefaultAndAllNICs(ipv6.ProtocolNumber, true);
+	_netStack.SetForwardingDefaultAndAllNICs(ipv6.ProtocolNumber, true);
 	var nicid tcpip.NICID = 1
 	macAddr, err := net.ParseMAC("de:ad:be:ee:ee:ef")
 	if err != nil {
