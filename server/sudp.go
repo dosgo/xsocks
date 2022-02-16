@@ -92,15 +92,15 @@ func newTun(_stack *stack.Stack, channelLinkID *channel.Endpoint,addr net.Addr,u
 	defer fmt.Printf("channelLinkID recv exit \r\n");
 	ctx, cancel := context.WithCancel(context.Background())
 	for {
-			pkt,res :=channelLinkID.ReadContext(ctx)
-			if !res {
+			pkt :=channelLinkID.ReadContext(ctx)
+			if pkt==nil {
 				break;
 			}
 			tunKeep.Store(addr.String(),keepInfo{cancel:cancel,lastTime: time.Now().Unix()});
 			buffer.Reset()
-			buffer.Write(pkt.Pkt.NetworkHeader().View())
-			buffer.Write(pkt.Pkt.TransportHeader().View())
-			buffer.Write(pkt.Pkt.Data().AsRange().ToOwnedView())
+			buffer.Write(pkt.NetworkHeader().View())
+			buffer.Write(pkt.TransportHeader().View())
+			buffer.Write(pkt.Data().AsRange().ToOwnedView())
 			if buffer.Len()>0 {
 				ciphertext,err:=aesGcm.AesGcm(buffer.Bytes(),true);
 				if err==nil {
