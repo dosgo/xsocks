@@ -29,16 +29,20 @@ var remoteTunUdpNat sync.Map
 var udpLimit sync.Map
 
 func InjectInbound(channelLinkID *channel.Endpoint, buf []byte) error {
-	tmpView := buffer.NewVectorisedView(len(buf), []buffer.View{
-		buffer.NewViewFromBytes(buf),
-	})
 	if channelLinkID == nil {
 		log.Println("channelLinkID nil")
 		return errors.New("channelLinkID nil")
 	}
-	channelLinkID.InjectInbound(header.IPv4ProtocolNumber, stack.NewPacketBuffer(stack.PacketBufferOptions{
-		Data: tmpView,
-	}))
+	pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
+		Data: buffer.View(buf).ToVectorisedView(),
+	})
+	switch header.IPVersion(buf[:]) {
+	case header.IPv4Version:
+		channelLinkID.InjectInbound(header.IPv4ProtocolNumber, pkt)
+	case header.IPv6Version:
+		channelLinkID.InjectInbound(header.IPv6ProtocolNumber, pkt)
+	}
+	pkt.DecRef()
 	return nil
 }
 
