@@ -53,7 +53,13 @@ func ForwardTransportFromIo(dev io.ReadWriteCloser, mtu int, tcpCallback comm.Fo
 		pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
 			Data: buffer.NewViewFromBytes(buf[:n]).ToVectorisedView(),
 		})
-		channelLinkID.InjectInbound(header.IPv4ProtocolNumber, pkt)
+		//channelLinkID.InjectInbound(header.IPv4ProtocolNumber, pkt)
+		switch header.IPVersion(buf[:]) {
+		case header.IPv4Version:
+			channelLinkID.InjectInbound(header.IPv4ProtocolNumber, pkt)
+		case header.IPv6Version:
+			channelLinkID.InjectInbound(header.IPv6ProtocolNumber, pkt)
+		}
 		pkt.DecRef()
 	}
 	return nil
