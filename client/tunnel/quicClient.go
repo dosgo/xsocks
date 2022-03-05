@@ -4,27 +4,28 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/dosgo/xsocks/comm"
-	"github.com/dosgo/xsocks/comm/udpHeader"
-	"github.com/dosgo/xsocks/param"
-	"github.com/lucas-clemente/quic-go"
 	"log"
 	"net"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/dosgo/xsocks/comm"
+	"github.com/dosgo/xsocks/comm/udpHeader"
+	"github.com/lucas-clemente/quic-go"
 )
+
 var quicDialer *QuicDialer
 
-func init(){
+func init() {
 	quicDialer = &QuicDialer{}
 }
-var num int64=0;
 
+var num int64 = 0
 
 type QuicDialer struct {
-	sess           quic.Session
-	udpConn  *udpHeader.UdpConn;
+	sess    quic.Session
+	udpConn *udpHeader.UdpConn
 	sync.Mutex
 }
 
@@ -32,63 +33,60 @@ func NewQuicDialer() *QuicDialer {
 	return quicDialer
 }
 
-func ClearQuicDialer(){
-	sess:= quicDialer.GetSess();
-	if sess!=nil {
+func ClearQuicDialer() {
+	sess := quicDialer.GetSess()
+	if sess != nil {
 		sess.CloseWithError(2021, "deadlocks error close")
 	}
 }
 
-
-func (qd *QuicDialer) Connect(quicAddr string) error{
-	qd.Lock();
-	defer qd.Unlock();
-	if qd.sess!=nil {
+func (qd *QuicDialer) Connect(quicAddr string) error {
+	qd.Lock()
+	defer qd.Unlock()
+	if qd.sess != nil {
 		qd.sess.CloseWithError(2021, "OpenStreamSync error")
 	}
-	var maxIdleTimeout=time.Minute*5;
-
+	var maxIdleTimeout = time.Minute * 5
 
 	var quicConfig = &quic.Config{
-	//	MaxIncomingStreams:                    32,
-	//	MaxIncomingUniStreams:                 -1,              // disable unidirectional streams
-		Versions: []quic.VersionNumber{quic.Version1},
-		MaxIdleTimeout:maxIdleTimeout,
-		KeepAlive: true,
+		//	MaxIncomingStreams:                    32,
+		//	MaxIncomingUniStreams:                 -1,              // disable unidirectional streams
+		Versions:       []quic.VersionNumber{quic.Version1},
+		MaxIdleTimeout: maxIdleTimeout,
+		KeepAlive:      true,
 	}
-
 
 	tlsConf := &tls.Config{
 		InsecureSkipVerify: true,
-		NextProtos:   []string{param.Args.Password,"quic-echo-example"},
+		NextProtos:         []string{"quic-xsocks", "quic-echo-example"},
 	}
 	udpAddr, err := net.ResolveUDPAddr("udp", quicAddr)
 	if err != nil {
-		log.Printf("err:%v\r\n",err)
-		return  err
+		log.Printf("err:%v\r\n", err)
+		return err
 	}
 	_udpConn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4zero, Port: 0})
 	if err != nil {
-		log.Printf("err:%v\r\n",err)
-		return  err
+		log.Printf("err:%v\r\n", err)
+		return err
 	}
 	//udp fob
-	udpConn := udpHeader.NewUdpConn(_udpConn);
+	udpConn := udpHeader.NewUdpConn(_udpConn)
 
-	sess, err := quic.DialEarly(udpConn,udpAddr,quicAddr,tlsConf, quicConfig)
+	sess, err := quic.DialEarly(udpConn, udpAddr, quicAddr, tlsConf, quicConfig)
 	if err != nil {
-		log.Printf("err:%v udpAddr:%v _udpConn:%v\r\n",err,udpAddr,_udpConn)
+		log.Printf("err:%v udpAddr:%v _udpConn:%v\r\n", err, udpAddr, _udpConn)
 		return err
 	}
 	qd.sess = sess
-	qd.udpConn=udpConn;
-	atomic.StoreInt64(&num,0)
-	return nil;
+	qd.udpConn = udpConn
+	atomic.StoreInt64(&num, 0)
+	return nil
 }
 
-func (qd *QuicDialer) GetSess() quic.Session{
-	qd.Lock();
-	defer qd.Unlock();
+func (qd *QuicDialer) GetSess() quic.Session {
+	qd.Lock()
+	defer qd.Unlock()
 	return qd.sess
 }
 
@@ -101,31 +99,28 @@ func isActive(s quic.Session) bool {
 	}
 }
 
-
-
-func (qd *QuicDialer) Dial(quicAddr string,remoteAddr string) (comm.CommConn, error) {
-	atomic.AddInt64(&num,1)
-	var retryNum=0;
-	fmt.Printf("num:%d\r\n", num);
-	for{
-		if retryNum>3 {
-			break;
+func (qd *QuicDialer) Dial(quicAddr string, remoteAddr string) (comm.CommConn, error) {
+	atomic.AddInt64(&num, 1)
+	var retryNum = 0
+	fmt.Printf("num:%d\r\n", num)
+	for {
+		if retryNum > 3 {
+			break
 		}
-		sess:=qd.GetSess();
-		if sess==nil||!isActive(sess){
-			qd.Connect(quicAddr);
-			retryNum++;
-			continue;
+		sess := qd.GetSess()
+		if sess == nil || !isActive(sess) {
+			qd.Connect(quicAddr)
+			retryNum++
+			continue
 		}
 		stream, err := sess.OpenStream()
 		if err != nil {
-			log.Printf("err:%v\r\n",err)
-			qd.Connect(quicAddr);
-			retryNum++;
-			continue;
+			log.Printf("err:%v\r\n", err)
+			qd.Connect(quicAddr)
+			retryNum++
+			continue
 		}
 		return stream, nil
 	}
-	return nil,errors.New("retryNum>3")
+	return nil, errors.New("retryNum>3")
 }
-
