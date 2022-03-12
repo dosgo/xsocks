@@ -64,8 +64,8 @@ var ipv6To4 sync.Map
 func (fakeDns *FakeDnsTun) Start(tunType int, udpProxy bool, tunDevice string, _tunAddr string, _tunMask string, _tunGW string, tunDNS string) {
 	fakeDns.tunType = tunType
 	fakeDns.udpProxy = udpProxy
-	//start local dns
-	fakeDns.tunDns = &TunDns{dnsPort: "53", dnsAddr: "127.0.0.1", dnsAddrV6: "0:0:0:0:0:0:0:1"}
+	//start local dns  (Compatible with openvpn using port 653)
+	fakeDns.tunDns = &TunDns{dnsPort: "653", dnsAddr: "127.0.0.1", dnsAddrV6: "0:0:0:0:0:0:0:1"}
 	if fakeDns.tunType == 3 {
 		fakeDns.localSocks = param.Args.Sock5Addr
 	}
@@ -373,6 +373,7 @@ func (tunDns *TunDns) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	var err error
 	switch r.Question[0].Qtype {
 	case dns.TypeA:
+		fmt.Printf("r.Question[0]:%+v\r\n", r.Question[0].Name)
 		msg, err = tunDns.doIPv4Query(r)
 		break
 	case dns.TypeAAAA:
