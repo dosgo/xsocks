@@ -113,8 +113,6 @@ func GetGatewayIndex() uint32 {
 	var forwardMask uint32 = 0
 	for _, row := range rows {
 		if routetable.Inet_ntoa(row.ForwardDest, false) == "0.0.0.0" {
-			fmt.Printf("row.ForwardMask:%d\r\n", row.ForwardMask)
-
 			if minMetric == 0 {
 				minMetric = row.ForwardMetric1
 				ifIndex = row.ForwardIfIndex
