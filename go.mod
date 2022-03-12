@@ -20,7 +20,7 @@ require (
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20220128215802-99c3d69c2c27
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
-	golang.zx2c4.com/wireguard v0.0.0-20211209221555-9c9e7e272434
+	golang.zx2c4.com/wireguard v0.0.0-20220310012736-ae6bc4dd64e1
 	golang.zx2c4.com/wireguard/windows v0.5.1
 	gvisor.dev/gvisor v0.0.0-20220214215919-2394c1fdd0c3
 )
