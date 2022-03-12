@@ -373,7 +373,6 @@ func (tunDns *TunDns) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	var err error
 	switch r.Question[0].Qtype {
 	case dns.TypeA:
-		fmt.Printf("r.Question[0]:%+v\r\n", r.Question[0].Name)
 		msg, err = tunDns.doIPv4Query(r)
 		break
 	case dns.TypeAAAA:
