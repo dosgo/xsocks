@@ -13,8 +13,8 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/StackExchange/wmi"
 	routetable "github.com/yijunjun/route-table"
+	"github.com/yusufpapurcu/wmi"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 )
