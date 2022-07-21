@@ -20,7 +20,6 @@ func StartQuic(_addr string) error {
 	var quicConfig = &quic.Config{
 		MaxIncomingStreams:    72,
 		MaxIncomingUniStreams: -1, // disable unidirectional streams
-		KeepAlive:             true,
 		MaxIdleTimeout:        time.Minute * 5,
 	}
 	addr, err := net.ResolveUDPAddr("udp", _addr)
@@ -52,7 +51,7 @@ func StartQuic(_addr string) error {
 }
 
 /* to socks server*/
-func quicToSocks5(sess quic.Session) {
+func quicToSocks5(sess quic.Connection) {
 	for {
 		stream, err := sess.AcceptStream(context.Background())
 		if err != nil {
