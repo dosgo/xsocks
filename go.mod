@@ -9,7 +9,7 @@ require (
 	github.com/lucas-clemente/quic-go v0.28.0
 	github.com/miekg/dns v1.1.50
 	github.com/songgao/water v0.0.0-20200317203138-2b4b6d7c09d8
-	github.com/vishalkuo/bimap v0.0.0-20180703190407-09cff2814645
+	github.com/vishalkuo/bimap v0.0.0-20220718221914-6dad504cbbcc
 	github.com/xtaci/kcp-go/v5 v5.6.1
 	github.com/xtaci/smux v1.5.16
 	github.com/yijunjun/route-table v0.0.0-20160321072918-9608fc1e2e44
@@ -22,5 +22,5 @@ require (
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
 	golang.zx2c4.com/wireguard v0.0.0-20220703234212-c31a7b1ab478
 	golang.zx2c4.com/wireguard/windows v0.5.1
-	gvisor.dev/gvisor v0.0.0-20220214215919-2394c1fdd0c3
+	gvisor.dev/gvisor v0.0.0-20220720225807-f3c99479d588
 )

@@ -7,7 +7,7 @@ import (
 	"log"
 
 	"github.com/dosgo/xsocks/comm"
-	"gvisor.dev/gvisor/pkg/tcpip/buffer"
+	"gvisor.dev/gvisor/pkg/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
@@ -50,8 +50,9 @@ func ForwardTransportFromIo(dev io.ReadWriteCloser, mtu int, tcpCallback comm.Fo
 			log.Printf("err:%v", err)
 			break
 		}
+
 		pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
-			Data: buffer.NewViewFromBytes(buf[:n]).ToVectorisedView(),
+			Payload: buffer.NewWithData(buf[:n]),
 		})
 		//channelLinkID.InjectInbound(header.IPv4ProtocolNumber, pkt)
 		switch header.IPVersion(buf[:]) {
