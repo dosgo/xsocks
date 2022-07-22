@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/netip"
 	"os"
 	"runtime"
 	"unsafe"
@@ -114,11 +115,11 @@ func RegTunDev(tunDevice string, tunAddr string, tunMask string, tunGW string, t
 }
 func setInterfaceAddress4(tunDev *tun.NativeTun, addr, mask, gateway, tunDNS string) error {
 	luid := winipcfg.LUID(tunDev.LUID())
-	addresses := append([]net.IPNet{}, net.IPNet{
+	ipnet := net.IPNet{
 		IP:   net.ParseIP(addr).To4(),
 		Mask: net.IPMask(net.ParseIP(mask).To4()),
-	})
-
+	}
+	addresses := append([]netip.Prefix{}, netip.MustParsePrefix(ipnet.String()))
 	err := luid.SetIPAddressesForFamily(windows.AF_INET, addresses)
 	if errors.Is(err, windows.ERROR_OBJECT_ALREADY_EXISTS) {
 		cleanupAddressesOnDisconnectedInterfaces(windows.AF_INET, addresses)
@@ -128,7 +129,7 @@ func setInterfaceAddress4(tunDev *tun.NativeTun, addr, mask, gateway, tunDNS str
 		return err
 	}
 
-	err = luid.SetDNS(windows.AF_INET, []net.IP{net.ParseIP(tunDNS).To4()}, []string{})
+	err = luid.SetDNS(windows.AF_INET, []netip.Addr{netip.MustParseAddr(tunDNS)}, []string{})
 	return err
 }
 
@@ -136,10 +137,11 @@ func setInterfaceAddress4(tunDev *tun.NativeTun, addr, mask, gateway, tunDNS str
 func setInterfaceAddress6(tunDev *tun.NativeTun, addr, mask, gateway, tunDNS string) error {
 	luid := winipcfg.LUID(tunDev.LUID())
 
-	addresses := append([]net.IPNet{}, net.IPNet{
+	ipnet := net.IPNet{
 		IP:   net.ParseIP(addr).To16(),
 		Mask: net.IPMask(net.ParseIP(mask).To16()),
-	})
+	}
+	addresses := append([]netip.Prefix{}, netip.MustParsePrefix(ipnet.String()))
 
 	err := luid.SetIPAddressesForFamily(windows.AF_INET6, addresses)
 	if errors.Is(err, windows.ERROR_OBJECT_ALREADY_EXISTS) {
@@ -150,7 +152,7 @@ func setInterfaceAddress6(tunDev *tun.NativeTun, addr, mask, gateway, tunDNS str
 		return err
 	}
 
-	err = luid.SetDNS(windows.AF_INET6, []net.IP{net.ParseIP(tunDNS).To16()}, []string{})
+	err = luid.SetDNS(windows.AF_INET6, []netip.Addr{netip.MustParseAddr(tunDNS)}, []string{})
 	return err
 }
 
@@ -163,4 +165,4 @@ func determineGUID(name string) *windows.GUID {
 }
 
 //go:linkname cleanupAddressesOnDisconnectedInterfaces golang.zx2c4.com/wireguard/windows/tunnel.cleanupAddressesOnDisconnectedInterfaces
-func cleanupAddressesOnDisconnectedInterfaces(family winipcfg.AddressFamily, addresses []net.IPNet)
+func cleanupAddressesOnDisconnectedInterfaces(family winipcfg.AddressFamily, addresses []netip.Prefix)
