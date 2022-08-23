@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"golang.org/x/time/rate"
-	"gvisor.dev/gvisor/pkg/buffer"
+	"gvisor.dev/gvisor/pkg/bufferv2"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/link/channel"
@@ -35,7 +35,7 @@ func InjectInbound(channelLinkID *channel.Endpoint, buf []byte) error {
 	}
 
 	pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
-		Payload: buffer.NewWithData(buf),
+		Payload: bufferv2.MakeWithData(buf),
 	})
 	switch header.IPVersion(buf[:]) {
 	case header.IPv4Version:

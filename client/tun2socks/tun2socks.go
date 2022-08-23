@@ -7,7 +7,8 @@ import (
 	"log"
 
 	"github.com/dosgo/xsocks/comm"
-	"gvisor.dev/gvisor/pkg/tcpip/buffer"
+
+	"gvisor.dev/gvisor/pkg/bufferv2"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
@@ -31,11 +32,12 @@ func ForwardTransportFromIo(dev io.ReadWriteCloser, mtu int, tcpCallback comm.Fo
 				log.Printf("channelLinkID exit \r\n")
 				break
 			}
-			info.Data().AsRange().AsView()
 			sendBuffer.Reset()
-			sendBuffer.Write(info.NetworkHeader().View())
-			sendBuffer.Write(info.TransportHeader().View())
-			sendBuffer.Write(info.Data().AsRange().ToOwnedView())
+			sendBuffer.Write(info.NetworkHeader().View().AsSlice())
+			sendBuffer.Write(info.TransportHeader().View().AsSlice())
+			//sendBuffer.Write(info.Data().AsRange().ToView().AsSlice())
+			sendBuffer.Write(info.Data().AsRange().ToView().ToSlice())
+
 			if sendBuffer.Len() > 0 {
 				dev.Write(sendBuffer.Bytes())
 			}
@@ -50,11 +52,21 @@ func ForwardTransportFromIo(dev io.ReadWriteCloser, mtu int, tcpCallback comm.Fo
 			log.Printf("err:%v", err)
 			break
 		}
+		//hdr := buf[0:14]
+		//	payload := buf[14:n]
+
+		//proto := tcpip.NetworkProtocolNumber(binary.BigEndian.Uint16(buf[12:14]))
 		pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
-			Data: buffer.NewViewFromBytes(buf[:n]).ToVectorisedView(),
+			//ReserveHeaderBytes: len(hdr),
+			Payload:           bufferv2.MakeWithData(buf[:n]),
+			IsForwardedPacket: true,
 		})
+		//pkt.LinkHeader().Push()
+		//copy(pkt.LinkHeader().Push(len(hdr)), hdr)
 		//channelLinkID.InjectInbound(header.IPv4ProtocolNumber, pkt)
-		switch header.IPVersion(buf[:]) {
+		//pkt.LinkHeader()
+
+		switch header.IPVersion(buf[:n]) {
 		case header.IPv4Version:
 			channelLinkID.InjectInbound(header.IPv4ProtocolNumber, pkt)
 		case header.IPv6Version:
