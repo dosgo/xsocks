@@ -1,7 +1,6 @@
 package tun2socks
 
 import (
-	"bytes"
 	"context"
 	"io"
 	"log"
@@ -25,22 +24,14 @@ func ForwardTransportFromIo(dev io.ReadWriteCloser, mtu int, tcpCallback comm.Fo
 
 	// write tun
 	go func(_ctx context.Context) {
-		var sendBuffer = new(bytes.Buffer)
 		for {
 			info := channelLinkID.ReadContext(_ctx)
 			if info == nil {
 				log.Printf("channelLinkID exit \r\n")
 				break
 			}
-			sendBuffer.Reset()
-			sendBuffer.Write(info.NetworkHeader().View().AsSlice())
-			sendBuffer.Write(info.TransportHeader().View().AsSlice())
-			//sendBuffer.Write(info.Data().AsRange().ToView().AsSlice())
-			sendBuffer.Write(info.Data().AsRange().ToView().ToSlice())
-
-			if sendBuffer.Len() > 0 {
-				dev.Write(sendBuffer.Bytes())
-			}
+			info.ToView().WriteTo(dev)
+			info.DecRef()
 		}
 	}(ctx)
 
@@ -58,15 +49,15 @@ func ForwardTransportFromIo(dev io.ReadWriteCloser, mtu int, tcpCallback comm.Fo
 		//proto := tcpip.NetworkProtocolNumber(binary.BigEndian.Uint16(buf[12:14]))
 		pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
 			//ReserveHeaderBytes: len(hdr),
-			Payload:           bufferv2.MakeWithData(buf[:n]),
-			IsForwardedPacket: true,
+			Payload: bufferv2.MakeWithData(buf[:n]),
+			//IsForwardedPacket: true,
 		})
 		//pkt.LinkHeader().Push()
 		//copy(pkt.LinkHeader().Push(len(hdr)), hdr)
 		//channelLinkID.InjectInbound(header.IPv4ProtocolNumber, pkt)
 		//pkt.LinkHeader()
 
-		switch header.IPVersion(buf[:n]) {
+		switch header.IPVersion(buf) {
 		case header.IPv4Version:
 			channelLinkID.InjectInbound(header.IPv4ProtocolNumber, pkt)
 		case header.IPv6Version:
