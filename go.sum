@@ -125,8 +125,8 @@ github.com/dgryski/go-sip13 v0.0.0-20181026042036-e10d5fee7954/go.mod h1:vAd38F8
 github.com/docker/go-units v0.4.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
 github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96/go.mod h1:Qh8CwZgvJUkLughtfhJv5dyTYa91l1fOUCrgjqmcifM=
 github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815/go.mod h1:WwZ+bS3ebgob9U8Nd0kOddGdZWjyMGR8Wziv+TBNwSE=
-github.com/dosgo/go-tun2socks v0.0.0-20220903133818-0fb82fe0855c h1:rdwvQoF5Ii9MOrzqrjOT4+46dtqcaucAXuXqdsDNpwk=
-github.com/dosgo/go-tun2socks v0.0.0-20220903133818-0fb82fe0855c/go.mod h1:2rb4uFHrmdM/vD+NsrvBCZWeMTJe9ZFywnP96gSDiJY=
+github.com/dosgo/go-tun2socks v1.0.0 h1:ZiEVqdX7HP00u/lzlrOjjs6UjV4a01tppunWHXX3PEk=
+github.com/dosgo/go-tun2socks v1.0.0/go.mod h1:2rb4uFHrmdM/vD+NsrvBCZWeMTJe9ZFywnP96gSDiJY=
 github.com/dosgo/xsocks v0.0.0-20220829135017-7da56ad69d8c/go.mod h1:gbRXTccqFWZ1ACXZcg1DshP7Kk+77ePwph8ruTh0dSc=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/elazarl/goproxy v0.0.0-20170405201442-c4fc26588b6e/go.mod h1:/Zj4wYkgs4iZTTu3o/KG3Itv/qCCa8VVMlb3i9OVuzc=
