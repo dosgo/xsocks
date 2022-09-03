@@ -6,6 +6,7 @@ import (
 	"log"
 	"sync"
 
+	"github.com/dosgo/go-tun2socks/core"
 	"golang.org/x/time/rate"
 	"gvisor.dev/gvisor/pkg/bufferv2"
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -50,7 +51,7 @@ func InjectInbound(channelLinkID *channel.Endpoint, buf []byte) error {
 /*start */
 func StartTunStack(mtu uint16) (*stack.Stack, *channel.Endpoint, error) {
 	go autoFree()
-	return comm.NewDefaultStack(int(mtu), tcpForward, udpForward)
+	return core.NewDefaultStack(int(mtu), tcpForward, udpForward)
 }
 
 /*udp 转发*/

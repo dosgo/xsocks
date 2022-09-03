@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dosgo/xsocks/client/tun"
+	"github.com/dosgo/go-tun2socks/tun"
 	"github.com/dosgo/xsocks/client/tunnelcomm"
 	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/comm/udpHeader"
@@ -31,7 +31,7 @@ func (remoteTun *RemoteTun) Start(tunDevice string, tunAddr string, tunMask stri
 	remoteTun.tunGW = tunGW
 	var err error
 	if len(param.Args.UnixSockTun) > 0 {
-		remoteTun.tunDev, err = tun.UsocketToTun(param.Args.UnixSockTun)
+		remoteTun.tunDev, err = SocketToTun(param.Args.UnixSockTun)
 		if err != nil {
 			return err
 		}

@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/cakturk/go-netstat v0.0.0-20200220111822-e5b49efee7a5
+	github.com/dosgo/go-tun2socks v0.0.0-20220903133818-0fb82fe0855c
 	github.com/hashicorp/yamux v0.1.0
 	github.com/imgk/divert-go v0.0.0-20220205193416-faaa83c2c10a
 	github.com/lucas-clemente/quic-go v0.28.0
@@ -19,9 +20,7 @@ require (
 	golang.org/x/net v0.0.0-20220624214902-1bab6f366d9e
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a
-	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
-	golang.zx2c4.com/wireguard v0.0.0-20220703234212-c31a7b1ab478
-	golang.zx2c4.com/wireguard/windows v0.5.3
+	golang.org/x/time v0.0.0-20220210224613-90d013bbcef8
 	gvisor.dev/gvisor v0.0.0-20220826233730-c9c4ccb3f49b
 
 )

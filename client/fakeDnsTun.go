@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dosgo/xsocks/client/tun"
-	"github.com/dosgo/xsocks/client/tun2socks"
+	"github.com/dosgo/go-tun2socks/tun"
+	"github.com/dosgo/go-tun2socks/tun2socks"
 	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/comm/dot"
 	"github.com/dosgo/xsocks/comm/netstat"
@@ -127,7 +127,7 @@ func (fakeDns *FakeDnsTun) _startTun(tunDevice string, _tunAddr string, _tunMask
 	var err error
 	//dnsServers := strings.Split(tunDNS, ",")
 	if len(param.Args.UnixSockTun) > 0 {
-		fakeDns.tunDev, err = tun.UsocketToTun(param.Args.UnixSockTun)
+		fakeDns.tunDev, err = SocketToTun(param.Args.UnixSockTun)
 		if err != nil {
 			return err
 		}

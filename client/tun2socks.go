@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dosgo/xsocks/client/tun"
-	"github.com/dosgo/xsocks/client/tun2socks"
+	"github.com/dosgo/go-tun2socks/tun"
+	"github.com/dosgo/go-tun2socks/tun2socks"
 	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/comm/socks"
 	"github.com/dosgo/xsocks/param"
@@ -35,7 +35,7 @@ func (_tun2socks *Tun2Socks) Start(tunDevice string, tunAddr string, tunMask str
 	_tun2socks.dnsServers = strings.Split(tunDNS, ",")
 	var err error
 	if len(param.Args.UnixSockTun) > 0 {
-		_tun2socks.tunDev, err = tun.UsocketToTun(param.Args.UnixSockTun)
+		_tun2socks.tunDev, err = SocketToTun(param.Args.UnixSockTun)
 		if err != nil { //如果监听失败，一般是文件已存在，需要删除它
 			return err
 		}
