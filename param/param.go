@@ -49,7 +49,6 @@ type ServerParam struct {
 	Sock5Port    string
 	QuicPort     string
 	WebPort      string
-	SudpPort     string
 	KcpPort      string
 	CertFile     string
 	KeyFile      string

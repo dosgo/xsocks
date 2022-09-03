@@ -37,7 +37,6 @@ func Start() {
 	fmt.Println("client run: ./client   -serverAddr \"wss://" + publicIp + ":" + paramParam.WebPort + "\" -caFile xx_ca.pem")
 	fmt.Println("client run: ./client   -serverAddr \"http2://" + publicIp + ":" + paramParam.WebPort + "\" -caFile xx_ca.pem")
 	fmt.Println("client run: ./client   -serverAddr \"kcp://" + publicIp + ":" + paramParam.KcpPort + "\"")
-	fmt.Println("client run: ./client   -tunType 2   -serverAddr \"sudp://" + publicIp + ":" + paramParam.SudpPort + "\"")
 
 	go StartRemoteSocks51("127.0.0.1:" + paramParam.Sock5Port)
 	go StartWeb(publicIp + ":" + paramParam.WebPort)

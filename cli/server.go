@@ -21,7 +21,6 @@ func main() {
 	flag.StringVar(&paramParam.QuicPort, "quicPort", "5002", "quic port")
 	flag.StringVar(&paramParam.WebPort, "webPort", "5003", "websocket port")
 	flag.StringVar(&paramParam.KcpPort, "kcpPort", "5005", "kcp port")
-	flag.StringVar(&paramParam.SudpPort, "sudpPort", "5006", "sudp port")
 	flag.StringVar(&paramParam.Password, "password", "password", "password")
 	flag.StringVar(&paramParam.KeyFile, "keyFile", "", "keyFile")
 	flag.StringVar(&paramParam.CertFile, "certFile", "", "certFile")

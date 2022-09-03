@@ -19,7 +19,7 @@ import (
 	"github.com/vishalkuo/bimap"
 )
 
-//污染的域名不用再尝试解析
+// 污染的域名不用再尝试解析
 var PolluteDomainName sync.Map
 
 type LocalSocks struct {
@@ -36,10 +36,10 @@ func (lSocks *LocalSocks) Start(address string) error {
 	}
 	//start udpProxy
 	var udpAddr *net.UDPAddr
-	if !strings.HasPrefix(param.Args.ServerAddr, "sudp") {
-		lSocks.udpProxy = &UdpProxy{}
-		udpAddr, err = lSocks.udpProxy.startUdpProxy("127.0.0.1:" + param.Args.Sock5UdpPort)
-	}
+
+	lSocks.udpProxy = &UdpProxy{}
+	udpAddr, err = lSocks.udpProxy.startUdpProxy("127.0.0.1:" + param.Args.Sock5UdpPort)
+
 	if err != nil {
 		return err
 	}
