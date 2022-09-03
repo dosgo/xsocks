@@ -18,7 +18,6 @@ type Client struct {
 	lSocks5   *LocalSocks
 	lDns      *LocalDns
 	tun2Socks *Tun2Socks  //tuntype1
-	remoteTun *RemoteTun  //tuntype2
 	fakeDns   *FakeDnsTun //tuntype3
 }
 
@@ -34,9 +33,6 @@ func (c *Client) Shutdown() {
 	}
 	if c.tun2Socks != nil {
 		c.tun2Socks.Shutdown()
-	}
-	if c.remoteTun != nil {
-		c.remoteTun.Shutdown()
 	}
 	//关闭代理
 	if param.Args.TunType == 4 && runtime.GOOS == "windows" {
@@ -86,12 +82,8 @@ func (c *Client) Start() error {
 	}
 	//2==tun2remote tun (android)
 	if param.Args.TunType == 2 {
-		if runtime.GOOS == "windows" {
-			fmt.Printf("Windows does not support the TUNTYPE 2 parameter, use TUNTYPE 3\r\n")
-		} else {
-			c.remoteTun = &RemoteTun{}
-			c.remoteTun.Start("", "", "", "", "")
-		}
+		fmt.Printf("does not support the TUNTYPE 2 parameter, use TUNTYPE 3\r\n")
+		return nil
 	}
 	//windows + linux +mac
 	if param.Args.TunType == 3 {
