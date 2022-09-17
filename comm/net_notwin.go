@@ -4,7 +4,6 @@
 package comm
 
 import (
-	"github.com/songgao/water"
 	"net"
 	"os"
 	"os/exec"
@@ -30,13 +29,7 @@ func GetLocalAddresses() ([]lAddr, error) {
 	return lAddrs, nil
 }
 
-func GetWaterConf(tunAddr string, tunMask string) water.Config {
-	config := water.Config{
-		DeviceType: water.TUN,
-	}
-	config.Name = "tun2"
-	return config
-}
+
 
 func SetNetConf(dnsIpv4 string, dnsIpv6 string) {
 	var dnsByte = []byte("nameserver " + dnsIpv4 + "\n")

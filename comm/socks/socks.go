@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dosgo/go-tun2socks/core"
 	"github.com/dosgo/xsocks/comm"
-	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 )
 
 /*socks 5 udp header*/
@@ -94,7 +94,7 @@ func UdpProxyRes(clientConn net.Conn, udpAddr *net.UDPAddr) error {
 }
 
 /*socks5  udp gate 这里必须保持socks5兼容 */
-func SocksUdpGate(conn *gonet.UDPConn, gateAddr string, dstAddr *net.UDPAddr) error {
+func SocksUdpGate(conn core.CommUDPConn, gateAddr string, dstAddr *net.UDPAddr) error {
 	defer conn.Close()
 	gateConn, err := net.DialTimeout("udp", gateAddr, time.Second*15)
 	if err != nil {

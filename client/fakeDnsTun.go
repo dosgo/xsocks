@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dosgo/go-tun2socks/core"
 	"github.com/dosgo/go-tun2socks/tun"
 	"github.com/dosgo/go-tun2socks/tun2socks"
 	"github.com/dosgo/xsocks/comm"
@@ -24,8 +25,6 @@ import (
 	"github.com/miekg/dns"
 	"github.com/vishalkuo/bimap"
 	"golang.org/x/time/rate"
-	"gvisor.dev/gvisor/pkg/tcpip"
-	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 )
 
 type FakeDnsTun struct {
@@ -163,7 +162,7 @@ func (fakeDns *FakeDnsTun) task() {
 	}
 }
 
-func (fakeDns *FakeDnsTun) tcpForwarder(conn *gonet.TCPConn) error {
+func (fakeDns *FakeDnsTun) tcpForwarder(conn core.CommTCPConn) error {
 	var srcAddr = conn.LocalAddr().String()
 	var srcAddrs = strings.Split(srcAddr, ":")
 	var remoteAddr = ""
@@ -208,7 +207,7 @@ func (fakeDns *FakeDnsTun) tcpForwarder(conn *gonet.TCPConn) error {
 	return nil
 }
 
-func (fakeDns *FakeDnsTun) udpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint) error {
+func (fakeDns *FakeDnsTun) udpForwarder(conn core.CommUDPConn, ep core.CommEndpoint) error {
 	var srcAddr = conn.LocalAddr().String()
 	var remoteAddr = fakeDns.dnsToAddr(srcAddr)
 	if remoteAddr == "" {
@@ -243,7 +242,7 @@ func (fakeDns *FakeDnsTun) udpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint) 
 }
 
 /*直连*/
-func (fakeDns *FakeDnsTun) UdpDirect(remoteAddr string, conn *gonet.UDPConn, ep tcpip.Endpoint) {
+func (fakeDns *FakeDnsTun) UdpDirect(remoteAddr string, conn core.CommUDPConn, ep core.CommEndpoint) {
 	//tuntype 直连
 	var limit *comm.UdpLimit
 	_limit, ok := fakeDns.udpLimit.Load(remoteAddr)

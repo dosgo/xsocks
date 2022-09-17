@@ -9,13 +9,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dosgo/go-tun2socks/core"
 	"github.com/dosgo/go-tun2socks/tun"
 	"github.com/dosgo/go-tun2socks/tun2socks"
 	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/comm/socks"
 	"github.com/dosgo/xsocks/param"
-	"gvisor.dev/gvisor/pkg/tcpip"
-	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 )
 
 type Tun2Socks struct {
@@ -58,7 +57,7 @@ func (_tun2socks *Tun2Socks) Shutdown() {
 	unRegRoute(_tun2socks.tunGW, _tun2socks.remoteAddr, _tun2socks.dnsServers, _tun2socks.oldGw)
 }
 
-func rawTcpForwarder(conn *gonet.TCPConn) error {
+func rawTcpForwarder(conn core.CommTCPConn) error {
 	var remoteAddr = conn.LocalAddr().String()
 	//dns ,use 8.8.8.8
 	if strings.HasSuffix(remoteAddr, ":53") {
@@ -77,7 +76,7 @@ func rawTcpForwarder(conn *gonet.TCPConn) error {
 	return nil
 }
 
-func rawUdpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint) error {
+func rawUdpForwarder(conn core.CommUDPConn, ep core.CommEndpoint) error {
 	//dns port
 	if strings.HasSuffix(conn.LocalAddr().String(), ":53") {
 		dnsReqUdp(conn, ep)
@@ -88,13 +87,13 @@ func rawUdpForwarder(conn *gonet.UDPConn, ep tcpip.Endpoint) error {
 	}
 	return nil
 }
-func dnsReqUdp(conn *gonet.UDPConn, ep tcpip.Endpoint) error {
+func dnsReqUdp(conn core.CommUDPConn, ep core.CommEndpoint) error {
 	comm.TunNatSawp(&tun2UdpNat, conn, ep, "127.0.0.1:"+param.Args.DnsPort, 15*time.Second)
 	return nil
 }
 
 /*to dns*/
-func dnsReqTcp(conn *gonet.TCPConn) error {
+func dnsReqTcp(conn core.CommTCPConn) error {
 	dnsConn, err := net.DialTimeout("tcp", "127.0.0.1:"+param.Args.DnsPort, time.Second*15)
 	if err != nil {
 		fmt.Println(err.Error())

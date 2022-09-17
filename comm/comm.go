@@ -17,9 +17,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dosgo/go-tun2socks/core"
 	"golang.org/x/time/rate"
-	"gvisor.dev/gvisor/pkg/tcpip"
-	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 )
 
 var poolNatBuf = &sync.Pool{
@@ -120,14 +119,14 @@ func GetRandomString(n int) string {
 	return string(result)
 }
 
-//生成32位md5字串
+// 生成32位md5字串
 func GetMd5String(s string) string {
 	h := md5.New()
 	h.Write([]byte(s))
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-//生成Guid字串
+// 生成Guid字串
 func UniqueId(_len int) string {
 	b := make([]byte, 48)
 	if _, err := io.ReadFull(crand.Reader, b); err != nil {
@@ -139,7 +138,7 @@ func UniqueId(_len int) string {
 }
 
 /*udp nat sawp*/
-func TunNatSawp(_udpNat *sync.Map, conn *gonet.UDPConn, ep tcpip.Endpoint, dstAddr string, duration time.Duration) {
+func TunNatSawp(_udpNat *sync.Map, conn core.CommUDPConn, ep core.CommEndpoint, dstAddr string, duration time.Duration) {
 	natKey := conn.RemoteAddr().String() + "_" + dstAddr
 	var remoteConn net.Conn
 	var err error
@@ -151,7 +150,7 @@ func TunNatSawp(_udpNat *sync.Map, conn *gonet.UDPConn, ep tcpip.Endpoint, dstAd
 		}
 		var buffer bytes.Buffer
 		_udpNat.Store(natKey, remoteConn)
-		go func(_remoteConn net.Conn, _conn *gonet.UDPConn) {
+		go func(_remoteConn net.Conn, _conn core.CommUDPConn) {
 			defer ep.Close()
 			defer _udpNat.Delete(natKey)
 			defer _remoteConn.Close()
