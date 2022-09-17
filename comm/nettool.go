@@ -29,17 +29,7 @@ func IntnRange(min, max int) int {
 	return rand.Intn(max-min) + min
 }
 
-func GetCidrIpRange(cidr string) (string, string) {
-	ip := strings.Split(cidr, "/")[0]
-	ipSegs := strings.Split(ip, ".")
-	maskLen, _ := strconv.Atoi(strings.Split(cidr, "/")[1])
-	seg3MinIp, seg3MaxIp := getIpSeg3Range(ipSegs, maskLen)
-	seg4MinIp, seg4MaxIp := getIpSeg4Range(ipSegs, maskLen)
-	ipPrefix := ipSegs[0] + "." + ipSegs[1] + "."
 
-	return ipPrefix + strconv.Itoa(seg3MinIp) + "." + strconv.Itoa(seg4MinIp),
-		ipPrefix + strconv.Itoa(seg3MaxIp) + "." + strconv.Itoa(seg4MaxIp)
-}
 
 //得到第三段IP的区间（第一片段.第二片段.第三片段.第四片段）
 func getIpSeg3Range(ipSegs []string, maskLen int) (int, int) {
@@ -67,15 +57,7 @@ func getIpSegRange(userSegIp, offset uint8) (int, int) {
 	return int(segMinIp), int(segMaxIp)
 }
 
-func IpIsCidr(addr string, mask string, ip string) bool {
-	masks := net.ParseIP(mask).To4()
-	cidr := net.IPNet{IP: net.ParseIP(addr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3])}
-	_, n, err := net.ParseCIDR(cidr.String())
-	if err != nil {
-		return false
-	}
-	return n.Contains(net.ParseIP(ip))
-}
+
 
 func CheckTcp(host string, port string) bool {
 	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), time.Second*1)
