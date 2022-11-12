@@ -24,13 +24,6 @@ func GetGateway() string {
 	return ""
 }
 
-func GetLocalAddresses() ([]lAddr, error) {
-	lAddrs := []lAddr{}
-	return lAddrs, nil
-}
-
-
-
 func SetNetConf(dnsIpv4 string, dnsIpv6 string) {
 	var dnsByte = []byte("nameserver " + dnsIpv4 + "\n")
 	oldByte, _ := os.ReadFile("/etc/resolv.conf")
