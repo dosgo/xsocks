@@ -568,7 +568,7 @@ func (tunDns *TunDns) localResolve(domain string, ipType int) (net.IP, uint32, e
 /*给域名分配私有地址*/
 func allocIpByDomain(domain string, tunDns *TunDns) string {
 	var ip = ""
-	for i := 0; i <= 2; i++ {
+	for i := 0; i <= 10; i++ {
 		ip = comm.GetCidrRandIpByNet(tunAddr, tunMask)
 		_, ok := tunDns.ip2Domain.Get(ip)
 		if !ok && ip != tunAddr {

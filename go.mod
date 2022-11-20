@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/cakturk/go-netstat v0.0.0-20200220111822-e5b49efee7a5
-	github.com/dosgo/go-tun2socks v1.0.7
+	github.com/dosgo/go-tun2socks v1.0.8
 	github.com/hashicorp/yamux v0.1.1
 	github.com/imgk/divert-go v0.0.0-20220205193416-faaa83c2c10a
 	github.com/lucas-clemente/quic-go v0.30.0
