@@ -68,61 +68,49 @@ func CloseSystenProxy() bool {
 }
 
 func GetGateway() string {
-	table, err := routetable.NewRouteTable()
-	if err != nil {
-		return ""
-	}
-	defer table.Close()
-	rows, err := table.Routes()
-	if err != nil {
-		return ""
-	}
-	var minMetric uint32 = 0
-	var gwIp = ""
-	for _, row := range rows {
-		if routetable.Inet_ntoa(row.ForwardDest, false) == "0.0.0.0" {
-
-			if minMetric == 0 {
-				minMetric = row.ForwardMetric1
-				gwIp = routetable.Inet_ntoa(row.ForwardNextHop, false)
-			} else {
-				if row.ForwardMetric1 < minMetric {
-					minMetric = row.ForwardMetric1
-					gwIp = routetable.Inet_ntoa(row.ForwardNextHop, false)
-				}
-			}
-		}
-	}
-	return gwIp
+	item := getGatewayInfo()
+	return item.GwIp
 }
 
-func GetGatewayIndex() uint32 {
+type GatewayInfo struct {
+	GwIp    string
+	IfIndex uint32
+}
+
+func getGatewayInfo() GatewayInfo {
+	var gatewayInfo = GatewayInfo{IfIndex: 0}
 	table, err := routetable.NewRouteTable()
 	if err != nil {
-		return 0
+		return gatewayInfo
 	}
 	defer table.Close()
 	rows, err := table.Routes()
 	if err != nil {
-		return 0
+		return gatewayInfo
 	}
 	var minMetric uint32 = 0
-	var ifIndex uint32 = 0
 	var forwardMask uint32 = 0
 	for _, row := range rows {
 		if routetable.Inet_ntoa(row.ForwardDest, false) == "0.0.0.0" {
 			if minMetric == 0 {
 				minMetric = row.ForwardMetric1
-				ifIndex = row.ForwardIfIndex
+				gatewayInfo.IfIndex = row.ForwardIfIndex
+				gatewayInfo.GwIp = routetable.Inet_ntoa(row.ForwardNextHop, false)
 			} else {
 				if row.ForwardMetric1 < minMetric || row.ForwardMask > forwardMask {
 					minMetric = row.ForwardMetric1
-					ifIndex = row.ForwardIfIndex
+					gatewayInfo.IfIndex = row.ForwardIfIndex
+					gatewayInfo.GwIp = routetable.Inet_ntoa(row.ForwardNextHop, false)
 				}
 			}
 		}
 	}
-	return ifIndex
+	return gatewayInfo
+}
+
+func GetGatewayIndex() uint32 {
+	item := getGatewayInfo()
+	return item.IfIndex
 }
 
 /*获取旧的dns,内网解析用*/
