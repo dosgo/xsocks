@@ -7,11 +7,9 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
 	"os/exec"
 	"strings"
 	"syscall"
-	"unsafe"
 
 	routetable "github.com/yijunjun/route-table"
 	"github.com/yusufpapurcu/wmi"
@@ -127,54 +125,6 @@ func GetGatewayIndex() uint32 {
 	return ifIndex
 }
 
-func getAdapterList() (*syscall.IpAdapterInfo, error) {
-	b := make([]byte, 1000)
-	l := uint32(len(b))
-	a := (*syscall.IpAdapterInfo)(unsafe.Pointer(&b[0]))
-	err := syscall.GetAdaptersInfo(a, &l)
-	if err == syscall.ERROR_BUFFER_OVERFLOW {
-		b = make([]byte, l)
-		a = (*syscall.IpAdapterInfo)(unsafe.Pointer(&b[0]))
-		err = syscall.GetAdaptersInfo(a, &l)
-	}
-	if err != nil {
-		return nil, os.NewSyscallError("GetAdaptersInfo", err)
-	}
-	return a, nil
-}
-
-func GetLocalAddresses() ([]lAddr, error) {
-	lAddrs := []lAddr{}
-	ifaces, err := net.Interfaces()
-	if err != nil {
-		return nil, err
-	}
-
-	aList, err := getAdapterList()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, ifi := range ifaces {
-		for ai := aList; ai != nil; ai = ai.Next {
-			index := ai.Index
-			if ifi.Index == int(index) {
-				ipl := &ai.IpAddressList
-				gwl := &ai.GatewayList
-				for ; ipl != nil; ipl = ipl.Next {
-					itemAddr := lAddr{}
-					itemAddr.Name = ifi.Name
-					itemAddr.IpAddress = fmt.Sprintf("%s", ipl.IpAddress.String)
-					itemAddr.IpMask = fmt.Sprintf("%s", ipl.IpMask.String)
-					itemAddr.GateWay = fmt.Sprintf("%s", gwl.IpAddress.String)
-					lAddrs = append(lAddrs, itemAddr)
-				}
-			}
-		}
-	}
-	return lAddrs, err
-}
-
 /*获取旧的dns,内网解析用*/
 func GetOldDns(dnsAddr string, tunGW string, _tunGW string) string {
 	ifIndex := GetGatewayIndex()
@@ -253,13 +203,16 @@ func AddRoute(tunAddr string, tunGw string, tunMask string) error {
 	}
 	maskAddr := net.IPNet{IP: net.ParseIP(tunAddr), Mask: net.IPv4Mask(masks[0], masks[1], masks[2], masks[3])}
 	maskAddrs := strings.Split(maskAddr.String(), "/")
-	lAdds, err := GetLocalAddresses()
 	var iName = ""
+	ifaces, err := net.Interfaces()
 	if err == nil {
-		for _, v := range lAdds {
-			if strings.Index(v.IpAddress, tunAddr) != -1 {
-				iName = v.Name
-				break
+		for _, ifi := range ifaces {
+			lAdds, _ := ifi.Addrs()
+			for _, v := range lAdds {
+				if strings.Index(v.String(), tunAddr) != -1 {
+					iName = ifi.Name
+					break
+				}
 			}
 		}
 	}
