@@ -318,7 +318,6 @@ func (tunDns *TunDns) _startSmartDns(clientPort string) {
 		WriteTimeout:   time.Duration(10) * time.Second,
 	}
 	tunDns.dnsClientConn, _ = tunDns.dnsClient.Dial(comm.GetOldDns(tunDns.dnsAddr, tunGW, "") + ":53")
-	fmt.Printf("dnsClientConn:%s\r\n", tunDns.dnsClientConn.RemoteAddr().String())
 	go tunDns.udpServer.ListenAndServe()
 	go tunDns.tcpServer.ListenAndServe()
 	go tunDns.checkDnsChange()
