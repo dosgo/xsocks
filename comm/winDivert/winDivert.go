@@ -73,7 +73,7 @@ func RedirectDNS(dnsAddr string, _port string, sendPort string) error {
 		udpheadlen := 8
 		request := recvBuf[ipheadlen+udpheadlen : recvLen]
 		dnsConn.Write(request)
-		dnsConn.SetReadDeadline(time.Now().Add(time.Second * 2))
+		dnsConn.SetReadDeadline(time.Now().Add(time.Second * 12))
 		n, err := dnsConn.Read(dnsRecvBuf)
 		if err == nil {
 			var response = dnsRecvBuf[:n]
