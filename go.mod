@@ -15,6 +15,7 @@ require (
 	github.com/yijunjun/route-table v0.0.0-20160321072918-9608fc1e2e44
 	github.com/yl2chen/cidranger v1.0.2
 	github.com/yusufpapurcu/wmi v1.2.2
+	golang.org/dl v0.0.0-20221101163307-8012bed62c3d // indirect
 	golang.org/x/crypto v0.0.0-20220315160706-3147a52a75dd
 	golang.org/x/net v0.2.0
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
