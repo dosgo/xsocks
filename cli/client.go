@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"log"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -13,11 +14,8 @@ import (
 	"github.com/dosgo/xsocks/param"
 )
 
-func init() {
-	comm.InitLog("")
-}
-
 func main() {
+	comm.InitLog("", log.LstdFlags)
 	//debug server
 	go http.ListenAndServe(":8000", nil)
 

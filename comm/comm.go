@@ -264,7 +264,7 @@ type UdpLimit struct {
 	Expired int64
 }
 
-func InitLog(_logfile string) {
+func InitLog(_logfile string, flag int) {
 	logfile := _logfile
 	if _logfile == "" {
 		logfile = "out.log"
@@ -275,4 +275,5 @@ func InitLog(_logfile string) {
 	}
 	mw := io.MultiWriter(os.Stdout, logFile)
 	log.SetOutput(mw)
+	log.SetFlags(flag)
 }
