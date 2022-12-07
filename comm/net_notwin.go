@@ -85,17 +85,13 @@ func AddRoute(tunAddr string, tunGw string, tunMask string) {
 
 	//clear old
 	cmd1 := CmdHide("route", "delete", "-net", strings.Join(netNat, ".")+"/"+maskAddrs[1])
-	//fmt.Printf("cmd.args:%s\r\n",cmd1.Args)
+	//log.Printf("cmd.args:%s\r\n",cmd1.Args)
 	cmd1.Run()
 	cmd := CmdHide("route", "add", "-net", strings.Join(netNat, ".")+"/"+maskAddrs[1], "gw", tunAddr)
-	//fmt.Printf("cmd.args:%s\r\n",cmd.Args)
+	//log.Printf("cmd.args:%s\r\n",cmd.Args)
 	cmd.Run()
 }
 
 func CmdHide(name string, arg ...string) *exec.Cmd {
 	return exec.Command(name, arg...)
-}
-
-func ExistStdOutput() bool {
-	return true
 }

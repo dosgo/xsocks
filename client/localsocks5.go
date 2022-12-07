@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -162,10 +161,10 @@ func (ut *UdpTunnel) sendRemote(data []byte, localAddr *net.UDPAddr) error {
 
 	tunnel := ut.GetTunnel()
 	if tunnel == nil {
-		fmt.Printf("sendRemote Tunnel null connect\r\n")
+		log.Printf("sendRemote Tunnel null connect\r\n")
 		tunnel, err := ut.Connect()
 		if err != nil {
-			fmt.Printf("sendRemote1\r\n")
+			log.Printf("sendRemote1\r\n")
 			return err
 		}
 		ut.PutTunnel(tunnel)
@@ -188,16 +187,16 @@ func (ut *UdpTunnel) sendRemote(data []byte, localAddr *net.UDPAddr) error {
 	}
 	//失败重新连接
 	if err != nil {
-		fmt.Printf("sendRemote-2\r\n")
+		log.Printf("sendRemote-2\r\n")
 		tunnel, err1 := ut.Connect()
 		if err1 != nil {
-			fmt.Printf("sendRemote2\r\n")
+			log.Printf("sendRemote2\r\n")
 			return err1
 		}
 		ut.PutTunnel(tunnel)
 		_, err = tunnel.Write(sendBuf)
 		if err != nil {
-			fmt.Printf("sendRemote3\r\n")
+			log.Printf("sendRemote3\r\n")
 			return err
 		}
 	}
@@ -220,7 +219,7 @@ func (ut *UdpTunnel) recv() {
 				ut.PutTunnel(_tunnel)
 			} else {
 				time.Sleep(10 * time.Second)
-				fmt.Printf("re TunStream 3 e:%v\r\n", err)
+				log.Printf("re TunStream 3 e:%v\r\n", err)
 			}
 			continue
 		}
@@ -349,19 +348,19 @@ func handleLocalRequest(clientConn net.Conn, udpAddr *net.UDPAddr) error {
 					if err == nil {
 						ip = addr.String()
 					} else {
-						fmt.Printf("dnserr host:%s  addr:%s err:%v\r\n", string(hostBuf), addr.String(), err)
+						log.Printf("dnserr host:%s  addr:%s err:%v\r\n", string(hostBuf), addr.String(), err)
 					}
 				}
 				ipAddr = net.ParseIP(ip)
 				break
 			case 0x04: //IP V6
-				fmt.Printf("ipv6\r\n")
+				log.Printf("ipv6\r\n")
 				_, err = io.ReadFull(clientConn, ipv6)
 				ipAddr = net.IP{ipv6[0], ipv6[1], ipv6[2], ipv6[3], ipv6[4], ipv6[5], ipv6[6], ipv6[7], ipv6[8], ipv6[9], ipv6[10], ipv6[11], ipv6[12], ipv6[13], ipv6[14], ipv6[15]}
 
 				break
 			default:
-				fmt.Printf("default connectHead[3]:%v\r\n", connectHead[3])
+				log.Printf("default connectHead[3]:%v\r\n", connectHead[3])
 				break
 			}
 
@@ -421,7 +420,7 @@ func handleLocalRequest(clientConn net.Conn, udpAddr *net.UDPAddr) error {
 					if strings.Contains(err.Error(), "deadline") {
 						tunnelcomm.ResetTunnel()
 					}
-					fmt.Printf("read remote error err:%v\r\n ", err)
+					log.Printf("read remote error err:%v\r\n ", err)
 					return err
 				}
 				comm.TcpPipe(stream, clientConn, time.Minute*3)

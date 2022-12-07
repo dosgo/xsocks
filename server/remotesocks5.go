@@ -145,17 +145,17 @@ func handleRemoteRequest(clientConn net.Conn, udpAddr *net.UDPAddr) {
 				hostBuf := make([]byte, hostLen[0])
 				_, err = io.ReadFull(clientConn, hostBuf)
 				host = string(hostBuf) //b[4]表示域名的长度
-				fmt.Printf("host:%s\r\n", hostBuf)
+				log.Printf("host:%s\r\n", hostBuf)
 				break
 			case 0x04: //IP V6
-				fmt.Printf("ipv6\r\n")
+				log.Printf("ipv6\r\n")
 				ipv6 := make([]byte, 16)
 				_, err = io.ReadFull(clientConn, ipv6)
 				host = net.IP{ipv6[0], ipv6[1], ipv6[2], ipv6[3], ipv6[4], ipv6[5], ipv6[6], ipv6[7], ipv6[8], ipv6[9], ipv6[10], ipv6[11], ipv6[12], ipv6[13], ipv6[14], ipv6[15]}.String()
 				break
 			}
 			if len(host) == 0 {
-				log.Println("host null\r\n")
+				log.Println("host null")
 				return
 			}
 

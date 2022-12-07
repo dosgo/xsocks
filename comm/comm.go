@@ -68,7 +68,7 @@ func GetFreePort() (string, error) {
 }
 
 func GetFreeUdpPort() (string, error) {
-	addr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
+	addr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:0")
 	l, err := net.ListenUDP("udp", addr)
 	if err != nil {
 		return "0", err
@@ -264,47 +264,15 @@ type UdpLimit struct {
 	Expired int64
 }
 
-func LogOutput(_logfile string) func() {
+func InitLog(_logfile string) {
 	logfile := _logfile
 	if _logfile == "" {
 		logfile = "out.log"
 	}
-	// open file read/write | create if not exist | clear file at open if exists
-	f, err := os.OpenFile(logfile, os.O_WRONLY|os.O_CREATE|os.O_SYNC|os.O_APPEND, 0755)
+	logFile, err := os.OpenFile(logfile, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 	if err != nil {
-		fmt.Printf("ddd:%+v", err)
+		panic(err)
 	}
-	// save existing stdout | MultiWriter writes to saved stdout and file
-	mw := io.MultiWriter(f)
-	if ExistStdOutput() {
-		out := os.Stdout
-		mw = io.MultiWriter(f, out)
-	}
-
-	// get pipe reader and writer | writes to pipe writer come out pipe reader
-	r, w, _ := os.Pipe()
-
-	// replace stdout,stderr with pipe writer | all writes to stdout, stderr will go through pipe instead (fmt.print, log)
-	os.Stdout = w
-	os.Stderr = w
-
-	// writes with log.Print should also write to mw
+	mw := io.MultiWriter(os.Stdout, logFile)
 	log.SetOutput(mw)
-	//create channel to control exit | will block until all copies are finished
-	exit := make(chan bool)
-	go func() {
-		// copy all reads from pipe to multiwriter, which writes to stdout and file
-		_, _ = io.Copy(mw, r)
-		// when r or w is closed copy will finish and true will be sent to channel
-		exit <- true
-	}()
-
-	// function to be deferred in main until program exits
-	return func() {
-		// close writer then block on exit channel | this will let mw finish writing before the program exits
-		_ = w.Close()
-		<-exit
-		// close file after all writes have finished
-		_ = f.Close()
-	}
 }

@@ -9,8 +9,13 @@ import (
 	"syscall"
 
 	"github.com/dosgo/xsocks/client"
+	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/param"
 )
+
+func init() {
+	comm.InitLog("")
+}
 
 func main() {
 	//debug server

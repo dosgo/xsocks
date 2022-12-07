@@ -4,7 +4,6 @@
 package comm
 
 import (
-	"fmt"
 	"log"
 	"net"
 	"os/exec"
@@ -13,7 +12,6 @@ import (
 
 	routetable "github.com/yijunjun/route-table"
 	"github.com/yusufpapurcu/wmi"
-	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 )
 
@@ -24,33 +22,33 @@ var defaultDns = "114.114.114.114"
 func SetSystenProxy(proxyServer string, whiteList string, open bool) bool {
 	key, err := registry.OpenKey(registry.CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", registry.ALL_ACCESS)
 	if err != nil {
-		fmt.Printf("err:%s", err.Error())
+		log.Printf("err:%s", err.Error())
 		return false
 	}
 	defer key.Close()
 	if open {
 		err = key.SetDWordValue("ProxyEnable", 0x01)
 		if err != nil {
-			fmt.Printf("err:%s", err.Error())
+			log.Printf("err:%s", err.Error())
 			return false
 		}
 	} else {
 		err = key.SetDWordValue("ProxyEnable", 0x00)
 		if err != nil {
-			fmt.Printf("err:%s", err.Error())
+			log.Printf("err:%s", err.Error())
 			return false
 		}
 	}
 
 	err = key.SetStringValue("ProxyServer", proxyServer)
 	if err != nil {
-		fmt.Printf("err:%s", err.Error())
+		log.Printf("err:%s", err.Error())
 		return false
 	}
 	if len(whiteList) > 0 {
 		err = key.SetStringValue("ProxyOverride", whiteList)
 		if err != nil {
-			fmt.Printf("err:%s", err.Error())
+			log.Printf("err:%s", err.Error())
 			return false
 		}
 	}
@@ -208,10 +206,10 @@ func AddRoute(tunAddr string, tunGw string, tunMask string) error {
 	//clear old
 	CmdHide("route", "delete", strings.Join(netNat, ".")).Output()
 	cmd := CmdHide("netsh", "interface", "ipv4", "add", "route", strings.Join(netNat, ".")+"/"+maskAddrs[1], iName, tunGw, "metric=6", "store=active")
-	fmt.Printf("cmd:%s\r\n", cmd.Args)
+	log.Printf("cmd:%s\r\n", cmd.Args)
 	cmd.Run()
 
-	fmt.Printf("cmd:%s\r\n", strings.Join(cmd.Args, " "))
+	log.Printf("cmd:%s\r\n", strings.Join(cmd.Args, " "))
 	CmdHide("ipconfig", "/flushdns").Run()
 	return nil
 }
@@ -220,9 +218,4 @@ func CmdHide(name string, arg ...string) *exec.Cmd {
 	cmd := exec.Command(name, arg...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	return cmd
-}
-
-func ExistStdOutput() bool {
-	handle, err := windows.GetStdHandle(windows.STD_OUTPUT_HANDLE)
-	return err == nil && handle > 0
 }

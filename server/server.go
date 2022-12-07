@@ -1,7 +1,7 @@
 package server
 
 import (
-	"fmt"
+	"log"
 	"net"
 	"runtime"
 
@@ -12,11 +12,11 @@ import (
 
 func Start() {
 	paramParam := param.Args
-	fmt.Printf("verison:%s\r\n", paramParam.Version)
-	fmt.Printf("socks5 server Port:%s\r\n", paramParam.Sock5Port)
-	fmt.Printf("Quic Port:%s\r\n", paramParam.QuicPort)
-	fmt.Printf("webSocket Port:%s\r\n", paramParam.WebPort)
-	fmt.Printf("passWord:%s\r\n", paramParam.Password)
+	log.Printf("verison:%s\r\n", paramParam.Version)
+	log.Printf("socks5 server Port:%s\r\n", paramParam.Sock5Port)
+	log.Printf("Quic Port:%s\r\n", paramParam.QuicPort)
+	log.Printf("webSocket Port:%s\r\n", paramParam.WebPort)
+	log.Printf("passWord:%s\r\n", paramParam.Password)
 
 	var publicIp = "0.0.0.0"
 	_ip, err := GetPublicIP()
@@ -33,10 +33,10 @@ func Start() {
 		}
 	}
 
-	fmt.Println("client run: ./client   -serverAddr \"quic://" + publicIp + ":" + paramParam.QuicPort + "\"")
-	fmt.Println("client run: ./client   -serverAddr \"wss://" + publicIp + ":" + paramParam.WebPort + "\" -caFile xx_ca.pem")
-	fmt.Println("client run: ./client   -serverAddr \"http2://" + publicIp + ":" + paramParam.WebPort + "\" -caFile xx_ca.pem")
-	fmt.Println("client run: ./client   -serverAddr \"kcp://" + publicIp + ":" + paramParam.KcpPort + "\"")
+	log.Println("client run: ./client   -serverAddr \"quic://" + publicIp + ":" + paramParam.QuicPort + "\"")
+	log.Println("client run: ./client   -serverAddr \"wss://" + publicIp + ":" + paramParam.WebPort + "\" -caFile xx_ca.pem")
+	log.Println("client run: ./client   -serverAddr \"http2://" + publicIp + ":" + paramParam.WebPort + "\" -caFile xx_ca.pem")
+	log.Println("client run: ./client   -serverAddr \"kcp://" + publicIp + ":" + paramParam.KcpPort + "\"")
 
 	go StartRemoteSocks51("127.0.0.1:" + paramParam.Sock5Port)
 	go StartWeb(publicIp + ":" + paramParam.WebPort)

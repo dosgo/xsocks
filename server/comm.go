@@ -9,7 +9,6 @@ import (
 	"encoding/binary"
 	"encoding/pem"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"math/big"
@@ -46,14 +45,14 @@ func Proxy(conn comm.CommConn) {
 	}
 	//autherr;
 	if string(authHead) != comm.GenPasswordHead(param.Args.Password) {
-		fmt.Printf("password err\r\n")
+		log.Printf("password err\r\n")
 		return
 	}
 	//read cmd
 	cmd := make([]byte, 1)
 	_, err = io.ReadFull(conn, cmd)
 	if err != nil {
-		fmt.Printf("err:%v\r\n", err)
+		log.Printf("err:%v\r\n", err)
 		return
 	}
 	switch cmd[0] {
@@ -152,12 +151,12 @@ func dnsResolve(conn comm.CommConn) {
 		hostLen = int(hostLenBuf[0])
 		_, err = io.ReadFull(conn, hostBuf[:hostLen])
 		if err != nil {
-			fmt.Printf("hostLen:%d\r\n", hostLen)
+			log.Printf("hostLen:%d\r\n", hostLen)
 			return
 		}
 		addr, err := net.ResolveIPAddr("ip4", string(hostBuf[:hostLen]))
 		if err != nil {
-			fmt.Printf("host:%s hostLen:%d\r\n", string(hostBuf[:hostLen]), hostLen)
+			log.Printf("host:%s hostLen:%d\r\n", string(hostBuf[:hostLen]), hostLen)
 			//err
 			conn.Write([]byte{0x01, 0x04}) //0x01==error  0x04==ipv4
 			continue                       //解析失败跳过不关闭连接

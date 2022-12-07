@@ -7,7 +7,6 @@ import (
 	_ "embed"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"log"
 	"net"
 	"os"
@@ -25,7 +24,7 @@ var divertSys = "WinDivert32.sys"
 func dllInit(_divertDll string) {
 	_, err := os.Stat(_divertDll)
 	if err != nil {
-		fmt.Printf("not found :%s\r\n", _divertDll)
+		log.Printf("not found :%s\r\n", _divertDll)
 	}
 }
 
@@ -38,13 +37,13 @@ func RedirectDNS(dnsAddr string, _port string, sendPort string) error {
 	var err error
 	_, err = os.Stat(divertDll)
 	if err != nil {
-		fmt.Printf("not found :%s\r\n", divertDll)
+		log.Printf("not found :%s\r\n", divertDll)
 		return err
 	}
 	winDivertRun = true
 	winDivert, err = divert.Open("outbound and !loopback and !impostor and udp.DstPort=53 and udp.SrcPort!="+sendPort, divert.LayerNetwork, divert.PriorityDefault, divert.FlagDefault)
 	if err != nil {
-		fmt.Printf("winDivert open failed: %v\r\n", err)
+		log.Printf("winDivert open failed: %v\r\n", err)
 		return err
 	}
 

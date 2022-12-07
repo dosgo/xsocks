@@ -2,8 +2,8 @@ package comm
 
 import (
 	"bufio"
-	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -37,7 +37,7 @@ func loadLookupTable(name string) cidranger.Ranger {
 	ranger := cidranger.NewPCTrieRanger()
 	fi, err := os.Open(name)
 	if err != nil {
-		fmt.Printf("Error: %s\n", err)
+		log.Printf("Error: %s\n", err)
 		return nil
 	}
 	defer fi.Close()
@@ -70,7 +70,7 @@ func IsChinaMainlandIP(IP string) bool {
 	if gChinaMainlandRange != nil {
 		contains, err := gChinaMainlandRange.Contains(ipp)
 		if err != nil {
-			fmt.Printf("to query ip is  %s failed %v", IP, err)
+			log.Printf("to query ip is  %s failed %v", IP, err)
 			return false
 		}
 		return contains
@@ -82,7 +82,7 @@ func downloadIPTable(name string) error {
 	uri := "https://raw.githubusercontent.com/17mon/china_ip_list/master/china_ip_list.txt"
 	resp, err := http.Get(uri)
 	if err != nil {
-		fmt.Printf("sending Rio server request failed %s\r\n", err.Error())
+		log.Printf("sending Rio server request failed %s\r\n", err.Error())
 		return nil
 	}
 	defer resp.Body.Close()

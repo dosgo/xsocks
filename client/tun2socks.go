@@ -1,7 +1,6 @@
 package client
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -41,7 +40,7 @@ func (_tun2socks *Tun2Socks) Start(tunDevice string, tunAddr string, tunMask str
 	} else {
 		_tun2socks.tunDev, err = tun.RegTunDev(tunDevice, tunAddr, tunMask, tunGW, tunDNS)
 		if err != nil {
-			fmt.Println("start tun err:", err)
+			log.Println("start tun err:", err)
 			return err
 		}
 	}
@@ -96,10 +95,10 @@ func dnsReqUdp(conn core.CommUDPConn, ep core.CommEndpoint) error {
 func dnsReqTcp(conn core.CommTCPConn) error {
 	dnsConn, err := net.DialTimeout("tcp", "127.0.0.1:"+param.Args.DnsPort, time.Second*15)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 		return err
 	}
 	comm.TcpPipe(conn, dnsConn, time.Minute*2)
-	fmt.Printf("dnsReq Tcp\r\n")
+	log.Printf("dnsReq Tcp\r\n")
 	return nil
 }

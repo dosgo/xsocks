@@ -2,7 +2,7 @@ package client
 
 import (
 	"errors"
-	"fmt"
+	"log"
 	"os"
 	"runtime"
 	"strings"
@@ -43,7 +43,7 @@ func (c *Client) Shutdown() {
 
 func (c *Client) Start() error {
 	if c.isStart {
-		fmt.Printf("clien runing...\r\n")
+		log.Printf("clien runing...\r\n")
 		return errors.New("clien runing...\n")
 	}
 	c.isStart = true
@@ -57,10 +57,10 @@ func (c *Client) Start() error {
 	if param.Args.Sock5UdpPort == "" {
 		param.Args.Sock5UdpPort, _ = comm.GetFreeUdpPort()
 	}
-	fmt.Printf("verison:%s\r\n", param.Args.Version)
-	fmt.Printf("server addr:%s\r\n", param.Args.ServerAddr)
-	fmt.Printf("socks5 addr :%s\r\n", param.Args.Sock5Addr)
-	fmt.Printf("Sock5UdpPort:%s\r\n", param.Args.Sock5UdpPort)
+	log.Printf("verison:%s\r\n", param.Args.Version)
+	log.Printf("server addr:%s\r\n", param.Args.ServerAddr)
+	log.Printf("socks5 addr :%s\r\n", param.Args.Sock5Addr)
+	log.Printf("Sock5UdpPort:%s\r\n", param.Args.Sock5UdpPort)
 
 	var tunAddr = ""
 	var tunGw = ""
@@ -74,7 +74,7 @@ func (c *Client) Start() error {
 	//mac use  SO_BINDTODEVICE  Unrealized
 	if param.Args.TunType == 1 {
 		if runtime.GOOS == "windows" {
-			fmt.Printf("Windows does not support the TUNTYPE 1 parameter, use TUNTYPE 3\r\n")
+			log.Printf("Windows does not support the TUNTYPE 1 parameter, use TUNTYPE 3\r\n")
 		} else {
 			c.tun2Socks = &Tun2Socks{}
 			c.tun2Socks.Start("", tunAddr, "", tunGw, "")
@@ -82,7 +82,7 @@ func (c *Client) Start() error {
 	}
 	//2==tun2remote tun (android)
 	if param.Args.TunType == 2 {
-		fmt.Printf("does not support the TUNTYPE 2 parameter, use TUNTYPE 3\r\n")
+		log.Printf("does not support the TUNTYPE 2 parameter, use TUNTYPE 3\r\n")
 		return nil
 	}
 	//windows + linux +mac
@@ -94,7 +94,7 @@ func (c *Client) Start() error {
 	//only windows  (system proxy)
 	if param.Args.TunType == 4 {
 		if runtime.GOOS != "windows" {
-			fmt.Printf("TunType 4 supports Windows only\r\n")
+			log.Printf("TunType 4 supports Windows only\r\n")
 		} else {
 			comm.SetSystenProxy("socks://"+param.Args.Sock5Addr, "", true)
 		}
@@ -102,7 +102,7 @@ func (c *Client) Start() error {
 	//to local safe socks5(udp support) windows + linux +mac
 	if param.Args.TunType == 5 {
 		if !strings.HasPrefix(param.Args.ServerAddr, "socks5") {
-			fmt.Printf("-serverAddr socks5://127.0.0.1:1080 \r\n")
+			log.Printf("-serverAddr socks5://127.0.0.1:1080 \r\n")
 			return errors.New("-tuntype 5 -serverAddr socks5://127.0.0.1:1080")
 		}
 		c.fakeDns = &FakeDnsTun{}

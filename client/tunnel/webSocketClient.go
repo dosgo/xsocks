@@ -1,8 +1,8 @@
 package tunnel
 
 import (
-	"fmt"
 	"io"
+	"log"
 	"strings"
 
 	"github.com/dosgo/xsocks/client/tunnel/muxComm"
@@ -29,7 +29,7 @@ func dialWs(url string) (io.ReadWriteCloser, error) {
 	}
 	config, err := websocket.NewConfig(url, origin)
 	if err != nil {
-		fmt.Printf("webSocketUrl:%s err:%v\r\n", url, err)
+		log.Printf("webSocketUrl:%s err:%v\r\n", url, err)
 		return nil, err
 	}
 	config.TlsConfig = GetTlsConf()

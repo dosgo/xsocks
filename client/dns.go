@@ -1,7 +1,7 @@
 package client
 
 import (
-	"fmt"
+	"log"
 	"net"
 	"time"
 
@@ -103,10 +103,10 @@ func (localDns *LocalDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 	}
 	ip, err = localDns.safeDns.Resolve(domain[0:len(domain)-1], 4)
 	if err != nil {
-		fmt.Printf("dns domain:%s Resolve err:%v\r\n", domain, err)
+		log.Printf("dns domain:%s Resolve err:%v\r\n", domain, err)
 		return m, err
 	}
-	fmt.Printf("dns domain:%s Resolve ip:%v\r\n", domain, ip)
+	log.Printf("dns domain:%s Resolve ip:%v\r\n", domain, ip)
 	m.Answer = append(r.Answer, &dns.A{
 		Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 1},
 		A:   net.ParseIP(ip),

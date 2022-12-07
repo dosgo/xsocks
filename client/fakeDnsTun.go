@@ -2,7 +2,6 @@ package client
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -131,7 +130,7 @@ func (fakeDns *FakeDnsTun) _startTun(tunDevice string, _tunAddr string, _tunMask
 			return err
 		}
 	} else {
-		fmt.Printf("tunGW:%s tunMask:%s\r\n", tunGW, tunMask)
+		log.Printf("tunGW:%s tunMask:%s\r\n", tunGW, tunMask)
 		fakeDns.tunDev, err = tun.RegTunDev(tunDevice, tunAddr, tunMask, tunGW, tunDNS)
 		if err != nil {
 			fakeDns.tunDev = nil
@@ -172,14 +171,14 @@ func (fakeDns *FakeDnsTun) tcpForwarder(conn core.CommTCPConn) error {
 		domain := fakeDns.dnsToDomain(srcAddr)
 		domains := strings.Split(domain, ":")
 		if domain == "" {
-			fmt.Printf("dnsToDomain domain:%s srcAddr:%s\r\n", domain, srcAddr)
+			log.Printf("dnsToDomain domain:%s srcAddr:%s\r\n", domain, srcAddr)
 			return nil
 		}
 		//add exclude  domain
 		fakeDns.tunDns.excludeDomains[domains[0]] = 1
 		ip, _, err := fakeDns.tunDns.localResolve(domains[0], 4)
 		if err != nil {
-			fmt.Printf("domain:%s  srcAddr:%s localResolve err:%s\r\n", domains[0], srcAddr, err)
+			log.Printf("domain:%s  srcAddr:%s localResolve err:%s\r\n", domains[0], srcAddr, err)
 			return nil
 		}
 		socksConn, err := net.DialTimeout("tcp", ip.String()+":"+srcAddrs[1], time.Second*15)
@@ -191,7 +190,7 @@ func (fakeDns *FakeDnsTun) tcpForwarder(conn core.CommTCPConn) error {
 	} else {
 		remoteAddr = fakeDns.dnsToAddr(srcAddr)
 		if remoteAddr == "" {
-			fmt.Printf("remoteAddr:%s srcAddr:%s\r\n", remoteAddr, srcAddr)
+			log.Printf("remoteAddr:%s srcAddr:%s\r\n", remoteAddr, srcAddr)
 			return nil
 		}
 		socksConn, err := net.DialTimeout("tcp", fakeDns.localSocks, time.Second*15)
@@ -217,7 +216,7 @@ func (fakeDns *FakeDnsTun) udpForwarder(conn core.CommUDPConn, ep core.CommEndpo
 	if fakeDns.tunType == 3 {
 		defer ep.Close()
 		dstAddr, _ := net.ResolveUDPAddr("udp", remoteAddr)
-		fmt.Printf("udp-remoteAddr:%s\r\n", remoteAddr)
+		log.Printf("udp-remoteAddr:%s\r\n", remoteAddr)
 		socks.SocksUdpGate(conn, "127.0.0.1:"+param.Args.Sock5UdpPort, dstAddr)
 	}
 	//tuntype 直连
@@ -228,10 +227,10 @@ func (fakeDns *FakeDnsTun) udpForwarder(conn core.CommUDPConn, ep core.CommEndpo
 			if err == nil {
 				defer socksConn.Close()
 				gateWay, err := socks.GetUdpGate(socksConn, remoteAddr)
-				fmt.Printf("gateWay:%s %v\r\n", gateWay, err)
+				log.Printf("gateWay:%s %v\r\n", gateWay, err)
 				if err == nil {
 					dstAddr, _ := net.ResolveUDPAddr("udp", remoteAddr)
-					fmt.Printf("udp-remoteAddr:%s\r\n", remoteAddr)
+					log.Printf("udp-remoteAddr:%s\r\n", remoteAddr)
 					return socks.SocksUdpGate(conn, gateWay, dstAddr)
 				}
 			}
@@ -381,7 +380,7 @@ func (tunDns *TunDns) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	default:
 		var rtt time.Duration
 		msg, rtt, err = tunDns.dnsClient.ExchangeWithConn(r, tunDns.dnsClientConn)
-		fmt.Printf("ServeDNS default rtt:%+v err:%+v\r\n", rtt, err)
+		log.Printf("ServeDNS default rtt:%+v err:%+v\r\n", rtt, err)
 		break
 	}
 	if err != nil {
@@ -411,7 +410,7 @@ func (tunDns *TunDns) ipv4Res(domain string) (*dns.A, error) {
 			if err == nil {
 				_ip = backIp
 			} else if err.Error() != "Not found addr" {
-				fmt.Printf("local dns error:%v\r\n", err)
+				log.Printf("local dns error:%v\r\n", err)
 				//解析错误说明无网络,否则就算不存在也会回复的
 				dnsErr = true //标记为错误
 			}
@@ -434,7 +433,7 @@ func (tunDns *TunDns) ipv4Res(domain string) (*dns.A, error) {
 			ipTtl = 1
 		}
 	}
-	fmt.Printf("domain:%s ip:%s\r\n", domain, ip)
+	log.Printf("domain:%s ip:%s\r\n", domain, ip)
 	return &dns.A{
 		Hdr: dns.RR_Header{Name: domain, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: ipTtl},
 		A:   net.ParseIP(ip),
@@ -509,7 +508,7 @@ func (tunDns *TunDns) ipv6Res(domain string) (interface{}, error) {
 			}, nil
 		}
 	} else {
-		fmt.Printf("ipv6:%s  rtt:%+v err:%+v\r\n", domain, rtt, err)
+		log.Printf("ipv6:%s  rtt:%+v err:%+v\r\n", domain, rtt, err)
 	}
 	return nil, err
 }
@@ -560,7 +559,7 @@ func (tunDns *TunDns) localResolve(domain string, ipType int) (net.IP, uint32, e
 			}
 		}
 	} else {
-		fmt.Printf("localResolve:%s  ipType:%d  rtt:%+v err:%+v\r\n", domain, ipType, rtt, err)
+		log.Printf("localResolve:%s  ipType:%d  rtt:%+v err:%+v\r\n", domain, ipType, rtt, err)
 		return nil, 0, err
 	}
 	return nil, 0, errors.New("Not found addr")
@@ -576,7 +575,7 @@ func allocIpByDomain(domain string, tunDns *TunDns) string {
 			tunDns.ip2Domain.Insert(ip, domain)
 			break
 		} else {
-			fmt.Println("ip used up")
+			log.Println("ip used up")
 			ip = ""
 		}
 	}

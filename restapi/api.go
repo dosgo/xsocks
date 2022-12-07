@@ -3,7 +3,6 @@ package restapi
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -17,7 +16,6 @@ import (
 )
 
 var socksX_cli *client.Client
-var logOutFun func()
 var token = ""
 
 func apiAction(w http.ResponseWriter, r *http.Request) {
@@ -62,18 +60,12 @@ func apiAction(w http.ResponseWriter, r *http.Request) {
 	}
 	//写日志
 	if r.Form.Get("cmd") != "console" {
-		fmt.Printf(r.URL.String() + "cmd:" + r.Form.Get("cmd") + "\r\n")
+		log.Printf(r.URL.String() + "cmd:" + r.Form.Get("cmd") + "\r\n")
 	}
-}
-func init() {
-	logOutFun = comm.LogOutput("")
 }
 
 func Start(port string, _token string) {
 	token = _token
-	if logOutFun != nil {
-		defer logOutFun()
-	}
 	socksX_cli = &client.Client{}
 	defer socksX_cli.Shutdown()
 	http.HandleFunc("/api", apiAction)
