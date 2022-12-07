@@ -11,7 +11,6 @@ import (
 	"math/rand"
 	"net"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -263,15 +262,6 @@ func GetUnusedTunAddr() (string, string) {
 type UdpLimit struct {
 	Limit   *rate.Limiter
 	Expired int64
-}
-
-func ArrMatch(target string, str_array []string) bool {
-	sort.Strings(str_array)
-	index := sort.SearchStrings(str_array, target)
-	if index < len(str_array) && str_array[index] == target {
-		return true
-	}
-	return false
 }
 
 func LogOutput(_logfile string) func() {
