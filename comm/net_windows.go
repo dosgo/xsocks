@@ -12,6 +12,7 @@ import (
 
 	routetable "github.com/yijunjun/route-table"
 	"github.com/yusufpapurcu/wmi"
+	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 )
 
@@ -218,4 +219,9 @@ func CmdHide(name string, arg ...string) *exec.Cmd {
 	cmd := exec.Command(name, arg...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	return cmd
+}
+
+func ExistStdOutput() bool {
+	handle, err := windows.GetStdHandle(windows.STD_OUTPUT_HANDLE)
+	return err == nil && handle > 0
 }

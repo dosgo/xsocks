@@ -270,10 +270,12 @@ func InitLog(_logfile string, flag int) {
 		logfile = "out.log"
 	}
 	logFile, err := os.OpenFile(logfile, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
-	if err != nil {
-		panic(err)
+	if err == nil {
+		mw := io.MultiWriter(logFile)
+		if ExistStdOutput() {
+			mw = io.MultiWriter(logFile, os.Stdout)
+		}
+		log.SetOutput(mw)
 	}
-	mw := io.MultiWriter(os.Stdout, logFile)
-	log.SetOutput(mw)
 	log.SetFlags(flag)
 }
