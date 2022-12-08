@@ -6,17 +6,9 @@ import (
 	"log"
 	"net"
 	"os"
-	"sync"
 
 	"github.com/dosgo/xsocks/comm"
 )
-
-var poolDnsBuf = &sync.Pool{
-	New: func() interface{} {
-		log.Println("new 1")
-		return make([]byte, 4096)
-	},
-}
 
 func regRoute(tunAddr string, remoteAddr string, dnsServers []string, oldGw string) {
 	//delete old
