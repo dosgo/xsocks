@@ -79,7 +79,7 @@ func (udpProxy *UdpProxy) startUdpProxy(addr string) (*net.UDPAddr, error) {
 	//隧道
 	udpProxy.udpTunnel = &UdpTunnel{}
 	udpProxy.udpTunnel.run = true
-	udpProxy.udpTunnel.natTable = bimap.NewBiMap()
+	udpProxy.udpTunnel.natTable = bimap.NewBiMap[string, string]()
 	udpProxy.udpTunnel.udpGate = udpProxy.udpListener
 	go udpProxy.udpTunnel.recv()
 
@@ -118,7 +118,7 @@ func (udpProxy *UdpProxy) Shutdown() {
 
 type UdpTunnel struct {
 	Tunnel   comm.CommConn
-	natTable *bimap.BiMap
+	natTable *bimap.BiMap[string, string]
 	run      bool
 	udpGate  *net.UDPConn
 	sync.Mutex

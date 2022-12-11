@@ -47,7 +47,6 @@ func StartQuic(_addr string) error {
 		}
 		go quicToSocks5(sess)
 	}
-	return err
 }
 
 /* to socks server*/
