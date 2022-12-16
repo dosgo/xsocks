@@ -26,7 +26,7 @@ type DoT struct {
 }
 
 func init() {
-	dnsCache = &comm.DnsCache{Cache: make(map[string]string, 128)}
+	dnsCache = &comm.DnsCache{Cache: make(map[string]comm.IpInfo, 128)}
 }
 
 func NewDot(serverName string, addr string, lSocks string) *DoT {

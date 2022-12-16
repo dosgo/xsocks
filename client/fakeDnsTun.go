@@ -78,7 +78,7 @@ func (fakeDns *FakeDnsTun) Start(tunType int, udpProxy bool, tunDevice string, _
 	}
 
 	fakeDns.tunDns.ip2Domain = bimap.NewBiMap[string, string]()
-	fakeDns.tunDns.fakeDnsCache = &comm.DnsCache{Cache: make(map[string]string, 128)}
+	fakeDns.tunDns.fakeDnsCache = &comm.DnsCache{Cache: make(map[string]comm.IpInfo, 128)}
 	fakeDns.tunDns.excludeDomains = make(map[string]uint8)
 	if fakeDns.tunType == 3 {
 		urlInfo, _ := url.Parse(param.Args.ServerAddr)

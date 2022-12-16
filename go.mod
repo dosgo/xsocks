@@ -4,10 +4,10 @@ go 1.18
 
 require (
 	github.com/cakturk/go-netstat v0.0.0-20200220111822-e5b49efee7a5
-	github.com/dosgo/go-tun2socks v1.0.8
+	github.com/dosgo/go-tun2socks v1.0.9
 	github.com/hashicorp/yamux v0.1.1
 	github.com/imgk/divert-go v0.0.0-20220205193416-faaa83c2c10a
-	github.com/lucas-clemente/quic-go v0.31.0
+	github.com/lucas-clemente/quic-go v0.31.1
 	github.com/miekg/dns v1.1.50
 	github.com/vishalkuo/bimap v0.0.0-20220726225509-e0b4f20de28b
 	github.com/xtaci/kcp-go/v5 v5.6.1
@@ -17,7 +17,7 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.2
 	golang.org/x/crypto v0.0.0-20220315160706-3147a52a75dd
 	golang.org/x/net v0.2.0
-	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
+	golang.org/x/sync v0.1.0
 	golang.org/x/sys v0.2.0
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
 
@@ -47,5 +47,5 @@ require (
 	golang.zx2c4.com/wintun v0.0.0-20211104114900-415007cec224 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20220920152132-bb719d3a6e2c // indirect
 	golang.zx2c4.com/wireguard/windows v0.5.3 // indirect
-	gvisor.dev/gvisor v0.0.0-20221107084555-4793b32eb08b // indirect
+	gvisor.dev/gvisor v0.0.0-20221214043228-7501cb5e258d // indirect
 )
