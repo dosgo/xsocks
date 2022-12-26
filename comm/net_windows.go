@@ -6,12 +6,13 @@ package comm
 import (
 	"log"
 	"net"
+	"os"
 	"os/exec"
 	"strings"
 	"syscall"
+	"unsafe"
 
 	routetable "github.com/yijunjun/route-table"
-	"github.com/yusufpapurcu/wmi"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 )
@@ -115,59 +116,67 @@ func GetGatewayIndex() uint32 {
 /*获取旧的dns,内网解析用*/
 func GetOldDns(dnsAddr string, tunGW string, _tunGW string) string {
 	ifIndex := GetGatewayIndex()
-	dnsServers, _, _ := GetDnsServerByIfIndex(ifIndex)
-	for _, v := range dnsServers {
-		if v != dnsAddr && v != tunGW && v != _tunGW {
-			oldDns = v
-			break
+	dnsServers, err := GetDnsServerByIfIndex(ifIndex)
+	if err == nil {
+		for _, v := range dnsServers {
+			if v != dnsAddr && v != tunGW && v != _tunGW {
+				oldDns = v
+				break
+			}
 		}
 	}
 	return oldDns
 }
 
-func GetDnsServerByIfIndex(ifIndex uint32) ([]string, bool, bool) {
-	var adapters = []NetworkAdapter{}
-	//DNSServerSearchOrder
-	err := GetNetworkAdapter(&adapters)
-	var isIpv6 = false
-	if err != nil {
-		return nil, false, isIpv6
-	}
-	for _, v := range adapters {
-		if v.InterfaceIndex == ifIndex {
-			for _, v2 := range v.IPAddress {
-				if len(v2) > 16 {
-					isIpv6 = true
-					break
-				}
+func getAdapterAddresses() ([]*windows.IpAdapterAddresses, error) {
+	var b []byte
+	l := uint32(15000) // recommended initial size
+	for {
+		b = make([]byte, l)
+		err := windows.GetAdaptersAddresses(syscall.AF_UNSPEC, windows.GAA_FLAG_INCLUDE_PREFIX, 0, (*windows.IpAdapterAddresses)(unsafe.Pointer(&b[0])), &l)
+		if err == nil {
+			if l == 0 {
+				return nil, nil
 			}
-			return v.DNSServerSearchOrder, v.DHCPEnabled, isIpv6
+			break
+		}
+		if err.(syscall.Errno) != syscall.ERROR_BUFFER_OVERFLOW {
+			return nil, os.NewSyscallError("getadaptersaddresses", err)
+		}
+		if l <= uint32(len(b)) {
+			return nil, os.NewSyscallError("getadaptersaddresses", err)
 		}
 	}
-	return nil, false, isIpv6
-}
-
-type NetworkAdapter struct {
-	DNSServerSearchOrder []string
-	DefaultIPGateway     []string
-	IPAddress            []string
-	Caption              string
-	DHCPEnabled          bool
-	ServiceName          string
-	IPSubnet             []string
-	InterfaceIndex       uint32
-	SettingID            string
-}
-
-func GetNetworkAdapter(s *[]NetworkAdapter) error {
-	//var s = []NetworkAdapter{}
-	err := wmi.Query("SELECT Caption,SettingID,InterfaceIndex,DNSServerSearchOrder,DefaultIPGateway,ServiceName,IPAddress,IPSubnet,DHCPEnabled       FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled=True", s) // WHERE (BIOSVersion IS NOT NULL)
-	if err != nil {
-		log.Printf("err:%v\r\n", err)
-		return err
+	var aas []*windows.IpAdapterAddresses
+	for aa := (*windows.IpAdapterAddresses)(unsafe.Pointer(&b[0])); aa != nil; aa = aa.Next {
+		aas = append(aas, aa)
 	}
-	return nil
+	return aas, nil
 }
+
+// GetDNSServerAddressList returns the DNS server addresses of the queried interface.
+func GetDnsServerByIfIndex(ifIndex uint32) ([]string, error) {
+	addresses, err := getAdapterAddresses()
+	if err != nil {
+		return nil, err
+	}
+
+	var firstDnsNode *windows.IpAdapterDnsServerAdapter
+	// Find the adapter which has the same mac as queried.
+	for _, adapterAddr := range addresses {
+		if adapterAddr.IfIndex == ifIndex {
+			firstDnsNode = adapterAddr.FirstDnsServerAddress
+		}
+	}
+
+	dnsServerAddressList := make([]string, 0)
+	for firstDnsNode != nil {
+		dnsServerAddressList = append(dnsServerAddressList, firstDnsNode.Address.IP().String())
+		firstDnsNode = firstDnsNode.Next
+	}
+	return dnsServerAddressList, nil
+}
+
 func SetNetConf(dnsIpv4 string, dnsIpv6 string) {
 
 }

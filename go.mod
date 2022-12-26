@@ -14,7 +14,6 @@ require (
 	github.com/xtaci/smux v1.5.17
 	github.com/yijunjun/route-table v0.0.0-20160321072918-9608fc1e2e44
 	github.com/yl2chen/cidranger v1.0.2
-	github.com/yusufpapurcu/wmi v1.2.2
 	golang.org/x/crypto v0.0.0-20220315160706-3147a52a75dd
 	golang.org/x/net v0.2.0
 	golang.org/x/sync v0.1.0
@@ -24,7 +23,6 @@ require (
 )
 
 require (
-	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0 // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/google/btree v1.0.1 // indirect
