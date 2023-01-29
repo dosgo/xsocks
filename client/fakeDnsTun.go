@@ -129,7 +129,13 @@ func (fakeDns *FakeDnsTun) _startTun(tunDevice string, _tunAddr string, _tunMask
 		if err != nil {
 			return err
 		}
-	} else {
+	}else if param.Args.TunFd > 0 {
+		fakeDns.tunDev, err = FdToConn(param.Args.TunFd)
+		if err != nil { 
+			return err
+		}
+
+	}else {
 		log.Printf("tunGW:%s tunMask:%s\r\n", tunGW, tunMask)
 		fakeDns.tunDev, err = tun.RegTunDev(tunDevice, tunAddr, tunMask, tunGW, tunDNS)
 		if err != nil {
