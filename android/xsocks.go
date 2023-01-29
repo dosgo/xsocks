@@ -1,5 +1,7 @@
 package xsocks
 
+// build   gomobile bind -androidapi 19 -target=android
+
 import (
 	"time"
 
