@@ -37,7 +37,13 @@ func (_tun2socks *Tun2Socks) Start(tunDevice string, tunAddr string, tunMask str
 		if err != nil { //如果监听失败，一般是文件已存在，需要删除它
 			return err
 		}
-	} else {
+	}else if param.Args.TunFd > 0 {
+		_tun2socks.tunDev, err = FdToConn(param.Args.TunFd)
+		if err != nil {
+			return err
+		}
+	}
+	else {
 		_tun2socks.tunDev, err = tun.RegTunDev(tunDevice, tunAddr, tunMask, tunGW, tunDNS)
 		if err != nil {
 			log.Println("start tun err:", err)
