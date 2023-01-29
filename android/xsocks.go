@@ -49,6 +49,7 @@ func Start(sock5Addr string, serverAddr string, password string, caFile string, 
 	paramParam.LocalDns = localDns
 	paramParam.SmartDns = smartDns
 	paramParam.UdpProxy = udpProxy
+	paramParam.TunFd = tunFd
 
 	if mtu != 0 {
 		paramParam.Mtu = mtu
