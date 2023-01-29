@@ -34,6 +34,7 @@ type ClientParam struct {
 	SkipVerify    bool
 	TunType       int
 	UnixSockTun   string
+	TunFd         int
 	DnsPort       string
 	UdpProxy      int
 	MuxNum        int
