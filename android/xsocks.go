@@ -10,7 +10,7 @@ import (
 
 var c *client.Client
 
-func Start(sock5Addr string, serverAddr string, password string, caFile string, skipVerify bool, tunType int, unixSockTun string, muxNum int, localDns int, smartDns int, udpProxy int, mtu int, tunSmartProxy bool, ipFile string) {
+func Start(sock5Addr string, serverAddr string, password string, caFile string, skipVerify bool, tunType int, unixSockTun string, tunFd int,muxNum int, localDns int, smartDns int, udpProxy int, mtu int, tunSmartProxy bool, ipFile string) {
 	paramParam := param.Args
 	if sock5Addr != "" {
 		paramParam.Sock5Addr = sock5Addr
