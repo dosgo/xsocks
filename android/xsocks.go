@@ -3,6 +3,7 @@ package xsocks
 // build   gomobile bind -androidapi 19 -target=android
 
 import (
+	"log"
 	"time"
 
 	"github.com/dosgo/xsocks/client"
@@ -12,7 +13,7 @@ import (
 
 var c *client.Client
 
-func Start(sock5Addr string, serverAddr string, password string, caFile string, skipVerify bool, tunType int, unixSockTun string, tunFd int,muxNum int, localDns int, smartDns int, udpProxy int, mtu int, tunSmartProxy bool, ipFile string) {
+func Start(sock5Addr string, serverAddr string, password string, caFile string, skipVerify bool, tunType int, unixSockTun string, tunFd int, muxNum int, localDns int, smartDns int, udpProxy int, mtu int, tunSmartProxy bool, ipFile string) {
 	paramParam := param.Args
 	if sock5Addr != "" {
 		paramParam.Sock5Addr = sock5Addr
@@ -63,7 +64,7 @@ func Start(sock5Addr string, serverAddr string, password string, caFile string, 
 	} else {
 		param.Args.IpFile = ""
 	}
-
+	log.Printf("param.Args %+v\r\n", param.Args)
 	paramParam.TunSmartProxy = tunSmartProxy
 	time.Sleep(time.Second * 1)
 	c = &client.Client{}

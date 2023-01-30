@@ -3,7 +3,6 @@ package client
 import (
 	"errors"
 	"log"
-	"os"
 	"runtime"
 	"strings"
 
@@ -65,7 +64,7 @@ func (c *Client) Start() error {
 	var tunAddr = ""
 	var tunGw = ""
 	//no android
-	if os.Getenv("ANDROID_DATA") == "" {
+	if param.Args.TunFd == 0 {
 		tunAddr, tunGw = comm.GetUnusedTunAddr()
 	}
 	//1==tun2sock  (android)
