@@ -76,7 +76,10 @@ func (c *Client) Start() error {
 			log.Printf("Windows does not support the TUNTYPE 1 parameter, use TUNTYPE 3\r\n")
 		} else {
 			c.tun2Socks = &Tun2Socks{}
-			c.tun2Socks.Start("", tunAddr, "", tunGw, "")
+			err := c.tun2Socks.Start("", tunAddr, "", tunGw, "")
+			if err != nil {
+				log.Printf("tun2Socks start err:%+v\r\n", err)
+			}
 		}
 	}
 	//2==tun2remote tun (android)
