@@ -64,7 +64,7 @@ func SocketToTun(unixSockTun string) (io.ReadWriteCloser, error) {
 	return nil, errors.New("unixSockTun null")
 }
 
-func FdToConn(fd int) (io.ReadWriteCloser, error) {
+func FdToIO(fd int) (io.ReadWriteCloser, error) {
 	f := os.NewFile(uintptr(fd), "Socket")
-	return net.FileConn(f)
+	return f,nil;
 }
