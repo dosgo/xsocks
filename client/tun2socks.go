@@ -38,7 +38,7 @@ func (_tun2socks *Tun2Socks) Start(tunDevice string, tunAddr string, tunMask str
 			return err
 		}
 	} else if param.Args.TunFd > 0 {
-		_tun2socks.tunDev, err = FdToConn(param.Args.TunFd)
+		_tun2socks.tunDev, err = FdToIO(param.Args.TunFd)
 		if err != nil {
 			return err
 		}
