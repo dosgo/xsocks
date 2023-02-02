@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/dosgo/xsocks/comm/udpHeader"
-	quic "github.com/lucas-clemente/quic-go"
+	quic "github.com/quic-go/quic-go"
 )
 
 func StartQuic(_addr string) error {

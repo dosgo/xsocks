@@ -11,7 +11,7 @@ import (
 
 	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/comm/udpHeader"
-	"github.com/lucas-clemente/quic-go"
+	"github.com/quic-go/quic-go"
 )
 
 var quicDialer *QuicDialer
