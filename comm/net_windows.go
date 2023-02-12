@@ -4,6 +4,7 @@
 package comm
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -79,12 +80,7 @@ type GatewayInfo struct {
 
 func getGatewayInfo() GatewayInfo {
 	var gatewayInfo = GatewayInfo{IfIndex: 0}
-	table, err := routetable.NewRouteTable()
-	if err != nil {
-		return gatewayInfo
-	}
-	defer table.Close()
-	rows, err := table.Routes()
+	var rows, err = getRoutes()
 	if err != nil {
 		return gatewayInfo
 	}
@@ -233,4 +229,66 @@ func CmdHide(name string, arg ...string) *exec.Cmd {
 func ExistStdOutput() bool {
 	handle, err := windows.GetStdHandle(windows.STD_OUTPUT_HANDLE)
 	return err == nil && handle > 0
+}
+
+type TableRow struct {
+	ForwardDest      uint32
+	ForwardMask      uint32
+	ForwardPolicy    uint32
+	ForwardNextHop   uint32
+	ForwardIfIndex   uint32
+	ForwardType      uint32
+	ForwardProto     uint32
+	ForwardAge       uint32
+	ForwardNextHopAS uint32
+	ForwardMetric1   uint32
+	ForwardMetric2   uint32
+	ForwardMetric3   uint32
+	ForwardMetric4   uint32
+	ForwardMetric5   uint32
+}
+
+type SliceHeader struct {
+	Addr uintptr
+	Len  int
+	Cap  int
+}
+
+func getRoutes() ([]TableRow, error) {
+	var bufLen uint32
+	var getIpForwardTable = syscall.NewLazyDLL("iphlpapi.dll").NewProc("GetIpForwardTable")
+	getIpForwardTable.Call(uintptr(0), uintptr(unsafe.Pointer(&bufLen)), 0)
+
+	var r1 uintptr
+	var buf = make([]byte, bufLen)
+	r1, _, _ = getIpForwardTable.Call(uintptr(unsafe.Pointer(&buf[0])), uintptr(unsafe.Pointer(&bufLen)), 0)
+
+	if r1 != 0 {
+		return nil, fmt.Errorf("call to GetIpForwardTable failed with result value：%v", r1)
+	}
+
+	var (
+		num     = *(*uint32)(unsafe.Pointer(&buf[0]))
+		routes  = make([]TableRow, num)
+		sr      = uintptr(unsafe.Pointer(&buf[0])) + unsafe.Sizeof(num)
+		rowSize = unsafe.Sizeof(TableRow{})
+
+		expectedBufferSize = int(bufLen)
+		actualBufferSize   = int(unsafe.Sizeof(num) + rowSize*uintptr(num))
+	)
+
+	if expectedBufferSize < actualBufferSize {
+		return nil, fmt.Errorf("buffer exceeded the expected size of %v while having a size of: %v", expectedBufferSize, actualBufferSize)
+	}
+	/*
+		for i := 0; i < int(num); i++ {
+			routes[i] = *((*TableRow)(unsafe.Pointer(uintptr(sr) + (rowSize * uintptr(i)))))
+		}
+	*/
+
+	sh_rows := (*SliceHeader)(unsafe.Pointer(&routes))
+	sh_rows.Addr = sr
+	sh_rows.Len = int(num)
+	sh_rows.Cap = int(num)
+	return routes, nil
 }
