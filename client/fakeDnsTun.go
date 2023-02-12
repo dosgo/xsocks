@@ -45,7 +45,7 @@ type TunDns struct {
 	udpServer      *dns.Server
 	tcpServer      *dns.Server
 	run            bool
-	excludeDomains map[string]uint8
+	excludeDomains sync.Map
 	dnsAddr        string
 	dnsAddrV6      string
 	dnsPort        string
@@ -79,10 +79,9 @@ func (fakeDns *FakeDnsTun) Start(tunType int, udpProxy bool, tunDevice string, _
 
 	fakeDns.tunDns.ip2Domain = bimap.NewBiMap[string, string]()
 	fakeDns.tunDns.fakeDnsCache = &comm.DnsCache{Cache: make(map[string]comm.IpInfo, 128)}
-	fakeDns.tunDns.excludeDomains = make(map[string]uint8)
 	if fakeDns.tunType == 3 {
 		urlInfo, _ := url.Parse(param.Args.ServerAddr)
-		fakeDns.tunDns.excludeDomains[urlInfo.Hostname()+"."] = 1
+		fakeDns.tunDns.excludeDomains.Store(urlInfo.Hostname()+".", 1)
 	}
 	//生成本地udp端口避免过滤的时候变动了
 	clientPort, _ := comm.GetFreeUdpPort()
@@ -129,13 +128,13 @@ func (fakeDns *FakeDnsTun) _startTun(tunDevice string, _tunAddr string, _tunMask
 		if err != nil {
 			return err
 		}
-	}else if param.Args.TunFd > 0 {
+	} else if param.Args.TunFd > 0 {
 		fakeDns.tunDev, err = FdToIO(param.Args.TunFd)
-		if err != nil { 
+		if err != nil {
 			return err
 		}
 
-	}else {
+	} else {
 		log.Printf("tunGW:%s tunMask:%s\r\n", tunGW, tunMask)
 		fakeDns.tunDev, err = tun.RegTunDev(tunDevice, tunAddr, tunMask, tunGW, tunDNS)
 		if err != nil {
@@ -181,7 +180,7 @@ func (fakeDns *FakeDnsTun) tcpForwarder(conn core.CommTCPConn) error {
 			return nil
 		}
 		//add exclude  domain
-		fakeDns.tunDns.excludeDomains[domains[0]] = 1
+		fakeDns.tunDns.excludeDomains.Store(domains[0], 1)
 		ip, _, err := fakeDns.tunDns.localResolve(domains[0], 4)
 		if err != nil {
 			log.Printf("domain:%s  srcAddr:%s localResolve err:%s\r\n", domains[0], srcAddr, err)
@@ -404,7 +403,7 @@ func (tunDns *TunDns) ipv4Res(domain string) (*dns.A, error) {
 	var dnsErr = false
 	var backErr error = nil
 	ipLog, ok := tunDns.ip2Domain.GetInverse(domain)
-	_, excludeFlag := tunDns.excludeDomains[domain]
+	_, excludeFlag := tunDns.excludeDomains.Load(domain)
 	if ok && !excludeFlag && strings.HasPrefix(ipLog, tunAddr[0:4]) {
 		ip = ipLog
 		ipTtl = 1
@@ -484,7 +483,7 @@ func (tunDns *TunDns) checkDnsChange() {
 func (tunDns *TunDns) ipv6Res(domain string) (interface{}, error) {
 	ipLog, ok := tunDns.ip2Domain.GetInverse(domain)
 	_, ok1 := ipv6To4.Load(domain)
-	_, excludeFlag := tunDns.excludeDomains[domain]
+	_, excludeFlag := tunDns.excludeDomains.Load(domain)
 	if ok && ok1 && !excludeFlag && strings.HasPrefix(ipLog, tunAddr[0:4]) {
 		//ipv6返回错误迫使使用ipv4地址
 		return nil, errors.New("use ipv4")
