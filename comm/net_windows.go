@@ -4,6 +4,7 @@
 package comm
 
 import (
+	"encoding/binary"
 	"fmt"
 	"log"
 	"net"
@@ -13,7 +14,6 @@ import (
 	"syscall"
 	"unsafe"
 
-	routetable "github.com/yijunjun/route-table"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 )
@@ -87,21 +87,33 @@ func getGatewayInfo() GatewayInfo {
 	var minMetric uint32 = 0
 	var forwardMask uint32 = 0
 	for _, row := range rows {
-		if routetable.Inet_ntoa(row.ForwardDest, false) == "0.0.0.0" {
+		if inet_ntoa(row.ForwardDest, false) == "0.0.0.0" {
 			if minMetric == 0 {
 				minMetric = row.ForwardMetric1
 				gatewayInfo.IfIndex = row.ForwardIfIndex
-				gatewayInfo.GwIp = routetable.Inet_ntoa(row.ForwardNextHop, false)
+				gatewayInfo.GwIp = inet_ntoa(row.ForwardNextHop, false)
 			} else {
 				if row.ForwardMetric1 < minMetric || row.ForwardMask > forwardMask {
 					minMetric = row.ForwardMetric1
 					gatewayInfo.IfIndex = row.ForwardIfIndex
-					gatewayInfo.GwIp = routetable.Inet_ntoa(row.ForwardNextHop, false)
+					gatewayInfo.GwIp = inet_ntoa(row.ForwardNextHop, false)
 				}
 			}
 		}
 	}
 	return gatewayInfo
+}
+
+func inet_ntoa(ipnr uint32, isBig bool) string {
+	ip := net.IPv4(0, 0, 0, 0)
+	var bo binary.ByteOrder
+	if isBig {
+		bo = binary.BigEndian
+	} else {
+		bo = binary.LittleEndian
+	}
+	bo.PutUint32([]byte(ip.To4()), ipnr)
+	return ip.String()
 }
 
 func GetGatewayIndex() uint32 {
