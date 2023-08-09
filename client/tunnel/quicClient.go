@@ -1,6 +1,7 @@
 package tunnel
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"log"
@@ -71,7 +72,7 @@ func (qd *QuicDialer) Connect(quicAddr string) error {
 	//udp fob
 	udpConn := udpHeader.NewUdpConn(_udpConn)
 
-	sess, err := quic.DialEarly(udpConn, udpAddr, quicAddr, tlsConf, quicConfig)
+	sess, err := quic.DialEarly(context.Background(), udpConn, udpAddr, tlsConf, quicConfig)
 	if err != nil {
 		log.Printf("err:%v udpAddr:%v _udpConn:%v\r\n", err, udpAddr, _udpConn)
 		return err
