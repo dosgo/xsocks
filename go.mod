@@ -8,6 +8,7 @@ require (
 	github.com/hashicorp/yamux v0.1.1
 	github.com/imgk/divert-go v0.0.0-20220205193416-faaa83c2c10a
 	github.com/miekg/dns v1.1.55
+	github.com/quic-go/quic-go v0.37.2-0.20230809122639-10d11149625a
 	github.com/vishalkuo/bimap v0.0.0-20230512162637-a5362d2f581f
 	github.com/xtaci/kcp-go/v5 v5.6.2
 	github.com/xtaci/smux v1.5.24
@@ -29,7 +30,6 @@ require (
 	github.com/onsi/ginkgo/v2 v2.9.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/quic-go/qtls-go1-20 v0.3.1 // indirect
-	github.com/quic-go/quic-go v0.37.2-0.20230809122639-10d11149625a // indirect
 	github.com/songgao/water v0.0.0-20200317203138-2b4b6d7c09d8 // indirect
 	github.com/templexxx/cpu v0.0.9 // indirect
 	github.com/templexxx/xorsimd v0.4.1 // indirect
