@@ -8,7 +8,7 @@ require (
 	github.com/hashicorp/yamux v0.1.1
 	github.com/imgk/divert-go v0.0.0-20220205193416-faaa83c2c10a
 	github.com/miekg/dns v1.1.55
-	github.com/quic-go/quic-go v0.37.2-0.20230809122639-10d11149625a
+	github.com/quic-go/quic-go v0.37.4
 	github.com/vishalkuo/bimap v0.0.0-20230512162637-a5362d2f581f
 	github.com/xtaci/kcp-go/v5 v5.6.2
 	github.com/xtaci/smux v1.5.24
