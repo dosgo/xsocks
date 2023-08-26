@@ -1,12 +1,13 @@
-// +build !windows
-// +build !wasm
+//go:build !windows && !wasm
+// +build !windows,!wasm
 
 package netstat
 
 import (
-	"github.com/cakturk/go-netstat/netstat"
 	"strconv"
 	"strings"
+
+	"github.com/cakturk/go-netstat/netstat"
 )
 
 /*为啥要用这方法,因为Process在一些电脑比较耗时间只有匹配的才获取*/
@@ -28,8 +29,8 @@ func PortGetPid(lSocks string) (int, error) {
 	return 0, err
 }
 
-func IsSocksServerAddr(pid int, addr string) bool {
-	tbl, err := netstat.TCPSocks(netstat.NoopFilter)
+func IsUdpSocksServerAddr(pid int, addr string) bool {
+	tbl, err := netstat.UDPSocks(netstat.NoopFilter)
 	if err != nil {
 		return false
 	}

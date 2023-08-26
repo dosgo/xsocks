@@ -27,16 +27,14 @@ import (
 )
 
 type FakeDnsTun struct {
-	tunType        int // 3 or 5
-	localSocks     string
-	udpLimit       sync.Map
-	socksServerPid int
-	autoFilter     bool
-	udpProxy       bool
-	run            bool
-	tunDns         *TunDns
-	tunDev         io.ReadWriteCloser
-	safeDns        SafeDns
+	tunType    int // 3 or 5
+	localSocks string
+	udpLimit   sync.Map
+	udpProxy   bool
+	run        bool
+	tunDns     *TunDns
+	tunDev     io.ReadWriteCloser
+	safeDns    SafeDns
 }
 
 type TunDns struct {
@@ -46,6 +44,8 @@ type TunDns struct {
 	tcpServer      *dns.Server
 	run            bool
 	excludeDomains sync.Map
+	socksServerPid int
+	autoFilter     bool
 	dnsAddr        string
 	dnsAddrV6      string
 	dnsPort        string
@@ -70,7 +70,7 @@ func (fakeDns *FakeDnsTun) Start(tunType int, udpProxy bool, tunDevice string, _
 	if fakeDns.tunType == 5 {
 		fakeDns.localSocks = param.Args.ServerAddr[9:]
 		if runtime.GOOS == "windows" {
-			fakeDns.autoFilter = true
+			fakeDns.tunDns.autoFilter = true
 		}
 	}
 	if fakeDns.tunType == 5 || fakeDns.tunType == 3 {
@@ -160,7 +160,7 @@ func (fakeDns *FakeDnsTun) task() {
 		})
 		pid, err := netstat.PortGetPid(fakeDns.localSocks)
 		if err == nil && pid > 0 {
-			fakeDns.socksServerPid = pid
+			fakeDns.tunDns.socksServerPid = pid
 		}
 		time.Sleep(time.Second * 30)
 	}
@@ -168,45 +168,22 @@ func (fakeDns *FakeDnsTun) task() {
 
 func (fakeDns *FakeDnsTun) tcpForwarder(conn core.CommTCPConn) error {
 	var srcAddr = conn.LocalAddr().String()
-	var srcAddrs = strings.Split(srcAddr, ":")
 	var remoteAddr = ""
 	var addrType = 0x01
 	defer conn.Close()
-	if fakeDns.autoFilter && netstat.IsSocksServerAddr(fakeDns.socksServerPid, srcAddrs[0]) {
-		domain := fakeDns.dnsToDomain(srcAddr)
-		domains := strings.Split(domain, ":")
-		if domain == "" {
-			log.Printf("dnsToDomain domain:%s srcAddr:%s\r\n", domain, srcAddr)
-			return nil
-		}
-		//add exclude  domain
-		fakeDns.tunDns.excludeDomains.Store(domains[0], 1)
-		ip, _, err := fakeDns.tunDns.localResolve(domains[0], 4)
-		if err != nil {
-			log.Printf("domain:%s  srcAddr:%s localResolve err:%s\r\n", domains[0], srcAddr, err)
-			return nil
-		}
-		socksConn, err := net.DialTimeout("tcp", ip.String()+":"+srcAddrs[1], time.Second*15)
-		if err != nil {
-			return nil
-		}
-		defer socksConn.Close()
+	remoteAddr = fakeDns.dnsToAddr(srcAddr)
+	if remoteAddr == "" {
+		log.Printf("remoteAddr:%s srcAddr:%s\r\n", remoteAddr, srcAddr)
+		return nil
+	}
+	socksConn, err := net.DialTimeout("tcp", fakeDns.localSocks, time.Second*15)
+	if err != nil {
+		log.Printf("err:%v", err)
+		return nil
+	}
+	defer socksConn.Close()
+	if socks.SocksCmd(socksConn, 1, uint8(addrType), remoteAddr, true) == nil {
 		comm.TcpPipe(conn, socksConn, time.Minute*2)
-	} else {
-		remoteAddr = fakeDns.dnsToAddr(srcAddr)
-		if remoteAddr == "" {
-			log.Printf("remoteAddr:%s srcAddr:%s\r\n", remoteAddr, srcAddr)
-			return nil
-		}
-		socksConn, err := net.DialTimeout("tcp", fakeDns.localSocks, time.Second*15)
-		if err != nil {
-			log.Printf("err:%v", err)
-			return nil
-		}
-		defer socksConn.Close()
-		if socks.SocksCmd(socksConn, 1, uint8(addrType), remoteAddr, true) == nil {
-			comm.TcpPipe(conn, socksConn, time.Minute*2)
-		}
 	}
 	return nil
 }
@@ -339,12 +316,12 @@ func (tunDns *TunDns) Shutdown() {
 }
 
 /*ipv4查询代理*/
-func (tunDns *TunDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
+func (tunDns *TunDns) doIPv4Query(r *dns.Msg, remoteAddr net.Addr) (*dns.Msg, error) {
 	m := &dns.Msg{}
 	m.SetReply(r)
 	m.Authoritative = false
 	domain := r.Question[0].Name
-	v, err := tunDns.ipv4Res(domain)
+	v, err := tunDns.ipv4Res(domain, remoteAddr)
 	if err == nil {
 		m.Answer = []dns.RR{v}
 	}
@@ -376,7 +353,7 @@ func (tunDns *TunDns) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	var err error
 	switch r.Question[0].Qtype {
 	case dns.TypeA:
-		msg, err = tunDns.doIPv4Query(r)
+		msg, err = tunDns.doIPv4Query(r, w.RemoteAddr())
 		break
 	case dns.TypeAAAA:
 		//ipv6
@@ -396,7 +373,7 @@ func (tunDns *TunDns) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 }
 
 /*ipv4智能响应*/
-func (tunDns *TunDns) ipv4Res(domain string) (*dns.A, error) {
+func (tunDns *TunDns) ipv4Res(domain string, remoteAddr net.Addr) (*dns.A, error) {
 	var ip = ""
 	var _ip net.IP
 	var ipTtl uint32 = 60
@@ -424,6 +401,10 @@ func (tunDns *TunDns) ipv4Res(domain string) (*dns.A, error) {
 				//backErr = errors.New("only ipv6")
 				dnsErr = true
 			}
+		}
+		//自动排除
+		if tunDns.autoFilter && netstat.IsUdpSocksServerAddr(tunDns.socksServerPid, remoteAddr.String()) {
+			excludeFlag = true
 		}
 
 		//不为空判断是不是中国ip
