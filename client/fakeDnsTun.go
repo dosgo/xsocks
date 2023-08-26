@@ -39,7 +39,7 @@ type FakeDnsTun struct {
 
 type TunDns struct {
 	dnsClient      *dns.Client
-	dnsClientConn  *dns.Conn
+	srcDns         string
 	udpServer      *dns.Server
 	tcpServer      *dns.Server
 	run            bool
@@ -298,7 +298,7 @@ func (tunDns *TunDns) _startSmartDns(clientPort string) {
 		ReadTimeout:    time.Duration(10) * time.Second,
 		WriteTimeout:   time.Duration(10) * time.Second,
 	}
-	tunDns.dnsClientConn, _ = tunDns.dnsClient.Dial(comm.GetOldDns(tunDns.dnsAddr, tunGW, "") + ":53")
+	tunDns.srcDns = comm.GetOldDns(tunDns.dnsAddr, tunGW, "") + ":53"
 	go tunDns.udpServer.ListenAndServe()
 	go tunDns.tcpServer.ListenAndServe()
 	go tunDns.checkDnsChange()
@@ -361,7 +361,7 @@ func (tunDns *TunDns) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 		break
 	default:
 		var rtt time.Duration
-		msg, rtt, err = tunDns.dnsClient.ExchangeWithConn(r, tunDns.dnsClientConn)
+		msg, rtt, err = tunDns.dnsClient.Exchange(r, tunDns.srcDns)
 		log.Printf("ServeDNS default rtt:%+v err:%+v\r\n", rtt, err)
 		break
 	}
@@ -437,21 +437,13 @@ func (tunDns *TunDns) clearDnsCache() {
 /*检测旧dns改变*/
 func (tunDns *TunDns) checkDnsChange() {
 	for tunDns.run {
-		if tunDns.dnsClientConn == nil || tunDns.dnsClientConn.RemoteAddr().String() == "" {
-			time.Sleep(time.Second * 10)
-			continue
-		}
-		conn, err := net.DialTimeout("tcp", tunDns.dnsClientConn.RemoteAddr().String(), time.Second*1)
+		conn, err := net.DialTimeout("tcp", tunDns.srcDns, time.Second*1)
 		//可能dns变了，
 		if err != nil {
 			oldDns := comm.GetOldDns(tunDns.dnsAddr, tunGW, "")
 			//检测网关DNS是否改变
-			if strings.Index(tunDns.dnsClientConn.RemoteAddr().String(), oldDns) == -1 {
-				tunDns.dnsClientConn.Close()
-				dnsClientConn, err := tunDns.dnsClient.Dial(oldDns + ":53")
-				if err == nil {
-					tunDns.dnsClientConn = dnsClientConn
-				}
+			if strings.Index(tunDns.srcDns, oldDns) == -1 {
+				tunDns.srcDns = oldDns + ":53"
 			}
 		} else {
 			conn.Close()
@@ -523,7 +515,7 @@ func (tunDns *TunDns) localResolve(domain string, ipType int) (net.IP, uint32, e
 	if cache != "" {
 		return net.ParseIP(cache), ttl, nil
 	}
-	m1, rtt, err := tunDns.dnsClient.ExchangeWithConn(query, tunDns.dnsClientConn)
+	m1, rtt, err := tunDns.dnsClient.Exchange(query, tunDns.srcDns)
 	if err == nil {
 		for _, v := range m1.Answer {
 			if ipType == 4 {

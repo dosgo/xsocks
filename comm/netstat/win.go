@@ -4,6 +4,7 @@
 package netstat
 
 import (
+	"os"
 	"strconv"
 	"strings"
 
@@ -45,7 +46,7 @@ func IsUdpSocksServerAddr(pid int, addr string) bool {
 			State:      s[i].SockState(),
 		}
 		if strings.Index(ent.RemoteAddr.String(), addr) != -1 {
-			if int(s[i].WinPid) == pid {
+			if int(s[i].WinPid) == pid || int(s[i].WinPid) == os.Getpid() {
 				return true
 			}
 		}
