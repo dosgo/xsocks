@@ -516,6 +516,7 @@ func (tunDns *TunDns) localResolve(domain string, ipType int) (net.IP, uint32, e
 		return net.ParseIP(cache), ttl, nil
 	}
 	m1, rtt, err := tunDns.dnsClient.Exchange(query, tunDns.srcDns)
+	var loopIp = ""
 	if err == nil {
 		for _, v := range m1.Answer {
 			if ipType == 4 {
@@ -525,6 +526,8 @@ func (tunDns *TunDns) localResolve(domain string, ipType int) (net.IP, uint32, e
 					if record.A.String() != "127.0.0.1" {
 						tunDns.fakeDnsCache.WriteDnsCache(domain+":"+strconv.Itoa(ipType), record.Hdr.Ttl, record.A.String())
 						return record.A, record.Hdr.Ttl, nil
+					} else {
+						loopIp = record.A.String()
 					}
 				}
 			}
@@ -539,6 +542,9 @@ func (tunDns *TunDns) localResolve(domain string, ipType int) (net.IP, uint32, e
 	} else {
 		log.Printf("localResolve:%s  ipType:%d  rtt:%+v err:%+v\r\n", domain, ipType, rtt, err)
 		return nil, 0, err
+	}
+	if loopIp == "127.0.0.1" {
+		return nil, 0, nil
 	}
 	return nil, 0, errors.New("Not found addr")
 }
