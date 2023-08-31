@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/cakturk/go-netstat v0.0.0-20200220111822-e5b49efee7a5
-	github.com/dosgo/go-tun2socks v1.1.3
+	github.com/dosgo/go-tun2socks v1.1.5
 	github.com/hashicorp/yamux v0.1.1
 	github.com/imgk/divert-go v0.0.0-20220205193416-faaa83c2c10a
 	github.com/miekg/dns v1.1.55
@@ -39,7 +39,7 @@ require (
 	golang.org/x/text v0.12.0 // indirect
 	golang.org/x/tools v0.9.1 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
-	golang.zx2c4.com/wireguard v0.0.0-20230209153558-1e2c3e5a3c14 // indirect
+	golang.zx2c4.com/wireguard v0.0.0-20230704135630-469159ecf7d1 // indirect
 	golang.zx2c4.com/wireguard/windows v0.5.3 // indirect
 	gvisor.dev/gvisor v0.0.0-20230721184925-1a20c31151f2 // indirect
 )
