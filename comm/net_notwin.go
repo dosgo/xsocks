@@ -41,7 +41,7 @@ func GetOldDns(dnsAddr string, tunGW string, _tunGW string) string {
 	for _, _dns := range dnss {
 		if strings.Index(_dns, dnsAddr) != -1 {
 			continue
-		} else {
+		} else if strings.Index(_dns, "nameserver") != -1 {
 			oldDns = strings.TrimSpace(strings.Replace(_dns, "nameserver", "", -1))
 			return oldDns
 		}
