@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/dosgo/go-tun2socks v1.1.6
-	github.com/dosgo/goSocksTap v0.0.0-20230901172958-b017da9d04c9
+	github.com/dosgo/goSocksTap v0.0.0-20230901173708-1cd34c4c1f66
 	github.com/hashicorp/yamux v0.1.1
 	github.com/miekg/dns v1.1.55
 	github.com/quic-go/quic-go v0.37.4
