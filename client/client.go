@@ -35,7 +35,6 @@ func (c *Client) Shutdown() {
 	if c.tun2Socks != nil {
 		c.tun2Socks.Shutdown()
 	}
-
 	c.isStart = false
 }
 
@@ -84,11 +83,9 @@ func (c *Client) Start() error {
 
 	//windows + linux +mac
 	if param.Args.TunType == 3 {
-		var _socksTap = socksTap.SocksTap{}
+		c.socksTap = &socksTap.SocksTap{}
 		urlInfo, _ := url.Parse(param.Args.ServerAddr)
-
-		_socksTap.Start(param.Args.Sock5Addr, urlInfo.Hostname(), true, param.Args.UdpProxy == 1)
-
+		c.socksTap.Start(param.Args.Sock5Addr, urlInfo.Hostname(), true, param.Args.UdpProxy == 1)
 	}
 
 	//to local safe socks5(udp support) windows + linux +mac
@@ -97,9 +94,8 @@ func (c *Client) Start() error {
 			log.Printf("-serverAddr socks5://127.0.0.1:1080 \r\n")
 			return errors.New("-tuntype 5 -serverAddr socks5://127.0.0.1:1080")
 		}
-
-		var _socksTap = socksTap.SocksTap{}
-		_socksTap.Start(param.Args.ServerAddr[9:], "", true, param.Args.UdpProxy == 1)
+		c.socksTap = &socksTap.SocksTap{}
+		c.socksTap.Start(param.Args.ServerAddr[9:], "", true, param.Args.UdpProxy == 1)
 
 	}
 
