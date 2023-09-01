@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
 	"os/exec"
 	"strings"
 	"syscall"
@@ -66,83 +65,6 @@ func inet_ntoa(ipnr uint32, isBig bool) string {
 	}
 	bo.PutUint32([]byte(ip.To4()), ipnr)
 	return ip.String()
-}
-
-func GetGatewayIndex() uint32 {
-	item := getGatewayInfo()
-	return item.IfIndex
-}
-
-/*获取旧的dns,内网解析用*/
-func GetOldDns(dnsAddr string, tunGW string, _tunGW string) string {
-	ifIndex := GetGatewayIndex()
-	dnsServers, err := GetDnsServerByIfIndex(ifIndex)
-	if err == nil {
-		for _, v := range dnsServers {
-			if v != dnsAddr && v != tunGW && v != _tunGW {
-				oldDns = v
-				break
-			}
-		}
-	}
-	return oldDns
-}
-
-func getAdapterAddresses() ([]*windows.IpAdapterAddresses, error) {
-	var b []byte
-	l := uint32(15000) // recommended initial size
-	for {
-		b = make([]byte, l)
-		err := windows.GetAdaptersAddresses(syscall.AF_UNSPEC, windows.GAA_FLAG_INCLUDE_PREFIX, 0, (*windows.IpAdapterAddresses)(unsafe.Pointer(&b[0])), &l)
-		if err == nil {
-			if l == 0 {
-				return nil, nil
-			}
-			break
-		}
-		if err.(syscall.Errno) != syscall.ERROR_BUFFER_OVERFLOW {
-			return nil, os.NewSyscallError("getadaptersaddresses", err)
-		}
-		if l <= uint32(len(b)) {
-			return nil, os.NewSyscallError("getadaptersaddresses", err)
-		}
-	}
-	var aas []*windows.IpAdapterAddresses
-	for aa := (*windows.IpAdapterAddresses)(unsafe.Pointer(&b[0])); aa != nil; aa = aa.Next {
-		aas = append(aas, aa)
-	}
-	return aas, nil
-}
-
-// GetDNSServerAddressList returns the DNS server addresses of the queried interface.
-func GetDnsServerByIfIndex(ifIndex uint32) ([]string, error) {
-	addresses, err := getAdapterAddresses()
-	if err != nil {
-		return nil, err
-	}
-
-	var firstDnsNode *windows.IpAdapterDnsServerAdapter
-	// Find the adapter which has the same mac as queried.
-	for _, adapterAddr := range addresses {
-		if adapterAddr.IfIndex == ifIndex {
-			firstDnsNode = adapterAddr.FirstDnsServerAddress
-		}
-	}
-
-	dnsServerAddressList := make([]string, 0)
-	for firstDnsNode != nil {
-		dnsServerAddressList = append(dnsServerAddressList, firstDnsNode.Address.IP().String())
-		firstDnsNode = firstDnsNode.Next
-	}
-	return dnsServerAddressList, nil
-}
-
-func SetNetConf(dnsIpv4 string, dnsIpv6 string) {
-
-}
-
-func ResetNetConf(ip string) {
-
 }
 
 func AddRoute(tunAddr string, tunGw string, tunMask string) error {
