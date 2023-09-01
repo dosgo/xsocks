@@ -33,10 +33,7 @@ func (c *Client) Shutdown() {
 	if c.tun2Socks != nil {
 		c.tun2Socks.Shutdown()
 	}
-	//关闭代理
-	if param.Args.TunType == 4 && runtime.GOOS == "windows" {
-		comm.CloseSystenProxy()
-	}
+
 	c.isStart = false
 }
 
@@ -82,25 +79,13 @@ func (c *Client) Start() error {
 			}
 		}
 	}
-	//2==tun2remote tun (android)
-	if param.Args.TunType == 2 {
-		log.Printf("does not support the TUNTYPE 2 parameter, use TUNTYPE 3\r\n")
-		return nil
-	}
+
 	//windows + linux +mac
 	if param.Args.TunType == 3 {
 		c.fakeDns = &FakeDnsTun{}
 		c.fakeDns.Start(3, param.Args.UdpProxy == 1, "", tunAddr, "", tunGw, "")
 	}
 
-	//only windows  (system proxy)
-	if param.Args.TunType == 4 {
-		if runtime.GOOS != "windows" {
-			log.Printf("TunType 4 supports Windows only\r\n")
-		} else {
-			comm.SetSystenProxy("socks://"+param.Args.Sock5Addr, "", true)
-		}
-	}
 	//to local safe socks5(udp support) windows + linux +mac
 	if param.Args.TunType == 5 {
 		if !strings.HasPrefix(param.Args.ServerAddr, "socks5") {
@@ -142,9 +127,6 @@ func initTunnel() {
 	} else if strings.HasPrefix(param.Args.ServerAddr, "quic") {
 		tunnelDialer = tunnel.NewQuicDialer()
 		tunnelUrl = param.Args.ServerAddr[7:]
-	} else if strings.HasPrefix(param.Args.ServerAddr, "kcp") {
-		tunnelDialer = tunnel.NewKcpDialer()
-		tunnelUrl = param.Args.ServerAddr[6:]
 	} else {
 		return
 	}

@@ -50,7 +50,6 @@ type ServerParam struct {
 	Sock5Port    string
 	QuicPort     string
 	WebPort      string
-	KcpPort      string
 	CertFile     string
 	KeyFile      string
 	LocalTunSock string

@@ -36,10 +36,8 @@ func Start() {
 	log.Println("client run: ./client   -serverAddr \"quic://" + publicIp + ":" + paramParam.QuicPort + "\"")
 	log.Println("client run: ./client   -serverAddr \"wss://" + publicIp + ":" + paramParam.WebPort + "\" -caFile xx_ca.pem")
 	log.Println("client run: ./client   -serverAddr \"http2://" + publicIp + ":" + paramParam.WebPort + "\" -caFile xx_ca.pem")
-	log.Println("client run: ./client   -serverAddr \"kcp://" + publicIp + ":" + paramParam.KcpPort + "\"")
 
 	go StartRemoteSocks51("127.0.0.1:" + paramParam.Sock5Port)
 	go StartWeb(publicIp + ":" + paramParam.WebPort)
-	go StartKcp(publicIp + ":" + paramParam.KcpPort)
 	go StartQuic(publicIp + ":" + paramParam.QuicPort)
 }
