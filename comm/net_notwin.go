@@ -12,14 +12,6 @@ import (
 
 var oldDns = ""
 
-/**/
-func SetSystenProxy(proxyServer string, whiteList string, open bool) bool {
-	return true
-}
-func CloseSystenProxy() bool {
-	return true
-}
-
 func GetGateway() string {
 	return ""
 }
