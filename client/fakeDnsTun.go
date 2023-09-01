@@ -62,8 +62,9 @@ var ipv6To4 sync.Map
 func (fakeDns *FakeDnsTun) Start(tunType int, udpProxy bool, tunDevice string, _tunAddr string, _tunMask string, _tunGW string, tunDNS string) {
 	fakeDns.tunType = tunType
 	fakeDns.udpProxy = udpProxy
+	localAddr := comm.GetLocalIpV4()
 	//start local dns  (Compatible with openvpn using port 653)
-	fakeDns.tunDns = &TunDns{dnsPort: "653", dnsAddr: "127.0.0.1", dnsAddrV6: "0:0:0:0:0:0:0:1"}
+	fakeDns.tunDns = &TunDns{dnsPort: "53", dnsAddr: localAddr, dnsAddrV6: "0:0:0:0:0:0:0:1"}
 	if fakeDns.tunType == 3 {
 		fakeDns.localSocks = param.Args.Sock5Addr
 	}
@@ -71,6 +72,7 @@ func (fakeDns *FakeDnsTun) Start(tunType int, udpProxy bool, tunDevice string, _
 		fakeDns.localSocks = param.Args.ServerAddr[9:]
 		if runtime.GOOS == "windows" {
 			fakeDns.tunDns.autoFilter = true
+			fakeDns.tunDns.dnsPort = "653" //为了避免死循环windows使用653端口
 		}
 	}
 	if fakeDns.tunType == 5 || fakeDns.tunType == 3 {
@@ -272,32 +274,35 @@ func (fakeDns *FakeDnsTun) dnsToDomain(remoteAddr string) string {
 func (tunDns *TunDns) _startSmartDns(clientPort string) {
 	tunDns.run = true
 	tunDns.udpServer = &dns.Server{
-		Net:          "udp",
-		Addr:         ":" + tunDns.dnsPort,
+		Net:          "udp4",
+		Addr:         tunDns.dnsAddr + ":" + tunDns.dnsPort,
 		Handler:      dns.HandlerFunc(tunDns.ServeDNS),
 		UDPSize:      4096,
 		ReadTimeout:  time.Duration(10) * time.Second,
 		WriteTimeout: time.Duration(10) * time.Second,
 	}
 	tunDns.tcpServer = &dns.Server{
-		Net:          "tcp",
-		Addr:         ":" + tunDns.dnsPort,
+		Net:          "tcp4",
+		Addr:         tunDns.dnsAddr + ":" + tunDns.dnsPort,
 		Handler:      dns.HandlerFunc(tunDns.ServeDNS),
 		UDPSize:      4096,
 		ReadTimeout:  time.Duration(10) * time.Second,
 		WriteTimeout: time.Duration(10) * time.Second,
 	}
 
-	localPort, _ := strconv.Atoi(clientPort)
-	_dialer := &net.Dialer{Timeout: 10 * time.Second, LocalAddr: &net.UDPAddr{Port: localPort}}
 	tunDns.dnsClient = &dns.Client{
 		Net:            "udp",
 		UDPSize:        4096,
-		Dialer:         _dialer,
 		SingleInflight: false,
 		ReadTimeout:    time.Duration(10) * time.Second,
 		WriteTimeout:   time.Duration(10) * time.Second,
 	}
+	if runtime.GOOS == "windows" {
+		localPort, _ := strconv.Atoi(clientPort)
+		_dialer := &net.Dialer{Timeout: 10 * time.Second, LocalAddr: &net.UDPAddr{Port: localPort}}
+		tunDns.dnsClient.Dialer = _dialer
+	}
+
 	tunDns.srcDns = comm.GetOldDns(tunDns.dnsAddr, tunGW, "") + ":53"
 	go tunDns.udpServer.ListenAndServe()
 	go tunDns.tcpServer.ListenAndServe()
