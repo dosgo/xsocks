@@ -10,8 +10,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dosgo/go-tun2socks v1.1.6 h1:EpeQbN0vjxcRKZhEpFZT0axvaZt9+NWv6mforBS9BQY=
 github.com/dosgo/go-tun2socks v1.1.6/go.mod h1:joCBZ4C0myOi8b6tMT4dmt8imC0adYql85J2ODTqovg=
-github.com/dosgo/goSocksTap v0.0.0-20230901151947-ab5cf6344ad6 h1:673/fWAvqSAqLWZaKVOFzsdJZg32YG18uvtaL3032eM=
-github.com/dosgo/goSocksTap v0.0.0-20230901151947-ab5cf6344ad6/go.mod h1:y6uPuLXDX1txYJ7ZMYn4iTjooHrrK9cWjtNbNtEAmrM=
+github.com/dosgo/goSocksTap v0.0.0-20230901172523-ecd2edaaf82e h1:PsVpZ47lKiqKMq83/uJcG3X7NMHk3MQc99OK+2Y61fc=
+github.com/dosgo/goSocksTap v0.0.0-20230901172523-ecd2edaaf82e/go.mod h1:KUg/n+5dnIf71dGgBvEvs30ulAXUjR+qBAK5aQsLQLc=
 github.com/go-logr/logr v1.2.4 h1:g01GSCwiDw2xSZfjJ2/T9M+S6pFdcNtFYsp+Y43HYDQ=
 github.com/go-ole/go-ole v1.2.5 h1:t4MGB5xEDZvXI+0rMjjsfBsD7yAgp/s9ZDkL1JndXwY=
 github.com/go-ole/go-ole v1.2.5/go.mod h1:pprOEPIfldk/42T2oK7lQ4v4JSDwmV0As9GaiUsvbm0=
@@ -47,12 +47,10 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.7.1 h1:5TQK59W5E3v0r2duFAb7P95B6hEeOyEnHRa8MjYSMTY=
-github.com/vishalkuo/bimap v0.0.0-20230512162637-a5362d2f581f h1:Bdvgl5ALPSQgEKwjJ9ypv+yZJRtS3wWsc1MV1bxHXqM=
-github.com/vishalkuo/bimap v0.0.0-20230512162637-a5362d2f581f/go.mod h1:dxXQNHjw3hAY1z8izMtjimf/IjtT/o7ZZezj7XI8Vy0=
+github.com/vishalkuo/bimap v0.0.0-20230830142743-a9fb9b52066c h1:KEcyvVSSrD/dq45OZpwFG7/gi608xzyriB8kgquCgPU=
+github.com/vishalkuo/bimap v0.0.0-20230830142743-a9fb9b52066c/go.mod h1:oVZgsxuZOVCkAVcgSitAfucCKX0Ani+R8bIbfGdqAkg=
 github.com/xtaci/smux v1.5.24 h1:77emW9dtnOxxOQ5ltR+8BbsX1kzcOxQ5gB+aaV9hXOY=
 github.com/xtaci/smux v1.5.24/go.mod h1:OMlQbT5vcgl2gb49mFkYo6SMf+zP3rcjcwQz7ZU7IGY=
-github.com/yijunjun/route-table v0.0.0-20160321072918-9608fc1e2e44 h1:m+wS8XcW72Mvj3DH/AI5z8FvtHnkutIqaz8ZDdvly38=
-github.com/yijunjun/route-table v0.0.0-20160321072918-9608fc1e2e44/go.mod h1:sYs5XM5timgLjTPVLLR5tbTtv1nT2tfUzWEw2dD/ULw=
 github.com/yl2chen/cidranger v1.0.2 h1:lbOWZVCG1tCRX4u24kuM1Tb4nHqWkDxwLdoS+SevawU=
 github.com/yl2chen/cidranger v1.0.2/go.mod h1:9U1yz7WPYDwf0vpNWFaeRh0bjwz5RVgRy/9UEQfHl0g=
 github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
