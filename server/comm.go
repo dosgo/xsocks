@@ -20,7 +20,6 @@ import (
 	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/param"
 	"github.com/hashicorp/yamux"
-	"github.com/xtaci/smux"
 )
 
 /*共享内存避免GC*/
@@ -213,29 +212,6 @@ func streamToSocks5Yamux(conn io.ReadWriteCloser) {
 	for {
 		// Accept a stream
 		stream, err := session.Accept()
-		if err != nil {
-			log.Printf("err:%v\r\n", err)
-			return
-		}
-		go Proxy(stream)
-	}
-}
-
-/* to socks5 server*/
-func streamToSocks5Smux(conn io.ReadWriteCloser) {
-	conf := smux.DefaultConfig()
-	conf.KeepAliveInterval = 59 * time.Second
-	conf.KeepAliveTimeout = 60 * time.Second
-	// Setup server side of yamux
-	session, err := smux.Server(conn, conf)
-	if err != nil {
-		log.Printf("err:%v\r\n", err)
-		return
-	}
-	defer session.Close()
-	for {
-		// Accept a stream
-		stream, err := session.AcceptStream()
 		if err != nil {
 			log.Printf("err:%v\r\n", err)
 			return

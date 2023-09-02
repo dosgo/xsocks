@@ -9,7 +9,6 @@ require (
 	github.com/miekg/dns v1.1.55
 	github.com/quic-go/quic-go v0.37.4
 	github.com/vishalkuo/bimap v0.0.0-20230830142743-a9fb9b52066c
-	github.com/xtaci/smux v1.5.24
 	github.com/yl2chen/cidranger v1.0.2
 	golang.org/x/net v0.10.0
 	golang.org/x/sys v0.11.0
