@@ -115,6 +115,7 @@ func ReadConf() ([]byte, error) {
 			paramParam.SkipVerify = confParam.SkipVerify
 			paramParam.TunType = confParam.TunType
 			paramParam.UdpProxy = confParam.UdpProxy
+			paramParam.ExcludeDomain = confParam.ExcludeDomain
 			paramParam.AutoStart = isAutoStart(paramParam.ServerAddr)
 		}
 	} else {
