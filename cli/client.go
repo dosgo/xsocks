@@ -28,6 +28,7 @@ func main() {
 	flag.BoolVar(&paramParam.SkipVerify, "skipVerify", false, "SkipVerify")
 	flag.IntVar(&paramParam.TunType, "tunType", 0, "tun type 1.tun2sock 2.tun2Remote")
 	flag.StringVar(&paramParam.UnixSockTun, "unixSockTun", "", "unix socket tun")
+	flag.StringVar(&paramParam.ExcludeDomain, "excludeDomain", "", "exclude Domain")
 	flag.IntVar(&paramParam.MuxNum, "muxNum", 4, "multiplexer Num")
 	flag.IntVar(&paramParam.LocalDns, "localDns", 0, "use local dns")
 	flag.IntVar(&paramParam.SmartDns, "smartDns", 1, "use smart dns")

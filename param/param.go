@@ -2,7 +2,7 @@ package param
 
 import "time"
 
-var version = "2.0.0-(20230827)"
+var version = "2.0.0-(20231222)"
 
 var Args *ArgsParam
 
@@ -30,6 +30,7 @@ type CommParam struct {
 type ClientParam struct {
 	Sock5Addr     string
 	ServerAddr    string
+	ExcludeDomain string
 	CaFile        string
 	SkipVerify    bool
 	TunType       int

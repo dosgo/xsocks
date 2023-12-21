@@ -85,7 +85,7 @@ func (c *Client) Start() error {
 	if param.Args.TunType == 3 {
 		c.socksTap = &socksTap.SocksTap{}
 		urlInfo, _ := url.Parse(param.Args.ServerAddr)
-		c.socksTap.Start(param.Args.Sock5Addr, urlInfo.Hostname(), true, param.Args.UdpProxy == 1)
+		c.socksTap.Start(param.Args.Sock5Addr, urlInfo.Hostname(), param.Args.UdpProxy == 1)
 	}
 
 	//to local safe socks5(udp support) windows + linux +mac
@@ -95,7 +95,7 @@ func (c *Client) Start() error {
 			return errors.New("-tuntype 5 -serverAddr socks5://127.0.0.1:1080")
 		}
 		c.socksTap = &socksTap.SocksTap{}
-		c.socksTap.Start(param.Args.ServerAddr[9:], "", true, param.Args.UdpProxy == 1)
+		c.socksTap.Start(param.Args.ServerAddr[9:], param.Args.ExcludeDomain, param.Args.UdpProxy == 1)
 
 	}
 
