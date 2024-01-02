@@ -7,7 +7,7 @@ require (
 	github.com/dosgo/goSocksTap v0.0.0-20231222172444-1a047c6990ab
 	github.com/hashicorp/yamux v0.1.1
 	github.com/miekg/dns v1.1.55
-	github.com/quic-go/quic-go v0.37.4
+	github.com/quic-go/quic-go v0.40.1
 	github.com/vishalkuo/bimap v0.0.0-20230830142743-a9fb9b52066c
 	github.com/yl2chen/cidranger v1.0.2
 	golang.org/x/net v0.10.0
@@ -36,5 +36,5 @@ require (
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20230704135630-469159ecf7d1 // indirect
 	golang.zx2c4.com/wireguard/windows v0.5.3 // indirect
-	gvisor.dev/gvisor v0.0.0-20230721184925-1a20c31151f2 // indirect
+	gvisor.dev/gvisor v0.0.0-20231020174304-b8a429915ff1 // indirect
 )
