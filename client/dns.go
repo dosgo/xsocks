@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/dosgo/goSocksTap/comm/dot"
-	"github.com/dosgo/xsocks/comm"
+	socksTapComm "github.com/dosgo/goSocksTap/comm"
 	"github.com/dosgo/xsocks/param"
 	"github.com/miekg/dns"
 )
@@ -94,7 +94,7 @@ func (localDns *LocalDns) doIPv4Query(r *dns.Msg) (*dns.Msg, error) {
 				record, isType := v.(*dns.A)
 				if isType {
 					//中国Ip直接回复
-					if comm.IsChinaMainlandIP(record.A.String()) {
+					if socksTapComm.IsChinaMainlandIP(record.A.String()) {
 						return m1, nil
 					}
 				}
