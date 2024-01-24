@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"runtime"
 	"strings"
-
+	socksTapComm "github.com/dosgo/goSocksTap/comm"
 	"github.com/dosgo/goSocksTap/socksTap"
 	"github.com/dosgo/xsocks/client/tunnel"
 	"github.com/dosgo/xsocks/client/tunnelcomm"
@@ -63,7 +63,7 @@ func (c *Client) Start() error {
 	var tunGw = ""
 	//no android
 	if param.Args.TunFd == 0 {
-		tunAddr, tunGw = comm.GetUnusedTunAddr()
+		tunAddr, tunGw = socksTapComm.GetUnusedTunAddr()
 	}
 	//1==tun2sock  (android)
 	//windows use IP_UNICAST_IF   Unrealized
