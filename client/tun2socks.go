@@ -11,6 +11,7 @@ import (
 	"github.com/dosgo/go-tun2socks/core"
 	"github.com/dosgo/go-tun2socks/tun"
 	"github.com/dosgo/go-tun2socks/tun2socks"
+	socksTapComm "github.com/dosgo/goSocksTap/comm"
 	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/comm/socks"
 	"github.com/dosgo/xsocks/param"
@@ -75,7 +76,7 @@ func rawTcpForwarder(conn core.CommTCPConn) error {
 	}
 	defer socksConn.Close()
 	if socks.SocksCmd(socksConn, 1, 1, remoteAddr, true) == nil {
-		comm.TcpPipe(conn, socksConn, time.Minute*2)
+		socksTapComm.TcpPipe(conn, socksConn, time.Minute*2)
 	}
 	return nil
 }
@@ -92,7 +93,7 @@ func rawUdpForwarder(conn core.CommUDPConn, ep core.CommEndpoint) error {
 	return nil
 }
 func dnsReqUdp(conn core.CommUDPConn, ep core.CommEndpoint) error {
-	comm.TunNatSawp(&tun2UdpNat, conn, ep, "127.0.0.1:"+param.Args.DnsPort, 15*time.Second)
+	socksTapComm.TunNatSawp(&tun2UdpNat, conn, ep, "127.0.0.1:"+param.Args.DnsPort, 15*time.Second)
 	return nil
 }
 
@@ -103,7 +104,7 @@ func dnsReqTcp(conn core.CommTCPConn) error {
 		log.Println(err.Error())
 		return err
 	}
-	comm.TcpPipe(conn, dnsConn, time.Minute*2)
+	socksTapComm.TcpPipe(conn, dnsConn, time.Minute*2)
 	log.Printf("dnsReq Tcp\r\n")
 	return nil
 }
