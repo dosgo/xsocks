@@ -185,7 +185,7 @@ func GetPublicIP() (ip string, err error) {
 		if ipNet, isIpNet = addr.(*net.IPNet); isIpNet && !ipNet.IP.IsLoopback() {
 			//
 			if ipNet.IP.To4() != nil {
-				if comm.IsPublicIP(ipNet.IP) {
+				if socksTapComm.IsPublicIP(ipNet.IP) {
 					ip = ipNet.IP.String()
 					return
 				}
