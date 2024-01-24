@@ -13,6 +13,7 @@ import (
 
 	"github.com/dosgo/xsocks/client/tunnelcomm"
 	"github.com/dosgo/xsocks/comm"
+	socksTapComm "github.com/dosgo/goSocksTap/comm"
 	"github.com/dosgo/xsocks/comm/socks"
 	"github.com/dosgo/xsocks/param"
 	"github.com/vishalkuo/bimap"
@@ -383,7 +384,7 @@ func handleLocalRequest(clientConn net.Conn, udpAddr *net.UDPAddr) error {
 				defer server.Close()
 				clientConn.Write([]byte{0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}) //响应客户端连接成功
 				//进行转发
-				comm.TcpPipe(server, clientConn, time.Minute*2)
+				socksTapComm.TcpPipe(server, clientConn, time.Minute*2)
 				return nil
 			} else {
 				//保存記錄
@@ -423,7 +424,7 @@ func handleLocalRequest(clientConn net.Conn, udpAddr *net.UDPAddr) error {
 					log.Printf("read remote error err:%v\r\n ", err)
 					return err
 				}
-				comm.TcpPipe(stream, clientConn, time.Minute*3)
+				socksTapComm.TcpPipe(stream, clientConn, time.Minute*3)
 			}
 		}
 		//UDP  代理
