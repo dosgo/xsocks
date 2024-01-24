@@ -5,7 +5,8 @@ import (
 	"net"
 	"runtime"
 
-	"github.com/dosgo/xsocks/comm"
+
+	"github.com/dosgo/goSocksTap/comm"
 	"github.com/dosgo/xsocks/param"
 	"github.com/miekg/dns"
 )
