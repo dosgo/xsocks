@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/dosgo/xsocks/comm"
+	socksTapComm "github.com/dosgo/goSocksTap/comm"
 	"github.com/dosgo/xsocks/param"
 	"github.com/hashicorp/yamux"
 )
@@ -69,7 +70,7 @@ func Proxy(conn comm.CommConn) {
 		}
 		defer sConn.Close()
 		//交换数据
-		comm.TcpPipe(sConn, conn, time.Minute*5)
+		socksTapComm.TcpPipe(sConn, conn, time.Minute*5)
 		break
 	//to tun
 	case 0x03:
