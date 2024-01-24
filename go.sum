@@ -8,10 +8,10 @@ github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMn
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/dosgo/go-tun2socks v1.1.8 h1:+9iBIoWAv6mCs5N0jIKJEXHPZVf/sA0S/+Cv4NJjHCM=
-github.com/dosgo/go-tun2socks v1.1.8/go.mod h1:ywCzINnQ1qKp4in6XTjykFSUyuRY0eSULJJUuVYO0V8=
-github.com/dosgo/goSocksTap v0.0.0-20240102170256-fbdeb7e81c0f h1:bEuR0Wt97u/G6S0ED0CPehCbj28JqTSmi/5YZe9ihlg=
-github.com/dosgo/goSocksTap v0.0.0-20240102170256-fbdeb7e81c0f/go.mod h1:ZK5gCVRPMcKNu/LCWSB3SqbiOZI8i9RqiJ+wClCyzJI=
+github.com/dosgo/go-tun2socks v1.1.9 h1:UZojDboHzOgs8wSt4RyiJEFvsD7u1hSQDtKaZllsLKQ=
+github.com/dosgo/go-tun2socks v1.1.9/go.mod h1:ywCzINnQ1qKp4in6XTjykFSUyuRY0eSULJJUuVYO0V8=
+github.com/dosgo/goSocksTap v0.0.0-20240124161127-6dc2e99f9281 h1:J7NzzCMUBv8hikF6908Z45zSeh80t4fHgM15HFWkilE=
+github.com/dosgo/goSocksTap v0.0.0-20240124161127-6dc2e99f9281/go.mod h1:cH67Z5mQb5rCqop9+pK0Mm7gzRtAf5Io495QZYKFjxE=
 github.com/go-logr/logr v1.2.4 h1:g01GSCwiDw2xSZfjJ2/T9M+S6pFdcNtFYsp+Y43HYDQ=
 github.com/go-logr/logr v1.2.4/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
 github.com/go-ole/go-ole v1.2.5 h1:t4MGB5xEDZvXI+0rMjjsfBsD7yAgp/s9ZDkL1JndXwY=
