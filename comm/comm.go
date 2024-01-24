@@ -9,38 +9,17 @@ import (
 	"log"
 	"net"
 	"os"
-	"strconv"
 	"strings"
-	"sync"
 	"time"
-	"golang.org/x/time/rate"
 )
 
-var poolNatBuf = &sync.Pool{
-	New: func() interface{} {
-		return make([]byte, 4096)
-	},
-}
+
 
 type CommConn interface {
 	SetDeadline(t time.Time) error
 	io.ReadWriteCloser
 }
 
-type CommConnTimeout struct {
-	Conn    CommConn
-	TimeOut time.Duration
-}
-
-func (conn CommConnTimeout) Read(buf []byte) (int, error) {
-	conn.Conn.SetDeadline(time.Now().Add(conn.TimeOut))
-	return conn.Conn.Read(buf)
-}
-
-func (conn CommConnTimeout) Write(buf []byte) (int, error) {
-	conn.Conn.SetDeadline(time.Now().Add(conn.TimeOut))
-	return conn.Conn.Write(buf)
-}
 
 func GenPasswordHead(password string) string {
 	h := md5.New()
@@ -73,16 +52,7 @@ func GetFreeUdpPort() (string, error) {
 	return fmt.Sprintf("%d", l.LocalAddr().(*net.UDPAddr).Port), nil
 }
 
-func IsPublicIP(ip net.IP) bool {
-	ip.IsPrivate()
-	if ip.IsLoopback() || ip.IsLinkLocalMulticast() || ip.IsLinkLocalUnicast() {
-		return false
-	}
-	if !ip.IsPrivate() {
-		return true
-	}
-	return false
-}
+
 
 // 生成Guid字串
 func UniqueId(_len int) string {
@@ -139,32 +109,7 @@ func GetNetworkInfo() ([]lAddr, error) {
 	return lAddrs, nil
 }
 
-/*
-get Unused B
-return tunaddr tungw
-*/
-func GetUnusedTunAddr() (string, string) {
-	laddrs, err := GetNetworkInfo()
-	if err != nil {
-		return "", ""
-	}
-	var laddrInfo = ""
-	for _, _laddr := range laddrs {
-		laddrInfo = laddrInfo + "net:" + _laddr.IpAddress
-	}
-	//tunAddr string,tunMask string,tunGW
-	for i := 19; i < 254; i++ {
-		if strings.Index(laddrInfo, "net:172."+strconv.Itoa(i)) == -1 {
-			return "172." + strconv.Itoa(i) + ".0.2", "172." + strconv.Itoa(i) + ".0.1"
-		}
-	}
-	return "", ""
-}
 
-type UdpLimit struct {
-	Limit   *rate.Limiter
-	Expired int64
-}
 
 func InitLog(_logfile string, flag int) {
 	logfile := _logfile
