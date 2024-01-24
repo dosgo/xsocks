@@ -107,11 +107,6 @@ func (c *Client) Start() error {
 	}
 	return nil
 }
-func init() {
-	if runtime.GOOS != "android" {
-		comm.Init()
-	}
-}
 
 func initTunnel() {
 	var isSocks = true
