@@ -1,7 +1,6 @@
 package comm
 
 import (
-	"bytes"
 	"crypto/md5"
 	crand "crypto/rand"
 	"encoding/hex"
@@ -14,8 +13,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/dosgo/go-tun2socks/core"
 	"golang.org/x/time/rate"
 )
 
@@ -98,65 +95,8 @@ func UniqueId(_len int) string {
 	return hex.EncodeToString(h.Sum(nil))[:_len]
 }
 
-/*udp nat sawp*/
-func TunNatSawp(_udpNat *sync.Map, conn core.CommUDPConn, ep core.CommEndpoint, dstAddr string, duration time.Duration) {
-	natKey := conn.RemoteAddr().String() + "_" + dstAddr
-	var remoteConn net.Conn
-	var err error
-	_remoteConn, ok := _udpNat.Load(natKey)
-	if !ok {
-		remoteConn, err = net.DialTimeout("udp", dstAddr, time.Second*15)
-		if err != nil {
-			return
-		}
-		var buffer bytes.Buffer
-		_udpNat.Store(natKey, remoteConn)
-		go func(_remoteConn net.Conn, _conn core.CommUDPConn) {
-			defer ep.Close()
-			defer _udpNat.Delete(natKey)
-			defer _remoteConn.Close()
-			defer _conn.Close()
-			//buf:= make([]byte, 1024*5);
-			for {
-				_remoteConn.SetReadDeadline(time.Now().Add(duration))
-				buf := poolNatBuf.Get().([]byte)
-				n, err := _remoteConn.Read(buf)
-				if err != nil {
-					log.Printf("err:%v\r\n", err)
-					return
-				}
-				buffer.Reset()
-				buffer.Write(buf[:n])
-				_, err = _conn.Write(buffer.Bytes())
-				if err != nil {
-					log.Printf("err:%v\r\n", err)
-				}
-				poolNatBuf.Put(buf)
-			}
-		}(remoteConn, conn)
-	} else {
-		remoteConn = _remoteConn.(net.Conn)
-	}
-	buf := poolNatBuf.Get().([]byte)
-	udpSize, err := conn.Read(buf)
-	if err == nil {
-		_, err = remoteConn.Write(buf[:udpSize])
-		if err != nil {
-			log.Printf("err:%v\r\n", err)
-		}
-	}
-	poolNatBuf.Put(buf)
-}
 
-/*stream swap*/
-func TcpPipe(src CommConn, dst CommConn, duration time.Duration) {
-	defer src.Close()
-	defer dst.Close()
-	srcT := CommConnTimeout{src, duration}
-	dstT := CommConnTimeout{dst, duration}
-	go io.Copy(srcT, dstT)
-	io.Copy(dstT, srcT)
-}
+
 
 type lAddr struct {
 	Name       string
