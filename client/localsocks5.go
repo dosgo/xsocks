@@ -101,7 +101,7 @@ func (udpProxy *UdpProxy) startUdpProxy(addr string) (*net.UDPAddr, error) {
 				continue
 			}
 			//本地转发
-			if (!comm.IsPublicIP(dstAddr.IP) || comm.IsChinaMainlandIP(dstAddr.IP.String())) && (param.Args.TunType != 1) {
+			if (!socksTapComm.IsPublicIP(dstAddr.IP) || socksTapComm.IsChinaMainlandIP(dstAddr.IP.String())) && (param.Args.TunType != 1) {
 				socksNatSawp(udpProxy.udpListener, data, dataStart, localAddr, dstAddr)
 			} else {
 				udpProxy.udpTunnel.sendRemote(data, localAddr)
@@ -375,7 +375,7 @@ func handleLocalRequest(clientConn net.Conn, udpAddr *net.UDPAddr) error {
 			port = strconv.Itoa(int(portBuf[0])<<8 | int(portBuf[1]))
 
 			//如果是内网IP,或者是中国IP(如果被污染的IP一定返回的是国外IP地址ChinaDNS也是这个原理)
-			if !comm.IsPublicIP(ipAddr) || (comm.IsChinaMainlandIP(ipAddr.String()) && param.Args.SmartDns == 1) {
+			if !socksTapComm.IsPublicIP(ipAddr) || (socksTapComm.IsChinaMainlandIP(ipAddr.String()) && param.Args.SmartDns == 1) {
 				server, err := net.DialTimeout("tcp", net.JoinHostPort(ipAddr.String(), port), param.Args.ConnectTime)
 				if err != nil {
 					log.Printf("host:%s err:%v\r\n", net.JoinHostPort(ipAddr.String(), port), err)
