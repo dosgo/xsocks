@@ -10,8 +10,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dosgo/go-tun2socks v1.2.1 h1:It0/UqX9mc4JBt/eR9ySWlWa3ncuxTUTYrJ9o35oESI=
 github.com/dosgo/go-tun2socks v1.2.1/go.mod h1:LLghJHZ77+98z571Binj7tm1kBE/f+jQNqzP+oO6TPQ=
-github.com/dosgo/goSocksTap v0.0.0-20240130024639-476a18ee9e1f h1:h5EXJMCcCw4mEGpE62Ya60rhsDPTuhbtoWK+YaUDaTY=
-github.com/dosgo/goSocksTap v0.0.0-20240130024639-476a18ee9e1f/go.mod h1:UI8TXabj/QcHY3WSXNtScpS+XAVwULjfFDV46xtlAnM=
+github.com/dosgo/goSocksTap v0.0.0-20240130135540-2abbc0f3fde8 h1:+pswspFqISJIvmcfp0mwzYP0RdKKRgsWrGcIIjDUuZ4=
+github.com/dosgo/goSocksTap v0.0.0-20240130135540-2abbc0f3fde8/go.mod h1:FeLxCe3G5FRNKRLZ7jEXf+tLqH+DPMTOV0Em4aFjHw8=
 github.com/go-logr/logr v1.2.4 h1:g01GSCwiDw2xSZfjJ2/T9M+S6pFdcNtFYsp+Y43HYDQ=
 github.com/go-logr/logr v1.2.4/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
 github.com/go-ole/go-ole v1.2.5 h1:t4MGB5xEDZvXI+0rMjjsfBsD7yAgp/s9ZDkL1JndXwY=

@@ -6,7 +6,7 @@ toolchain go1.21.4
 
 require (
 	github.com/dosgo/go-tun2socks v1.2.1
-	github.com/dosgo/goSocksTap v0.0.0-20240130024639-476a18ee9e1f
+	github.com/dosgo/goSocksTap v0.0.0-20240130135540-2abbc0f3fde8
 	github.com/hashicorp/yamux v0.1.1
 	github.com/miekg/dns v1.1.58
 	github.com/quic-go/quic-go v0.41.0
