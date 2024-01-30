@@ -5,10 +5,10 @@ go 1.21.1
 toolchain go1.21.4
 
 require (
-	github.com/dosgo/go-tun2socks v1.2.0
+	github.com/dosgo/go-tun2socks v1.2.1
 	github.com/dosgo/goSocksTap v0.0.0-20240130024639-476a18ee9e1f
 	github.com/hashicorp/yamux v0.1.1
-	github.com/miekg/dns v1.1.57
+	github.com/miekg/dns v1.1.58
 	github.com/quic-go/quic-go v0.41.0
 	github.com/vishalkuo/bimap v0.0.0-20230830142743-a9fb9b52066c
 	golang.org/x/net v0.20.0
@@ -34,7 +34,7 @@ require (
 	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	golang.org/x/tools v0.16.1 // indirect
+	golang.org/x/tools v0.17.0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173 // indirect
 	golang.zx2c4.com/wireguard/windows v0.5.3 // indirect
