@@ -5,14 +5,14 @@ go 1.21.1
 toolchain go1.21.4
 
 require (
-	github.com/dosgo/go-tun2socks v1.2.1
+	github.com/dosgo/go-tun2socks v1.2.2
 	github.com/dosgo/goSocksTap v0.0.0-20240130135540-2abbc0f3fde8
 	github.com/hashicorp/yamux v0.1.1
 	github.com/miekg/dns v1.1.58
 	github.com/quic-go/quic-go v0.41.0
 	github.com/vishalkuo/bimap v0.0.0-20230830142743-a9fb9b52066c
 	golang.org/x/net v0.20.0
-	golang.org/x/sys v0.16.0
+	golang.org/x/sys v0.17.0
 
 )
 
@@ -28,7 +28,7 @@ require (
 	github.com/songgao/water v0.0.0-20200317203138-2b4b6d7c09d8 // indirect
 	github.com/yl2chen/cidranger v1.0.2 // indirect
 	go.uber.org/mock v0.3.0 // indirect
-	golang.org/x/crypto v0.18.0 // indirect
+	golang.org/x/crypto v0.19.0 // indirect
 	golang.org/x/exp v0.0.0-20230725093048-515e97ebf090 // indirect
 	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
