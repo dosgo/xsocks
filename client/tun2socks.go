@@ -5,7 +5,6 @@ import (
 	"log"
 	"net"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/dosgo/go-tun2socks/core"
@@ -24,8 +23,6 @@ type Tun2Socks struct {
 	oldGw      string
 	tunGW      string
 }
-
-var tun2UdpNat sync.Map
 
 /*tunType==1*/
 func (_tun2socks *Tun2Socks) Start(tunDevice string, tunAddr string, tunMask string, tunGW string, tunDNS string) error {
@@ -84,7 +81,8 @@ func rawTcpForwarder(conn core.CommTCPConn) error {
 func rawUdpForwarder(conn core.CommUDPConn, ep core.CommEndpoint) error {
 	//dns port
 	if strings.HasSuffix(conn.LocalAddr().String(), ":53") {
-		dnsReqUdp(conn, ep)
+		defer ep.Close()
+		dnsReqUdp(conn)
 	} else {
 		defer ep.Close()
 		dstAddr, _ := net.ResolveUDPAddr("udp", conn.LocalAddr().String())
@@ -92,8 +90,32 @@ func rawUdpForwarder(conn core.CommUDPConn, ep core.CommEndpoint) error {
 	}
 	return nil
 }
-func dnsReqUdp(conn core.CommUDPConn, ep core.CommEndpoint) error {
-	socksTapComm.TunNatSawp(&tun2UdpNat, conn, ep, "127.0.0.1:"+param.Args.DnsPort, 15*time.Second)
+func dnsReqUdp(conn core.CommUDPConn) error {
+	defer conn.Close()
+	buf := make([]byte, 2048)
+	gateConn, err := net.DialTimeout("udp", "127.0.0.1:"+param.Args.DnsPort, time.Second*15)
+	go func() {
+		buf1 := make([]byte, 2048)
+		var readLen = 0
+		for {
+			gateConn.SetReadDeadline(time.Now().Add(time.Second * 65))
+			readLen, err = gateConn.Read(buf1)
+			if err != nil {
+				break
+			}
+			conn.Write(buf1[:readLen])
+		}
+	}()
+
+	for {
+		conn.SetReadDeadline(time.Now().Add(time.Second * 65))
+		udpSize, err := conn.Read(buf)
+		if err == nil {
+			gateConn.Write(buf[:udpSize])
+		} else {
+			break
+		}
+	}
 	return nil
 }
 

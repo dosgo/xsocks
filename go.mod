@@ -6,6 +6,7 @@ toolchain go1.22.2
 
 require (
 	github.com/dosgo/go-tun2socks v1.2.5
+	github.com/dosgo/goSocksTap v0.0.0-20240718161551-b3e665e07753
 	github.com/hashicorp/yamux v0.1.1
 	github.com/miekg/dns v1.1.59
 	github.com/quic-go/quic-go v0.44.0
@@ -14,8 +15,6 @@ require (
 	golang.org/x/sys v0.21.0
 
 )
-
-require github.com/dosgo/goSocksTap v0.0.0-20240707171216-30098d3034ee
 
 require (
 	github.com/StackExchange/wmi v1.2.1 // indirect
@@ -26,7 +25,10 @@ require (
 	github.com/google/pprof v0.0.0-20210407192527-94a9f03dee38 // indirect
 	github.com/imgk/divert-go v0.0.0-20220205193416-faaa83c2c10a // indirect
 	github.com/onsi/ginkgo/v2 v2.9.5 // indirect
+	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/songgao/water v0.0.0-20200317203138-2b4b6d7c09d8 // indirect
+	github.com/txthinking/runnergroup v0.0.0-20210608031112-152c7c4432bf // indirect
+	github.com/txthinking/socks5 v0.0.0-20230325130024-4230056ae301 // indirect
 	github.com/yl2chen/cidranger v1.0.2 // indirect
 	go.uber.org/mock v0.4.0 // indirect
 	golang.org/x/crypto v0.24.0 // indirect
