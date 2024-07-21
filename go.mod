@@ -10,6 +10,7 @@ require (
 	github.com/hashicorp/yamux v0.1.1
 	github.com/miekg/dns v1.1.59
 	github.com/quic-go/quic-go v0.44.0
+	github.com/things-go/go-socks5 v0.0.5
 	github.com/vishalkuo/bimap v0.0.0-20230830142743-a9fb9b52066c
 	golang.org/x/net v0.25.0
 	golang.org/x/sys v0.21.0
