@@ -2,11 +2,16 @@ package client
 
 import (
 	"bufio"
+	"context"
 	"encoding/binary"
 	"io"
+	"log"
 	"net"
+	"os"
 	"strconv"
 	"strings"
+
+	"github.com/things-go/go-socks5"
 )
 
 type LocalSocksV1 struct {
@@ -278,4 +283,114 @@ func checkDomain(buf []byte) string {
 	// 解析域名逻辑
 	// ...
 	return ""
+}
+
+// 自定义的SOCKS5处理器
+// 自定义的SOCKS5处理器
+type MyHandler struct{}
+
+/*https://github.com/things-go/go-socks5*/
+// 实现Handler接口中的HandleConnect方法
+func (h *MyHandler) handleConnection(ctx context.Context, writer io.Writer, request *socks5.Request) error {
+	// 从context中获取目标地址
+	//targetAddr := ctx.TargetAddr
+	targetAddr := request.RemoteAddr
+	// 检查目标地址是否在白名单中
+	if h.isSpecialDomain(targetAddr.String()) {
+		// 进行特殊处理，例如连接到不同的服务器
+		// 或者应用额外的安全检查
+		log.Println("Handling special domain:", targetAddr)
+		// 这里可以实现你自己的逻辑
+		// ...
+	} else {
+		// 进行常规处理，例如直接连接到目标服务器
+		log.Println("Handling regular domain:", targetAddr)
+		// 这里可以实现你自己的逻辑
+		// ...
+	}
+
+	// 建立到目标服务器的连接
+	targetConn, err := net.Dial("tcp", targetAddr.String())
+	if err != nil {
+		log.Println("Failed to connect to target:", err)
+		return err
+	}
+	defer targetConn.Close()
+
+	// 开始转发数据
+	go func() {
+		_, err := io.Copy(targetConn, writer)
+		if err != nil {
+			log.Println("Failed to copy data:", err)
+		}
+	}()
+	go func() {
+		_, err := io.Copy(ctx.Conn, targetConn)
+		if err != nil {
+			log.Println("Failed to copy data:", err)
+		}
+	}()
+
+	return nil
+}
+
+// 检查目标地址是否在特殊域名单中
+func (h *MyHandler) isSpecialDomain(addr string) bool {
+	// 这里可以实现你自己的逻辑来检查地址
+	// ...
+	return false
+}
+
+func main1() {
+	var myHandler MyHandler
+	// 创建自定义的SOCKS5处理器实例
+	// Create a SOCKS5 server
+	server := socks5.NewServer(
+		socks5.WithLogger(socks5.NewLogger(log.New(os.Stdout, "socks5: ", log.LstdFlags))),
+		socks5.WithConnectHandle(myHandler.handleConnection),
+	)
+
+	// Create SOCKS5 proxy on localhost port 8000
+	if err := server.ListenAndServe("tcp", ":10800"); err != nil {
+		panic(err)
+	}
+}
+
+// 实现Handler接口中的HandleUDPAssociate方法
+func (h *MyHandler) handleAssociate(ctx context.Context, conn conn, req *Request) error {
+	// 创建一个本地的UDP监听器
+	udpListener, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4zero, Port: 0})
+	if err != nil {
+		return nil, err
+	}
+	defer udpListener.Close()
+
+	// UDP监听器的本地地址
+	localAddr := udpListener.LocalAddr().(*net.UDPAddr)
+
+	// UDP数据包处理循环
+	go func() {
+		for {
+			buf := make([]byte, 512)
+			n, remoteAddr, err := udpListener.ReadFromUDP(buf)
+			if err != nil {
+				log.Println("Error reading from UDP listener:", err)
+				break
+			}
+
+			// 这里可以实现对UDP数据包的特殊处理
+			// 例如，检查remoteAddr，如果是特殊域名则进行特殊处理
+
+			// 将UDP数据包转发到正确的目的地
+			// 注意，这里需要你根据实际情况填充目的地的地址和端口
+			destAddr := &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 8080}
+			_, err = udpListener.WriteToUDP(buf[:n], destAddr)
+			if err != nil {
+				log.Println("Error forwarding UDP packet:", err)
+				break
+			}
+		}
+	}()
+
+	return localAddr, nil
 }
