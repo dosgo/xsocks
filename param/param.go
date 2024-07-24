@@ -1,14 +1,11 @@
 package param
 
-import "time"
-
-var version = "2.0.0-(20231222)"
+var version = "3.0.0-(20240724)"
 
 var Args *ArgsParam
 
 func init() {
 	Args = &ArgsParam{}
-	Args.ConnectTime = time.Second * 10
 	Args.Version = version
 	Args.SafeDns = "114.114.114.114"
 }
@@ -20,11 +17,9 @@ type ArgsParam struct {
 }
 
 type CommParam struct {
-	Version     string
-	Mtu         int
-	Password    string
-	ConnectTime time.Duration `json:"-"` //=10*time.Second;
-	UdpGatePort string
+	Version  string
+	Mtu      int
+	Password string
 }
 
 type ClientParam struct {
@@ -45,14 +40,13 @@ type ClientParam struct {
 	Sock5UdpPort  string
 	IpFile        string
 	AutoStart     bool
+	UdpGatePort   string
 }
 
 type ServerParam struct {
-	Sock5Port    string
-	QuicPort     string
-	WebPort      string
-	CertFile     string
-	KeyFile      string
-	LocalTunSock string
-	SafeDns      string
+	QuicPort string
+	WebPort  string
+	CertFile string
+	KeyFile  string
+	SafeDns  string
 }

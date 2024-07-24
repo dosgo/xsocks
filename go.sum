@@ -10,8 +10,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dosgo/go-tun2socks v1.2.5 h1:IxfVacGYUKubVgAI9p0XrN1wQ03Sc75TpG2FwGTD7to=
 github.com/dosgo/go-tun2socks v1.2.5/go.mod h1:RPuDYj5PzomJQB1+Pc7BoW0jMim0JsHS/VeDWPpnolk=
-github.com/dosgo/goSocksTap v0.0.0-20240718161551-b3e665e07753 h1:yeTVwf1bxX2BgtzCMjoqQOPusq++cnC4SBxL1mAJicE=
-github.com/dosgo/goSocksTap v0.0.0-20240718161551-b3e665e07753/go.mod h1:/ny6+XDvk2HyfjxmvzQ4EUKOHsUDcMIfD4hYiiJFmeo=
+github.com/dosgo/goSocksTap v0.0.0-20240724155150-fe5e9d574a50 h1:rOz9cmDp7d6TcYQe8Fr1ndJOto8hLc8RsleuRpar2bg=
+github.com/dosgo/goSocksTap v0.0.0-20240724155150-fe5e9d574a50/go.mod h1:/ny6+XDvk2HyfjxmvzQ4EUKOHsUDcMIfD4hYiiJFmeo=
 github.com/go-logr/logr v1.2.4 h1:g01GSCwiDw2xSZfjJ2/T9M+S6pFdcNtFYsp+Y43HYDQ=
 github.com/go-logr/logr v1.2.4/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
 github.com/go-ole/go-ole v1.2.5 h1:t4MGB5xEDZvXI+0rMjjsfBsD7yAgp/s9ZDkL1JndXwY=
@@ -51,8 +51,6 @@ github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81P
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
 github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
-github.com/things-go/go-socks5 v0.0.5 h1:qvKaGcBkfDrUL33SchHN93srAmYGzb4CxSM2DPYufe8=
-github.com/things-go/go-socks5 v0.0.5/go.mod h1:mtzInf8v5xmsBpHZVbIw2YQYhc4K0jRwzfsH64Uh0IQ=
 github.com/txthinking/runnergroup v0.0.0-20210608031112-152c7c4432bf h1:7PflaKRtU4np/epFxRXlFhlzLXZzKFrH5/I4so5Ove0=
 github.com/txthinking/runnergroup v0.0.0-20210608031112-152c7c4432bf/go.mod h1:CLUSJbazqETbaR+i0YAhXBICV9TrKH93pziccMhmhpM=
 github.com/txthinking/socks5 v0.0.0-20230325130024-4230056ae301 h1:d/Wr/Vl/wiJHc3AHYbYs5I3PucJvRuw3SvbmlIRf+oM=

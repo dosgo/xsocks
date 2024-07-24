@@ -98,7 +98,7 @@ func isActive(s quic.Connection) bool {
 	}
 }
 
-func (qd *QuicDialer) Dial(quicAddr string, remoteAddr string) (comm.CommConn, error) {
+func (qd *QuicDialer) Dial(quicAddr string) (comm.CommConn, error) {
 	atomic.AddInt64(&num, 1)
 	var retryNum = 0
 	log.Printf("num:%d\r\n", num)

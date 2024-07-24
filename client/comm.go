@@ -7,7 +7,9 @@ import (
 	"net"
 	"os"
 
+	socksTapComm "github.com/dosgo/goSocksTap/comm"
 	"github.com/dosgo/xsocks/comm"
+	"github.com/dosgo/xsocks/param"
 )
 
 func regRoute(tunAddr string, remoteAddr string, dnsServers []string, oldGw string) {
@@ -66,5 +68,12 @@ func SocketToTun(unixSockTun string) (io.ReadWriteCloser, error) {
 
 func FdToIO(fd int) (io.ReadWriteCloser, error) {
 	f := os.NewFile(uintptr(fd), "Socket")
-	return f,nil;
+	return f, nil
+}
+
+func IsProxy(dstAddr net.IP) bool {
+	if (!socksTapComm.IsPublicIP(dstAddr) || socksTapComm.IsChinaMainlandIP(dstAddr.String())) && param.Args.SmartDns == 1 {
+		return false
+	}
+	return true
 }

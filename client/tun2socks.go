@@ -73,7 +73,7 @@ func rawTcpForwarder(conn core.CommTCPConn) error {
 	}
 	defer socksConn.Close()
 	if socks.SocksCmd(socksConn, 1, 1, remoteAddr, true) == nil {
-		socksTapComm.TcpPipe(conn, socksConn, time.Minute*2)
+		socksTapComm.ConnPipe(conn, socksConn, time.Minute*2)
 	}
 	return nil
 }
@@ -126,7 +126,7 @@ func dnsReqTcp(conn core.CommTCPConn) error {
 		log.Println(err.Error())
 		return err
 	}
-	socksTapComm.TcpPipe(conn, dnsConn, time.Minute*2)
+	socksTapComm.ConnPipe(conn, dnsConn, time.Minute*2)
 	log.Printf("dnsReq Tcp\r\n")
 	return nil
 }

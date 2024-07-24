@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"runtime"
 	"strings"
+
 	socksTapComm "github.com/dosgo/goSocksTap/comm"
 	"github.com/dosgo/goSocksTap/socksTap"
 	"github.com/dosgo/xsocks/client/tunnel"
@@ -44,8 +45,6 @@ func (c *Client) Start() error {
 		return errors.New("clien runing...\n")
 	}
 	c.isStart = true
-	//init tunnel
-	initTunnel()
 
 	//随机端口
 	if param.Args.DnsPort == "" {
@@ -96,20 +95,24 @@ func (c *Client) Start() error {
 		}
 		c.socksTap = &socksTap.SocksTap{}
 		c.socksTap.Start(param.Args.ServerAddr[9:], param.Args.ExcludeDomain, param.Args.UdpProxy == 1)
-
 	}
 
 	if param.Args.TunType != 5 {
 		c.lDns = &LocalDns{}
 		c.lDns.StartDns()
 		c.lSocks5 = &LocalSocks{}
+		//init tunnel
+		tunnel := initTunnel()
+		if tunnel == nil {
+			return errors.New("not Tunnel")
+		}
+		c.lSocks5.tunnel = tunnel
 		return c.lSocks5.Start(param.Args.Sock5Addr)
 	}
 	return nil
 }
 
-func initTunnel() {
-	var isSocks = true
+func initTunnel() *tunnelcomm.TunelComm {
 	//初始化连接通道
 	var tunnelDialer tunnelcomm.CallerTunnel
 	var tunnelUrl string
@@ -126,8 +129,9 @@ func initTunnel() {
 		tunnelDialer = tunnel.NewQuicDialer()
 		tunnelUrl = param.Args.ServerAddr[7:]
 	} else {
-		return
+		return nil
 	}
 	//init tunnel
-	tunnelcomm.SetTunnel(tunnelDialer, tunnelUrl, param.Args.Password, isSocks)
+
+	return &tunnelcomm.TunelComm{tunnelUrl, param.Args.Password, tunnelDialer}
 }

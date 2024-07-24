@@ -8,7 +8,6 @@ import (
 	"encoding/binary"
 	"encoding/pem"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"math/big"
@@ -30,9 +29,6 @@ var poolAuthHeadBuf = &sync.Pool{
 	},
 }
 
-/*save uniqueId Tun */
-var uniqueIdTun sync.Map
-
 func Proxy(conn comm.CommConn) {
 	defer conn.Close()
 	//read auth Head
@@ -40,7 +36,7 @@ func Proxy(conn comm.CommConn) {
 	defer poolAuthHeadBuf.Put(authHead)
 	_, err := io.ReadFull(conn, authHead[:16])
 	if err != nil {
-		log.Printf("err:%v\r\n", err)
+		log.Printf("Proxy err:%v\r\n", err)
 		return
 	}
 	//autherr;
@@ -52,7 +48,7 @@ func Proxy(conn comm.CommConn) {
 	cmd := make([]byte, 1)
 	_, err = io.ReadFull(conn, cmd)
 	if err != nil {
-		log.Printf("err:%v\r\n", err)
+		log.Printf("Proxy 1 err:%v\r\n", err)
 		return
 	}
 	switch cmd[0] {
@@ -62,20 +58,23 @@ func Proxy(conn comm.CommConn) {
 		break
 	//to tcp req
 	case 0x02:
-		var addrLen byte
+		var addrLen uint16
 		if err := binary.Read(conn, binary.BigEndian, &addrLen); err != nil {
+			log.Printf("Proxy 2 addrLen:%d err:%v\r\n", addrLen, err)
 			return
 		}
 		addr := make([]byte, addrLen)
 		if _, err := io.ReadFull(conn, addr); err != nil {
+			log.Printf("Proxy 3 addr:%s err:%v\r\n", string(addr), err)
 			return
 		}
-		sConn, err := net.DialTimeout("tcp", string(addr), param.Args.ConnectTime)
+		sConn, err := net.DialTimeout("tcp", string(addr), 5*time.Second)
 		if err != nil {
+			log.Printf("Proxy 4 addr:%s err:%v\r\n", string(addr), err)
 			return
 		}
 		defer sConn.Close()
-		socksTapComm.TcpPipe(sConn, conn, time.Minute*5)
+		socksTapComm.ConnPipe(sConn, conn, time.Minute*2)
 		break
 	//to tun
 	case 0x03:
@@ -83,20 +82,23 @@ func Proxy(conn comm.CommConn) {
 		break
 		//to udp proxy
 	case 0x04:
-		var addrLen byte
+		var addrLen uint16
 		if err := binary.Read(conn, binary.BigEndian, &addrLen); err != nil {
+			log.Printf("Proxy 5 addrLen:%d err:%v\r\n", addrLen, err)
 			return
 		}
 		addr := make([]byte, addrLen)
 		if err := binary.Read(conn, binary.BigEndian, addr); err != nil {
+			log.Printf("Proxy 6 addr:%s err:%v\r\n", string(addr), err)
 			return
 		}
-		sConn, err := net.DialTimeout("udp", string(addr), param.Args.ConnectTime)
+		sConn, err := net.DialTimeout("udp", string(addr), 5*time.Second)
 		if err != nil {
+			log.Printf("Proxy 7 addr:%s err:%v\r\n", string(addr), err)
 			return
 		}
 		defer sConn.Close()
-		socksTapComm.TcpPipe(sConn, conn, time.Minute*5)
+		socksTapComm.ConnPipe(sConn, conn, time.Minute*2)
 		break
 	}
 }
@@ -178,7 +180,7 @@ func streamToSocks5Yamux(conn io.ReadWriteCloser) {
 		// Accept a stream
 		stream, err := session.Accept()
 		if err != nil {
-			log.Printf("err:%v\r\n", err)
+			log.Printf("streamToSocks5Yamux err:%v\r\n", err)
 			return
 		}
 		go Proxy(stream)
@@ -253,78 +255,4 @@ func CreateCertificateFile(name string, cert *x509.Certificate, key *rsa.Private
 		Bytes:   priv_b}
 	priv_b64 := pem.EncodeToMemory(privateKey)
 	os.WriteFile(priv_f, priv_b64, 0777)
-}
-
-type SocksClient struct {
-	Addr     string
-	Port     uint16
-	IPv4     [4]byte
-	Cmd      uint8
-	AddrType byte
-	Ver      uint8
-	Conn     comm.CommConn
-}
-
-func NewSocksReq(conn comm.CommConn) *SocksClient {
-	conn.SetDeadline(time.Now().Add(time.Second * 20))
-	return &SocksClient{Conn: conn}
-}
-func (socks *SocksClient) AuthRes() error {
-	//read auth
-	auth := make([]byte, 3)
-	_, err := io.ReadFull(socks.Conn, auth)
-	if err != nil {
-		log.Printf("err:%v", err)
-		return err
-	}
-	if auth[0] == 0x05 {
-		//resp auth
-		socks.Conn.Write([]byte{0x05, 0x00})
-	}
-	return nil
-}
-func (socks *SocksClient) ParseReq() error {
-	if socks.Conn == nil {
-		return errors.New("conn null")
-	}
-	connectHead := make([]byte, 4)
-	_, err := io.ReadFull(socks.Conn, connectHead)
-	if err != nil {
-		return err
-	}
-	socks.Ver = connectHead[0]
-	socks.Cmd = connectHead[1]
-
-	if socks.Ver == 0x05 {
-		//connect tcp
-		if socks.Cmd == 0x01 {
-			if err := binary.Read(socks.Conn, binary.BigEndian, &socks.AddrType); err != nil {
-				return err
-			}
-			switch socks.AddrType {
-			case 1: // IPv4
-				if err := binary.Read(socks.Conn, binary.BigEndian, &socks.IPv4); err != nil {
-					return err
-				}
-				socks.Addr = net.IPv4(socks.IPv4[0], socks.IPv4[1], socks.IPv4[2], socks.IPv4[3]).String()
-			case 3: // Domain name
-				var domainLen byte
-				if err := binary.Read(socks.Conn, binary.BigEndian, &domainLen); err != nil {
-					return err
-				}
-				domain := make([]byte, domainLen)
-				if err := binary.Read(socks.Conn, binary.BigEndian, domain); err != nil {
-					return err
-				}
-				socks.Addr = string(domain)
-			default:
-				return fmt.Errorf("unknown address type: %d", socks.AddrType)
-			}
-			if err := binary.Read(socks.Conn, binary.BigEndian, &socks.Port); err != nil {
-				return err
-			}
-			return nil
-		}
-	}
-	return nil
 }
