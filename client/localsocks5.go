@@ -185,14 +185,13 @@ func (lSocks *LocalSocks) handleLocalRequest(clientConn net.Conn) error {
 		//connect tcp
 		if connectHead[1] == 0x01 {
 			var ipAddr net.IP
-			var port string
 			var hostBuf []byte
 			var hostBufLen []byte
-			ipv4 := make([]byte, 4)
-			ipv6 := make([]byte, 16)
+
 			//解析
 			switch connectHead[3] {
 			case 0x01: //IP V4
+				ipv4 := make([]byte, 4)
 				_, err = io.ReadFull(clientConn, ipv4)
 				ipAddr = net.IPv4(ipv4[0], ipv4[1], ipv4[2], ipv4[3])
 				break
@@ -216,6 +215,7 @@ func (lSocks *LocalSocks) handleLocalRequest(clientConn net.Conn) error {
 				break
 			case 0x04: //IP V6
 				log.Printf("ipv6\r\n")
+				ipv6 := make([]byte, 16)
 				_, err = io.ReadFull(clientConn, ipv6)
 				ipAddr = net.IP{ipv6[0], ipv6[1], ipv6[2], ipv6[3], ipv6[4], ipv6[5], ipv6[6], ipv6[7], ipv6[8], ipv6[9], ipv6[10], ipv6[11], ipv6[12], ipv6[13], ipv6[14], ipv6[15]}
 
@@ -230,14 +230,14 @@ func (lSocks *LocalSocks) handleLocalRequest(clientConn net.Conn) error {
 				return nil
 			}
 
-			portBuf := make([]byte, 2)
-			_, err = io.ReadFull(clientConn, portBuf)
-			port = strconv.Itoa(int(portBuf[0])<<8 | int(portBuf[1]))
+			// 读取端口号
+			var port uint16
+			binary.Read(clientConn, binary.BigEndian, &port)
 
 			if !IsProxy(ipAddr) {
-				server, err := net.DialTimeout("tcp", net.JoinHostPort(ipAddr.String(), port), 5*time.Second)
+				server, err := net.DialTimeout("tcp", net.JoinHostPort(ipAddr.String(), strconv.Itoa(int(port))), 5*time.Second)
 				if err != nil {
-					log.Printf("host:%s err:%v\r\n", net.JoinHostPort(ipAddr.String(), port), err)
+					log.Printf("host:%s err:%v\r\n", net.JoinHostPort(ipAddr.String(), strconv.Itoa(int(port))), err)
 					return err
 				}
 				defer server.Close()
@@ -252,12 +252,10 @@ func (lSocks *LocalSocks) handleLocalRequest(clientConn net.Conn) error {
 				//使用host
 				if connectHead[3] == 0x03 {
 					remoteHost = string(hostBuf)
-				} else if connectHead[3] == 0x01 {
-					remoteHost = ipAddr.To4().String()
-				} else if connectHead[3] == 0x04 {
-					remoteHost = ipAddr.To16().String()
+				} else {
+					remoteHost = ipAddr.String()
 				}
-				remoteHost = remoteHost + ":" + port
+				remoteHost = remoteHost + ":" + strconv.Itoa(int(port))
 				var stream, err = lSocks.tunnel.NewTunnel()
 				if err != nil || stream == nil {
 					log.Printf("err:%v\r\n", err)

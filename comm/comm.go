@@ -13,13 +13,10 @@ import (
 	"time"
 )
 
-
-
 type CommConn interface {
 	SetDeadline(t time.Time) error
 	io.ReadWriteCloser
 }
-
 
 func GenPasswordHead(password string) string {
 	h := md5.New()
@@ -52,8 +49,6 @@ func GetFreeUdpPort() (string, error) {
 	return fmt.Sprintf("%d", l.LocalAddr().(*net.UDPAddr).Port), nil
 }
 
-
-
 // 生成Guid字串
 func UniqueId(_len int) string {
 	b := make([]byte, 48)
@@ -64,9 +59,6 @@ func UniqueId(_len int) string {
 	h.Write([]byte(b))
 	return hex.EncodeToString(h.Sum(nil))[:_len]
 }
-
-
-
 
 type lAddr struct {
 	Name       string
@@ -108,8 +100,6 @@ func GetNetworkInfo() ([]lAddr, error) {
 	}
 	return lAddrs, nil
 }
-
-
 
 func InitLog(_logfile string, flag int) {
 	logfile := _logfile
