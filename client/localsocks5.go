@@ -134,6 +134,7 @@ func (udpProxy *UdpProxyV1) socksNatSawp(udpGate *net.UDPConn, remoteConn comm.C
 	var buffer bytes.Buffer
 	go func() {
 		defer remoteConn.Close()
+		defer udpProxy.udpNat.Delete(localAddr.String() + "_" + dstAddr.String())
 		for {
 			remoteConn.SetDeadline(time.Now().Add(2 * time.Minute))
 			n, err := remoteConn.Read(buf)
