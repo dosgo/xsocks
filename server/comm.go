@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -9,6 +8,7 @@ import (
 	"encoding/binary"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"math/big"
@@ -17,8 +17,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dosgo/xsocks/comm"
 	socksTapComm "github.com/dosgo/goSocksTap/comm"
+	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/param"
 	"github.com/hashicorp/yamux"
 )
@@ -60,80 +60,44 @@ func Proxy(conn comm.CommConn) {
 	case 0x01:
 		dnsResolve(conn)
 		break
-	//to socks5
+	//to tcp req
 	case 0x02:
-		//连接socks5
-		sConn, err := net.DialTimeout("tcp", "127.0.0.1:"+param.Args.Sock5Port, param.Args.ConnectTime)
+		var addrLen byte
+		if err := binary.Read(conn, binary.BigEndian, &addrLen); err != nil {
+			return
+		}
+		addr := make([]byte, addrLen)
+		if _, err := io.ReadFull(conn, addr); err != nil {
+			return
+		}
+		sConn, err := net.DialTimeout("tcp", string(addr), param.Args.ConnectTime)
 		if err != nil {
-			log.Printf("err:%v\r\n", param.Args.Sock5Port)
 			return
 		}
 		defer sConn.Close()
-		//交换数据
 		socksTapComm.TcpPipe(sConn, conn, time.Minute*5)
 		break
 	//to tun
 	case 0x03:
 		//tcpToTun(conn)
 		break
-		//to udp socket
+		//to udp proxy
 	case 0x04:
-		tcpToUdpProxy(conn)
-		break
-	}
-}
-
-/*转发到本地的udp网关*/
-func tcpToUdpProxy(conn comm.CommConn) {
-	var packLenByte []byte = make([]byte, 2)
-	var bufByte []byte = make([]byte, 1024*10)
-	remoteConn, err := net.DialTimeout("udp", "127.0.0.1:"+param.Args.UdpGatePort, time.Second*15)
-	if err != nil {
-		log.Printf("err:%v\r\n", err)
-		return
-	}
-	defer remoteConn.Close()
-
-	go func() {
-		var bufByte1 []byte = make([]byte, 1024*10)
-		var buffer bytes.Buffer
-		var packLenByte []byte = make([]byte, 2)
-		for {
-			remoteConn.SetDeadline(time.Now().Add(5 * time.Minute))
-			n, err := remoteConn.Read(bufByte1)
-			if err != nil {
-				log.Printf("err:%v\r\n", err)
-				break
-			}
-			buffer.Reset()
-			binary.LittleEndian.PutUint16(packLenByte, uint16(n))
-			buffer.Write(packLenByte)
-			buffer.Write(bufByte1[:n])
-			//remote to client
-			conn.Write(buffer.Bytes())
+		var addrLen byte
+		if err := binary.Read(conn, binary.BigEndian, &addrLen); err != nil {
+			return
 		}
-	}()
-
-	for {
-		//remoteConn.SetDeadline();
-		conn.SetDeadline(time.Now().Add(5 * time.Minute))
-		_, err := io.ReadFull(conn, packLenByte)
-		packLen := binary.LittleEndian.Uint16(packLenByte)
-		if err != nil || int(packLen) > len(bufByte) {
-			log.Printf("err:%v\r\n", err)
-			break
+		addr := make([]byte, addrLen)
+		if err := binary.Read(conn, binary.BigEndian, addr); err != nil {
+			return
 		}
-		conn.SetDeadline(time.Now().Add(5 * time.Minute))
-		_, err = io.ReadFull(conn, bufByte[:int(packLen)])
+		sConn, err := net.DialTimeout("udp", string(addr), param.Args.ConnectTime)
 		if err != nil {
-			log.Printf("err:%v\r\n", err)
-			break
-		} else {
-			_, err = remoteConn.Write(bufByte[:int(packLen)])
-			if err != nil {
-				log.Printf("err:%v\r\n", err)
-			}
+			return
 		}
+		defer sConn.Close()
+		socksTapComm.TcpPipe(sConn, conn, time.Minute*5)
+		break
 	}
 }
 
@@ -289,4 +253,78 @@ func CreateCertificateFile(name string, cert *x509.Certificate, key *rsa.Private
 		Bytes:   priv_b}
 	priv_b64 := pem.EncodeToMemory(privateKey)
 	os.WriteFile(priv_f, priv_b64, 0777)
+}
+
+type SocksClient struct {
+	Addr     string
+	Port     uint16
+	IPv4     [4]byte
+	Cmd      uint8
+	AddrType byte
+	Ver      uint8
+	Conn     comm.CommConn
+}
+
+func NewSocksReq(conn comm.CommConn) *SocksClient {
+	conn.SetDeadline(time.Now().Add(time.Second * 20))
+	return &SocksClient{Conn: conn}
+}
+func (socks *SocksClient) AuthRes() error {
+	//read auth
+	auth := make([]byte, 3)
+	_, err := io.ReadFull(socks.Conn, auth)
+	if err != nil {
+		log.Printf("err:%v", err)
+		return err
+	}
+	if auth[0] == 0x05 {
+		//resp auth
+		socks.Conn.Write([]byte{0x05, 0x00})
+	}
+	return nil
+}
+func (socks *SocksClient) ParseReq() error {
+	if socks.Conn == nil {
+		return errors.New("conn null")
+	}
+	connectHead := make([]byte, 4)
+	_, err := io.ReadFull(socks.Conn, connectHead)
+	if err != nil {
+		return err
+	}
+	socks.Ver = connectHead[0]
+	socks.Cmd = connectHead[1]
+
+	if socks.Ver == 0x05 {
+		//connect tcp
+		if socks.Cmd == 0x01 {
+			if err := binary.Read(socks.Conn, binary.BigEndian, &socks.AddrType); err != nil {
+				return err
+			}
+			switch socks.AddrType {
+			case 1: // IPv4
+				if err := binary.Read(socks.Conn, binary.BigEndian, &socks.IPv4); err != nil {
+					return err
+				}
+				socks.Addr = net.IPv4(socks.IPv4[0], socks.IPv4[1], socks.IPv4[2], socks.IPv4[3]).String()
+			case 3: // Domain name
+				var domainLen byte
+				if err := binary.Read(socks.Conn, binary.BigEndian, &domainLen); err != nil {
+					return err
+				}
+				domain := make([]byte, domainLen)
+				if err := binary.Read(socks.Conn, binary.BigEndian, domain); err != nil {
+					return err
+				}
+				socks.Addr = string(domain)
+			default:
+				return fmt.Errorf("unknown address type: %d", socks.AddrType)
+			}
+			if err := binary.Read(socks.Conn, binary.BigEndian, &socks.Port); err != nil {
+				return err
+			}
+			return nil
+		}
+	}
+	return nil
 }
