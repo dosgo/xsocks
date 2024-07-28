@@ -29,7 +29,7 @@ var poolAuthHeadBuf = &sync.Pool{
 	},
 }
 
-func Proxy(conn comm.CommConn) {
+func Proxy(conn socksTapComm.CommConn) {
 	defer conn.Close()
 	//read auth Head
 	var authHead = poolAuthHeadBuf.Get().([]byte)
@@ -104,7 +104,7 @@ func Proxy(conn comm.CommConn) {
 }
 
 /*dns解析*/
-func dnsResolve(conn comm.CommConn) {
+func dnsResolve(conn socksTapComm.CommConn) {
 	hostLenBuf := make([]byte, 1)
 	var hostBuf = make([]byte, 1024)
 	var hostLen int
