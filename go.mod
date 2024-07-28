@@ -5,8 +5,8 @@ go 1.22.0
 toolchain go1.22.2
 
 require (
-	github.com/dosgo/go-tun2socks v1.2.5
-	github.com/dosgo/goSocksTap v0.0.0-20240727200917-de944d363eef
+	github.com/dosgo/go-tun2socks v1.2.6
+	github.com/dosgo/goSocksTap v0.0.0-20240728080348-b041064ff40e
 	github.com/hashicorp/yamux v0.1.1
 	github.com/miekg/dns v1.1.59
 	github.com/quic-go/quic-go v0.44.0
@@ -34,7 +34,6 @@ require (
 	go.uber.org/mock v0.4.0 // indirect
 	golang.org/x/crypto v0.25.0 // indirect
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
-	golang.org/x/mobile v0.0.0-20240716161057-1ad2df20a8b6 // indirect
 	golang.org/x/mod v0.19.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
