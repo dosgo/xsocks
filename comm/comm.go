@@ -10,13 +10,7 @@ import (
 	"net"
 	"os"
 	"strings"
-	"time"
 )
-
-type CommConn interface {
-	SetDeadline(t time.Time) error
-	io.ReadWriteCloser
-}
 
 func GenPasswordHead(password string) string {
 	h := md5.New()

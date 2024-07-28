@@ -12,7 +12,6 @@ import (
 
 	socksTapComm "github.com/dosgo/goSocksTap/comm"
 	"github.com/dosgo/xsocks/client/tunnelcomm"
-	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/comm/socks"
 	"github.com/dosgo/xsocks/param"
 )
@@ -121,14 +120,14 @@ func (udpProxy *UdpProxyV1) recv() {
 				}
 				remoteConn.Write([]byte(dstAddr.String()))
 			}
-			udpProxy.socksNatSawp(udpProxy.udpListener, remoteConn.(comm.CommConn), localAddr, dstAddr)
+			udpProxy.socksNatSawp(udpProxy.udpListener, remoteConn.(socksTapComm.CommConn), localAddr, dstAddr)
 		}
-		remoteConn.(comm.CommConn).Write(data[dataStart:])
+		remoteConn.(socksTapComm.CommConn).Write(data[dataStart:])
 	}
 }
 
 /*udp socks5 nat sawp*/
-func (udpProxy *UdpProxyV1) socksNatSawp(udpGate *net.UDPConn, remoteConn comm.CommConn, localAddr *net.UDPAddr, dstAddr *net.UDPAddr) {
+func (udpProxy *UdpProxyV1) socksNatSawp(udpGate *net.UDPConn, remoteConn socksTapComm.CommConn, localAddr *net.UDPAddr, dstAddr *net.UDPAddr) {
 
 	buf := make([]byte, 1024*5)
 	var buffer bytes.Buffer
@@ -136,7 +135,7 @@ func (udpProxy *UdpProxyV1) socksNatSawp(udpGate *net.UDPConn, remoteConn comm.C
 		defer remoteConn.Close()
 		defer udpProxy.udpNat.Delete(localAddr.String() + "_" + dstAddr.String())
 		for {
-			remoteConn.SetDeadline(time.Now().Add(2 * time.Minute))
+			remoteConn.SetReadDeadline(time.Now().Add(2 * time.Minute))
 			n, err := remoteConn.Read(buf)
 			if err != nil {
 				log.Printf("socksNatSawp time out eixt err:%v\r\n", err)

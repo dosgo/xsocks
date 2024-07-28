@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sync"
 
+	socksTapComm "github.com/dosgo/goSocksTap/comm"
 	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/param"
 	"golang.org/x/net/http2"
@@ -36,7 +37,7 @@ func newHttp2Client() *http.Client {
 	return &http.Client{Transport: t}
 }
 
-func (qd *http2Conn) Dial(url string) (comm.CommConn, error) {
+func (qd *http2Conn) Dial(url string) (socksTapComm.CommConn, error) {
 	qd.Lock()
 	defer qd.Unlock()
 	reader, writer := io.Pipe()

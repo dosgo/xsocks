@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"sync"
 
-	"github.com/dosgo/xsocks/comm"
+	socksTapComm "github.com/dosgo/goSocksTap/comm"
 	"github.com/dosgo/xsocks/param"
 )
 
@@ -36,7 +36,7 @@ func newHttpClient() *http.Client {
 	return &http.Client{Transport: t}
 }
 
-func (qd *httpConn) Dial(_url string) (comm.CommConn, error) {
+func (qd *httpConn) Dial(_url string) (socksTapComm.CommConn, error) {
 	qd.Lock()
 	defer qd.Unlock()
 	tslClientConf := GetTlsConf()

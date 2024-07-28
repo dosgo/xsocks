@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 
+	socksTapComm "github.com/dosgo/goSocksTap/comm"
 	"github.com/dosgo/xsocks/comm"
 )
 
@@ -14,10 +15,10 @@ type TunelComm struct {
 }
 
 type CallerTunnel interface {
-	Dial(url string) (comm.CommConn, error)
+	Dial(url string) (socksTapComm.CommConn, error)
 }
 
-func (tunnel *TunelComm) NewTunnel() (comm.CommConn, error) {
+func (tunnel *TunelComm) NewTunnel() (socksTapComm.CommConn, error) {
 	if tunnel.CallerTunnel == nil {
 		return nil, errors.New("Tunnel init error")
 	}

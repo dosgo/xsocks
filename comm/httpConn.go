@@ -1,17 +1,23 @@
 package comm
 
-import "net/http"
-import "time"
-import "io"
+import (
+	"io"
+	"net/http"
+	"time"
+)
 
 type HttpConn struct {
-	W io.Writer
+	W  io.Writer
 	Wf http.Flusher
-	R io.ReadCloser
+	R  io.ReadCloser
 }
 
-func (conn HttpConn) SetDeadline(t time.Time) error {
-	return nil;
+func (conn HttpConn) SetWriteDeadline(t time.Time) error {
+	return nil
+}
+
+func (conn HttpConn) SetReadDeadline(t time.Time) error {
+	return nil
 }
 
 func (conn HttpConn) Read(buf []byte) (int, error) {
@@ -19,13 +25,12 @@ func (conn HttpConn) Read(buf []byte) (int, error) {
 }
 
 func (conn HttpConn) Write(buf []byte) (int, error) {
-	n,err:= conn.W.Write(buf)
-	if conn.Wf!=nil {
-		conn.Wf.Flush();
+	n, err := conn.W.Write(buf)
+	if conn.Wf != nil {
+		conn.Wf.Flush()
 	}
-	return n,err
+	return n, err
 }
-func (conn HttpConn) Close() ( error) {
+func (conn HttpConn) Close() error {
 	return conn.R.Close()
 }
-

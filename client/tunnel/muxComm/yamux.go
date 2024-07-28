@@ -8,9 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/param"
 	"github.com/hashicorp/yamux"
+
+	socksTapComm "github.com/dosgo/goSocksTap/comm"
 )
 
 type YamuxComm struct {
@@ -25,7 +26,7 @@ func NewYamuxDialer(conn DialConn) *YamuxComm {
 	return _yamux
 }
 
-func (qd *YamuxComm) Dial(url string) (comm.CommConn, error) {
+func (qd *YamuxComm) Dial(url string) (socksTapComm.CommConn, error) {
 	qd.Lock()
 	defer qd.Unlock()
 	if qd.sess == nil {

@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/dosgo/xsocks/comm"
+	socksTapComm "github.com/dosgo/goSocksTap/comm"
 	"github.com/dosgo/xsocks/comm/udpHeader"
 	"github.com/quic-go/quic-go"
 )
@@ -98,7 +98,7 @@ func isActive(s quic.Connection) bool {
 	}
 }
 
-func (qd *QuicDialer) Dial(quicAddr string) (comm.CommConn, error) {
+func (qd *QuicDialer) Dial(quicAddr string) (socksTapComm.CommConn, error) {
 	atomic.AddInt64(&num, 1)
 	var retryNum = 0
 	log.Printf("num:%d\r\n", num)

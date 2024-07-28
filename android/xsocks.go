@@ -1,13 +1,12 @@
 package xsocks
 
-// build   gomobile bind -androidapi 19 -target=android
+// build   gomobile bind -androidapi 21 -target=android
 
 import (
 	"log"
 	"time"
 
 	"github.com/dosgo/xsocks/client"
-	"github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/param"
 )
 
@@ -76,8 +75,4 @@ func Shutdown() {
 		c.Shutdown()
 		time.Sleep(time.Second * 1)
 	}
-}
-
-func Init() {
-	comm.Init()
 }

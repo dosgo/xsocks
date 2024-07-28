@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/dosgo/go-tun2socks/core"
-	"github.com/dosgo/xsocks/comm"
+	socksTapComm "github.com/dosgo/goSocksTap/comm"
 )
 
 /*socks 5 udp header*/
@@ -184,7 +184,7 @@ cmd socks cmd
 addrtype socks type  0x01  0x03  0x04
 read Back
 */
-func SocksCmd(socksConn comm.CommConn, cmd uint8, addrType uint8, host string, readBack bool) error {
+func SocksCmd(socksConn socksTapComm.CommConn, cmd uint8, addrType uint8, host string, readBack bool) error {
 	//socks5 auth
 	socksConn.Write([]byte{0x05, 0x01, 0x00})
 	//connect head
