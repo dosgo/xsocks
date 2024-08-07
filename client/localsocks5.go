@@ -120,9 +120,13 @@ func (udpProxy *UdpProxyV1) recv() {
 				}
 				remoteConn.Write([]byte(dstAddr.String()))
 			}
-			udpProxy.socksNatSawp(udpProxy.udpListener, remoteConn.(socksTapComm.CommConn), localAddr, dstAddr)
+			if remoteConn != nil {
+				udpProxy.socksNatSawp(udpProxy.udpListener, remoteConn.(socksTapComm.CommConn), localAddr, dstAddr)
+			}
 		}
-		remoteConn.(socksTapComm.CommConn).Write(data[dataStart:])
+		if remoteConn != nil {
+			remoteConn.(socksTapComm.CommConn).Write(data[dataStart:])
+		}
 	}
 }
 
