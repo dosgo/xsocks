@@ -6,7 +6,6 @@ toolchain go1.22.2
 
 require (
 	github.com/dosgo/go-tun2socks v1.2.6
-	github.com/dosgo/goSocksTap v0.0.0-20250212143703-a5a7341f112b
 	github.com/hashicorp/yamux v0.1.1
 	github.com/miekg/dns v1.1.59
 	github.com/quic-go/quic-go v0.44.0
@@ -14,6 +13,8 @@ require (
 	golang.org/x/sys v0.23.0
 
 )
+
+require github.com/dosgo/goSocksTap v0.0.0-20250213020257-a005d87bb8bf
 
 require (
 	github.com/StackExchange/wmi v1.2.1 // indirect
