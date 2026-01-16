@@ -16,8 +16,8 @@ import (
 	"sync"
 	"time"
 
-	socksTapComm "github.com/dosgo/goSocksTap/comm"
 	"github.com/dosgo/xsocks/comm"
+	socksTapComm "github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/param"
 	"github.com/hashicorp/yamux"
 )
@@ -29,7 +29,7 @@ var poolAuthHeadBuf = &sync.Pool{
 	},
 }
 
-func Proxy(conn net.Conn) {
+func Proxy(conn socksTapComm.CommConn) {
 	defer conn.Close()
 	//read auth Head
 	var authHead = poolAuthHeadBuf.Get().([]byte)
@@ -104,7 +104,7 @@ func Proxy(conn net.Conn) {
 }
 
 /*dns解析*/
-func dnsResolve(conn net.Conn) {
+func dnsResolve(conn socksTapComm.CommConn) {
 	hostLenBuf := make([]byte, 1)
 	var hostBuf = make([]byte, 1024)
 	var hostLen int
