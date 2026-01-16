@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"sync"
 
-	socksTapComm "github.com/dosgo/goSocksTap/comm"
 	"github.com/dosgo/xsocks/comm"
+	socksTapComm "github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/param"
 	"golang.org/x/net/http2"
 )

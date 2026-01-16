@@ -11,7 +11,7 @@ import (
 	"github.com/dosgo/xsocks/param"
 	"github.com/hashicorp/yamux"
 
-	socksTapComm "github.com/dosgo/goSocksTap/comm"
+	socksTapComm "github.com/dosgo/xsocks/comm"
 )
 
 type YamuxComm struct {

@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	socksTapComm "github.com/dosgo/goSocksTap/comm"
+	socksTapComm "github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/comm/udpHeader"
 	"github.com/quic-go/quic-go"
 )

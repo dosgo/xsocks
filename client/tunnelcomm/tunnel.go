@@ -4,8 +4,8 @@ import (
 	"errors"
 	"strings"
 
-	socksTapComm "github.com/dosgo/goSocksTap/comm"
 	"github.com/dosgo/xsocks/comm"
+	socksTapComm "github.com/dosgo/xsocks/comm"
 )
 
 type TunelComm struct {

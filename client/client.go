@@ -2,16 +2,17 @@ package client
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/url"
 	"runtime"
 	"strings"
 
-	socksTapComm "github.com/dosgo/goSocksTap/comm"
 	"github.com/dosgo/goSocksTap/socksTap"
 	"github.com/dosgo/xsocks/client/tunnel"
 	"github.com/dosgo/xsocks/client/tunnelcomm"
 	"github.com/dosgo/xsocks/comm"
+	socksTapComm "github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/param"
 )
 
@@ -31,7 +32,7 @@ func (c *Client) Shutdown() {
 		c.lDns.Shutdown()
 	}
 	if c.socksTap != nil {
-		c.socksTap.Shutdown()
+		c.socksTap.Close()
 	}
 	if c.tun2Socks != nil {
 		c.tun2Socks.Shutdown()
@@ -82,9 +83,10 @@ func (c *Client) Start() error {
 
 	//windows + linux +mac
 	if param.Args.TunType == 3 {
-		c.socksTap = &socksTap.SocksTap{}
-		urlInfo, _ := url.Parse(param.Args.ServerAddr)
-		c.socksTap.Start(param.Args.Sock5Addr, urlInfo.Hostname(), param.Args.UdpProxy == 1)
+		c.socksTap = socksTap.NewSocksTap(11809, param.Args.Sock5Addr, true)
+		//urlInfo, _ := url.Parse(param.Args.ServerAddr)
+
+		c.socksTap.Start()
 	}
 
 	//to local safe socks5(udp support) windows + linux +mac
@@ -93,8 +95,12 @@ func (c *Client) Start() error {
 			log.Printf("-serverAddr socks5://127.0.0.1:1080 \r\n")
 			return errors.New("-tuntype 5 -serverAddr socks5://127.0.0.1:1080")
 		}
-		c.socksTap = &socksTap.SocksTap{}
-		c.socksTap.Start(param.Args.ServerAddr[9:], param.Args.ExcludeDomain, param.Args.UdpProxy == 1)
+		u, err := url.Parse(param.Args.Sock5Addr)
+		if err != nil {
+			return errors.New("-tuntype 5 -serverAddr socks5://127.0.0.1:1080")
+		}
+		c.socksTap = socksTap.NewSocksTap(11809, fmt.Sprintf("%s:%d", u.Hostname(), u.Port()), true)
+		c.socksTap.Start()
 	}
 
 	if param.Args.TunType != 5 {

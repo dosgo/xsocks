@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/dosgo/go-tun2socks/core"
-	socksTapComm "github.com/dosgo/goSocksTap/comm"
+	socksTapComm "github.com/dosgo/xsocks/comm"
 )
 
 /*socks 5 udp header*/

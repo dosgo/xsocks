@@ -10,8 +10,8 @@ import (
 	"github.com/dosgo/go-tun2socks/core"
 	"github.com/dosgo/go-tun2socks/tun"
 	"github.com/dosgo/go-tun2socks/tun2socks"
-	socksTapComm "github.com/dosgo/goSocksTap/comm"
 	"github.com/dosgo/xsocks/comm"
+	socksTapComm "github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/comm/socks"
 	"github.com/dosgo/xsocks/param"
 )

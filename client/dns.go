@@ -5,8 +5,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/dosgo/goSocksTap/comm/dot"
 	socksTapComm "github.com/dosgo/goSocksTap/comm"
+	"github.com/dosgo/xsocks/comm/dot"
 	"github.com/dosgo/xsocks/param"
 	"github.com/miekg/dns"
 )

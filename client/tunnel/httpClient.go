@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"sync"
 
-	socksTapComm "github.com/dosgo/goSocksTap/comm"
+	socksTapComm "github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/param"
 )
 

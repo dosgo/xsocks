@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	socksTapComm "github.com/dosgo/goSocksTap/comm"
 	"github.com/dosgo/xsocks/client/tunnelcomm"
+	socksTapComm "github.com/dosgo/xsocks/comm"
 	"github.com/dosgo/xsocks/comm/socks"
 	"github.com/dosgo/xsocks/param"
 )
