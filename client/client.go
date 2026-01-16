@@ -2,9 +2,7 @@ package client
 
 import (
 	"errors"
-	"fmt"
 	"log"
-	"net/url"
 	"runtime"
 	"strings"
 
@@ -95,11 +93,9 @@ func (c *Client) Start() error {
 			log.Printf("-serverAddr socks5://127.0.0.1:1080 \r\n")
 			return errors.New("-tuntype 5 -serverAddr socks5://127.0.0.1:1080")
 		}
-		u, err := url.Parse(param.Args.Sock5Addr)
-		if err != nil {
-			return errors.New("-tuntype 5 -serverAddr socks5://127.0.0.1:1080")
-		}
-		c.socksTap = socksTap.NewSocksTap(11809, fmt.Sprintf("%s:%d", u.Hostname(), u.Port()), true)
+		strings.Replace(param.Args.ServerAddr, "socks5://", "", 1)
+
+		c.socksTap = socksTap.NewSocksTap(11809, strings.Replace(param.Args.ServerAddr, "socks5://", "", 1), true)
 		c.socksTap.Start()
 	}
 
