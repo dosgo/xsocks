@@ -4,7 +4,7 @@ go 1.24.1
 
 require (
 	github.com/dosgo/go-tun2socks v1.2.7
-	github.com/dosgo/goSocksTap v0.0.0-20260117061257-38b92cdb986e
+	github.com/dosgo/goSocksTap v0.0.0-20260117083753-dae3507b2ee7
 	github.com/hashicorp/yamux v0.1.1
 	github.com/miekg/dns v1.1.59
 	github.com/quic-go/quic-go v0.44.0
