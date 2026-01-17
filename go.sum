@@ -8,8 +8,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dosgo/go-tun2socks v1.2.7 h1:xgSPghQP/nGVAVwMRbVOw33cKdnXuxShgOqlBj+IYss=
 github.com/dosgo/go-tun2socks v1.2.7/go.mod h1:OcB5dzuVRK16VRjCPOYS9ZEsCzTEFQvNzDr9yGjaEJA=
-github.com/dosgo/goSocksTap v0.0.0-20260117083753-dae3507b2ee7 h1:qt9IJOw5Z8QwsW7YprkE072OS4IyHFjM0aKpZwU4ksU=
-github.com/dosgo/goSocksTap v0.0.0-20260117083753-dae3507b2ee7/go.mod h1:fwhmvJbMBgKdZiJ3JOmc8tNI3614O2NPiw1jSEXogvI=
+github.com/dosgo/goSocksTap v0.0.0-20260117090646-eba8d86e8499 h1:pPQ6XYNmkn6jND2O3jCfu7KbVXOZR3s+owCLAJTj6lY=
+github.com/dosgo/goSocksTap v0.0.0-20260117090646-eba8d86e8499/go.mod h1:fwhmvJbMBgKdZiJ3JOmc8tNI3614O2NPiw1jSEXogvI=
 github.com/go-logr/logr v1.3.0 h1:2y3SDp0ZXuc6/cjLSZ+Q3ir+QB9T/iG5yYRXqsagWSY=
 github.com/go-logr/logr v1.3.0/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
 github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 h1:tfuBGBXKqDEevZMzYi5KSi8KkcZtzBcTgAUUtapy0OI=
