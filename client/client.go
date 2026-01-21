@@ -81,7 +81,7 @@ func (c *Client) Start() error {
 
 	//windows + linux +mac
 	if param.Args.TunType == 3 {
-		c.socksTap = socksTap.NewSocksTap(11809, param.Args.Sock5Addr, true)
+		c.socksTap = socksTap.NewSocksTap(11809, param.Args.Sock5Addr, 1)
 		//urlInfo, _ := url.Parse(param.Args.ServerAddr)
 
 		c.socksTap.Start()
@@ -95,7 +95,7 @@ func (c *Client) Start() error {
 		}
 		strings.Replace(param.Args.ServerAddr, "socks5://", "", 1)
 
-		c.socksTap = socksTap.NewSocksTap(11809, strings.Replace(param.Args.ServerAddr, "socks5://", "", 1), true)
+		c.socksTap = socksTap.NewSocksTap(11809, strings.Replace(param.Args.ServerAddr, "socks5://", "", 1), 1)
 		c.socksTap.Start()
 	}
 
