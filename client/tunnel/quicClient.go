@@ -24,7 +24,7 @@ func init() {
 var num int64 = 0
 
 type QuicDialer struct {
-	sess    quic.Connection
+	sess    *quic.Conn
 	udpConn *udpHeader.UdpConn
 	sync.Mutex
 }
@@ -51,7 +51,7 @@ func (qd *QuicDialer) Connect(quicAddr string) error {
 	var quicConfig = &quic.Config{
 		//	MaxIncomingStreams:                    32,
 		//	MaxIncomingUniStreams:                 -1,              // disable unidirectional streams
-		Versions:       []quic.VersionNumber{quic.Version1},
+		Versions:       []quic.Version{quic.Version1},
 		MaxIdleTimeout: maxIdleTimeout,
 	}
 
@@ -83,13 +83,13 @@ func (qd *QuicDialer) Connect(quicAddr string) error {
 	return nil
 }
 
-func (qd *QuicDialer) GetSess() quic.Connection {
+func (qd *QuicDialer) GetSess() *quic.Conn {
 	qd.Lock()
 	defer qd.Unlock()
 	return qd.sess
 }
 
-func isActive(s quic.Connection) bool {
+func isActive(s *quic.Conn) bool {
 	select {
 	case <-s.Context().Done():
 		return false
