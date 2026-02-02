@@ -50,7 +50,7 @@ func StartQuic(_addr string) error {
 }
 
 /* to socks server*/
-func quicToSocks5(sess quic.Connection) {
+func quicToSocks5(sess *quic.Conn) {
 	for {
 		stream, err := sess.AcceptStream(context.Background())
 		if err != nil {
