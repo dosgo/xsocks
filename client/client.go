@@ -85,7 +85,7 @@ func (c *Client) Start() error {
 		if param.Args.UdpProxy == 1 {
 			udp = true
 		}
-		c.socksTap = socksTap.NewSocksTap(11809, param.Args.Sock5Addr, 1, udp)
+		c.socksTap = socksTap.NewSocksTap(param.Args.Sock5Addr, 1, udp)
 		//urlInfo, _ := url.Parse(param.Args.ServerAddr)
 
 		c.socksTap.Start()
@@ -102,7 +102,7 @@ func (c *Client) Start() error {
 		if param.Args.UdpProxy == 1 {
 			udp = true
 		}
-		c.socksTap = socksTap.NewSocksTap(11809, param.Args.ServerAddr, 1, udp)
+		c.socksTap = socksTap.NewSocksTap(param.Args.ServerAddr, 1, udp)
 		c.socksTap.Start()
 	}
 

@@ -4,7 +4,6 @@ go 1.24.1
 
 require (
 	github.com/dosgo/go-tun2socks v1.2.7
-	github.com/dosgo/goSocksTap v0.0.0-20260202081117-e4a2e970ddb4
 	github.com/hashicorp/yamux v0.1.1
 	github.com/miekg/dns v1.1.59
 	github.com/quic-go/quic-go v0.59.0
@@ -13,6 +12,8 @@ require (
 	golang.org/x/sys v0.35.0
 	golang.org/x/time v0.7.0
 )
+
+require github.com/dosgo/goSocksTap v0.0.0-20260205124528-6c94ba79580b
 
 require (
 	github.com/cakturk/go-netstat v0.0.0-20200220111822-e5b49efee7a5 // indirect
