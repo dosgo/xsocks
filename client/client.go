@@ -97,7 +97,6 @@ func (c *Client) Start() error {
 			log.Printf("-serverAddr socks5://127.0.0.1:1080 \r\n")
 			return errors.New("-tuntype 5 -serverAddr socks5://127.0.0.1:1080")
 		}
-		strings.Replace(param.Args.ServerAddr, "socks5://", "", 1)
 		var udp = false
 		if param.Args.UdpProxy == 1 {
 			udp = true

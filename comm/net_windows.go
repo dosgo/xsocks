@@ -16,9 +16,6 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-var oldDns = "114.114.114.114"
-var defaultDns = "114.114.114.114"
-
 func GetGateway() string {
 	item := getGatewayInfo()
 	return item.GwIp

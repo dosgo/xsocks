@@ -9,8 +9,6 @@ import (
 	"strings"
 )
 
-var oldDns = ""
-
 func GetGateway() string {
 	return ""
 }
