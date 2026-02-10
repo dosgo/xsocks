@@ -35,7 +35,7 @@ func apiAction(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.Form.Get("cmd") == "read" {
 		conf, _, err := comm.ReadConf(configFile)
-		param.Args.AutoStart = isAutoStart(param.Args.ServerAddr)
+		param.Args.AutoStart = IsAutoStart(param.Args.ServerAddr)
 		if err == nil {
 			w.Write(conf)
 		}
@@ -97,7 +97,7 @@ func jsonBack(w http.ResponseWriter, data map[string]interface{}) {
 }
 
 /*是否自动启动*/
-func isAutoStart(serverAddr string) bool {
+func IsAutoStart(serverAddr string) bool {
 	_, err := os.Stat(configFile)
 	if err == nil {
 		urlInfo, err := url.Parse(serverAddr)
