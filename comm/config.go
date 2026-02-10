@@ -8,7 +8,7 @@ import (
 	"github.com/dosgo/xsocks/param"
 )
 
-func ReadConf(configFile string) ([]byte, error) {
+func ReadConf(configFile string) ([]byte, bool, error) {
 	paramParam := param.Args
 	paramParam.Sock5Addr = "127.0.0.1:6000"
 	paramParam.ServerAddr = "wss://127.0.0.1:5003"
@@ -23,10 +23,12 @@ func ReadConf(configFile string) ([]byte, error) {
 	paramParam.TunSmartProxy = false
 	_, err := os.Stat(configFile)
 	msgStr, err1 := os.ReadFile(configFile)
+	isConf := false
 	if err == nil && err1 == nil {
 		confParam := &param.ArgsParam{}
 		err = json.NewDecoder(bytes.NewReader(msgStr)).Decode(&confParam)
 		if err == nil {
+			isConf = true
 			paramParam.Sock5Addr = confParam.Sock5Addr
 			paramParam.Password = confParam.Password
 			paramParam.ServerAddr = confParam.ServerAddr
@@ -41,5 +43,6 @@ func ReadConf(configFile string) ([]byte, error) {
 			json.NewEncoder(fp).Encode(paramParam)
 		}
 	}
-	return json.Marshal(&paramParam)
+	data, err := json.Marshal(&paramParam)
+	return data, isConf, err
 }

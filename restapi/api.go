@@ -34,7 +34,7 @@ func apiAction(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if r.Form.Get("cmd") == "read" {
-		conf, err := comm.ReadConf(configFile)
+		conf, _, err := comm.ReadConf(configFile)
 		param.Args.AutoStart = isAutoStart(param.Args.ServerAddr)
 		if err == nil {
 			w.Write(conf)
