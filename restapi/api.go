@@ -1,7 +1,6 @@
 package restapi
 
 import (
-	"bytes"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -17,6 +16,7 @@ import (
 
 var socksX_cli *client.Client
 var token = ""
+var configFile = "config.json"
 
 func apiAction(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
@@ -34,7 +34,8 @@ func apiAction(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if r.Form.Get("cmd") == "read" {
-		conf, err := ReadConf()
+		conf, err := comm.ReadConf(configFile)
+		param.Args.AutoStart = isAutoStart(param.Args.ServerAddr)
 		if err == nil {
 			w.Write(conf)
 		}
@@ -75,8 +76,6 @@ func Start(port string, _token string) {
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
 
-var configFile = "config.json"
-
 func SaveConf(jsonStr string) error {
 	paramParam := param.Args
 	err := json.NewDecoder(strings.NewReader(jsonStr)).Decode(&paramParam)
@@ -88,43 +87,6 @@ func SaveConf(jsonStr string) error {
 		err = json.NewEncoder(fp).Encode(paramParam)
 	}
 	return err
-}
-
-func ReadConf() ([]byte, error) {
-	paramParam := param.Args
-	paramParam.Sock5Addr = "127.0.0.1:6000"
-	paramParam.ServerAddr = "wss://127.0.0.1:5003"
-	paramParam.Password = "password"
-	paramParam.SkipVerify = false
-	paramParam.TunType = 3
-	paramParam.MuxNum = 4
-	paramParam.LocalDns = 0
-	paramParam.SmartDns = 1
-	paramParam.UdpProxy = 1
-	paramParam.Mtu = 4500
-	paramParam.TunSmartProxy = false
-	_, err := os.Stat(configFile)
-	msgStr, err1 := os.ReadFile(configFile)
-	if err == nil && err1 == nil {
-		confParam := &param.ArgsParam{}
-		err = json.NewDecoder(bytes.NewReader(msgStr)).Decode(&confParam)
-		if err == nil {
-			paramParam.Sock5Addr = confParam.Sock5Addr
-			paramParam.Password = confParam.Password
-			paramParam.ServerAddr = confParam.ServerAddr
-			paramParam.SkipVerify = confParam.SkipVerify
-			paramParam.TunType = confParam.TunType
-			paramParam.UdpProxy = confParam.UdpProxy
-			paramParam.ExcludeDomain = confParam.ExcludeDomain
-			paramParam.AutoStart = isAutoStart(paramParam.ServerAddr)
-		}
-	} else {
-		fp, err := os.OpenFile(configFile, os.O_CREATE|os.O_RDWR, os.ModePerm)
-		if err == nil {
-			json.NewEncoder(fp).Encode(paramParam)
-		}
-	}
-	return json.Marshal(&paramParam)
 }
 
 func jsonBack(w http.ResponseWriter, data map[string]interface{}) {
